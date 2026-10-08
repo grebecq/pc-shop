@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Собрать ПК')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap">
+    <div class="catalog-head">
+        <h1>Собрать ПК</h1>
+        <p class="muted">Выбирайте детали в любом порядке: несовместимые мы отметим и объясним почему.</p>
+    </div>
+    <div th:replace="~{fragments :: flash}"></div>
+
+    <div class="builder">
+        <ol class="slots">
+            <li th:each="s : ${slots}" class="slot" th:with="p=${build.part(s)}"
+                th:classappend="${p == null} ? 'is-empty' : (${badSlots.contains(s)} ? 'is-bad')">
+                <div class="slot__icon"><svg th:replace="~{fragments :: icon(${s.category()})}"></svg></div>
+                <div class="slot__body">
+                    <p class="slot__title">
+                        <span th:text="${s.title()}">Процессор</span>
+                        <small class="muted" th:unless="${s.required()}">по необходимости</small>
+                    </p>
+                    <th:block th:if="${p != null}">
+                        <a class="slot__name" th:href="@{/p/{x}(x=${p.slug})}" th:text="${p.name}">Название</a>
+                        <p class="slot__specs muted" th:text="${@fmt.specs(p)}">AM5 · 6 ядер</p>
+                    </th:block>
+                </div>
+                <div class="slot__side">
+                    <span class="price" th:if="${p != null}" th:text="${@fmt.rub(p.price)}">0 ₽</span>
+                    <div class="slot__actions">
+                        <a class="btn btn--small" th:classappend="${p != null} ? 'btn--ghost'" th:href="${build.pickLink(s)}"
+                           th:text="${p == null} ? 'Выбрать' : 'Заменить'">Выбрать</a>
+                        <a class="link-btn" th:if="${p != null}" th:href="${build.linkWithout(s)}"
+                           th:attr="aria-label='Убрать: ' + ${s.title()}">Убрать</a>
+                    </div>
+                </div>
+            </li>
+        </ol>
+
+        <aside class="panel summary" aria-label="Итог сборки">
+            <p class="muted">Итого</p>
+            <p class="summary__total" th:text="${@fmt.rub(build.total())}">0 ₽</p>
+            <dl class="details">
+                <div><dt>Потребление</dt><dd th:text="'≈ ' + ${draw} + ' Вт'">0 Вт</dd></div>
+                <div><dt>Блок питания</dt><dd th:text="'от ' + ${recommendedPsu} + ' Вт'">от 0 Вт</dd></div>
+            </dl>
+
+            <p class="verdict verdict--ok" th:if="${complete}">Сборка совместима и готова к заказу</p>
+            <ul class="issues" th:unless="${errors.empty and warnings.empty and missing.empty}">
+                <li th:each="i : ${errors}" class="issue issue--error" th:text="${i.text()}">Ошибка</li>
+                <li th:each="i : ${warnings}" class="issue issue--warn" th:text="${i.text()}">Предупреждение</li>
+                <li th:each="i : ${missing}" class="issue" th:text="${i.text()}">Не выбрано</li>
+            </ul>
+
+            <button class="btn btn--wide" type="button" th:if="${!build.empty}" th:attr="data-add-build=${cartIds}"
+                    th:text="${complete} ? 'Добавить всё в корзину' : 'Добавить выбранное в корзину'">В корзину</button>
+
+            <form th:if="${user != null and !build.empty}" class="save-build" method="post"
+                  th:action="@{/configurator/save}">
+                <input type="hidden" th:each="e : ${build.ids()}" th:name="${e.key}" th:value="${e.value}">
+                <input name="name" maxlength="80" placeholder="Название сборки" aria-label="Название сборки">
+                <button class="btn btn--ghost" type="submit">Сохранить</button>
+            </form>
+            <p class="hint" th:if="${user == null and !build.empty}">
+                <a th:href="@{/login(next=${build.link()})}">Войдите</a>, чтобы сохранить сборку в кабинете.
+            </p>
+
+            <div class="share" th:if="${!build.empty}">
+                <label for="share-url" class="muted">Ссылка на сборку</label>
+                <div class="share__row">
+                    <input id="share-url" th:value="${shareUrl}" readonly>
+                    <button class="btn btn--ghost btn--small" type="button" data-copy="#share-url">Копировать</button>
+                </div>
+            </div>
+            <a class="link-btn" th:if="${!build.empty}" th:href="@{/configurator}">Начать заново</a>
+        </aside>
+    </div>
+
+    <section class="section">
+        <h2>Готовые сборки</h2>
+        <p class="muted section__lead">Возьмите за основу и поменяйте то, что нужно.</p>
+        <div class="presets">
+            <a class="preset" th:each="pr : ${presets}" th:href="${pr.build().link()}">
+                <b th:text="${pr.name()}">Игровой</b>
+                <span class="muted" th:text="${pr.purpose()}">Описание</span>
+                <span class="price" th:text="${@fmt.rub(pr.build().total())}">0 ₽</span>
+            </a>
+        </div>
+    </section>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

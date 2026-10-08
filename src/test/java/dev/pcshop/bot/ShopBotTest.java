@@ -39,6 +39,7 @@ class ShopBotTest {
     @Autowired CatalogService catalog;
     @Autowired OrderService orders;
     @Autowired BotCart cart;
+    @Autowired dev.pcshop.build.BuildService builds;
 
     TelegramClient telegram;
     ShopBot bot;
@@ -48,7 +49,7 @@ class ShopBotTest {
     void setUp() {
         telegram = mock(TelegramClient.class);
         var props = new ShopProperties("http://localhost:8080", null, new ShopProperties.Telegram("test", null, null, null));
-        bot = new ShopBot(telegram, catalog, orders, cart, props, java.time.Duration.ofMinutes(30));
+        bot = new ShopBot(telegram, catalog, orders, cart, builds, props, java.time.Duration.ofMinutes(30));
         cart.clear(CHAT);
     }
 
@@ -124,6 +125,48 @@ class ShopBotTest {
         orders.changeStatus(orders.byPublicId(UUID.fromString(payData.substring(4))).getId(), OrderStatus.CANCELLED);
         callback(payData);
         assertThat(lastText()).contains("отменён").doesNotContain("оплачен (");
+    }
+
+    @Test
+    void buildPcInBot() throws Exception {
+        builds.saveBotBuild(CHAT, dev.pcshop.build.Build.empty());
+        text(ShopBot.BTN_BUILD);
+        assertThat(lastText()).contains("Сборка ПК", "Процессор: —");
+        assertThat(lastButtons()).contains("bs:cpu:0", "bpl");
+
+        // Готовая сборка «Игровой 2K» совместима
+        callback("bpl");
+        assertThat(lastText()).contains("Готовые сборки", "Игровой 2K");
+        callback("bpre:2");
+        assertThat(lastText()).contains("готова к заказу", "AMD Ryzen 7 7800X3D").doesNotContain("❌");
+
+        // В списке плат — только платы под AM5, выбранная отмечена
+        callback("bs:mb:0");
+        long am4Board = catalog.product("msi-b550-a-pro").getId();
+        long am5Board = catalog.product("msi-pro-b650m-a-wifi").getId();
+        assertThat(lastButtons()).contains("bp:mb:" + am5Board, "br:mb", "b").doesNotContain("bp:mb:" + am4Board);
+
+        callback("bp:mb:" + am5Board);
+        assertThat(lastText()).contains("MSI PRO B650M-A WIFI");
+
+        // Кнопка с товаром не той категории или подделанная — не ломает сборку
+        long ssd = catalog.product("kingston-nv3-1-tb").getId();
+        callback("bp:mb:" + ssd);
+        callback("bs:zzz:0");
+        callback("bpre:99");
+        assertThat(toasts()).containsSequence("Кнопка устарела", "Кнопка устарела", "Кнопка устарела");
+        assertThat(builds.botBuild(CHAT).part(dev.pcshop.build.Slot.MOTHERBOARD).getId()).isEqualTo(am5Board);
+
+        callback("br:gpu");
+        assertThat(lastText()).contains("Видеокарта: —");
+
+        callback("bcart");
+        assertThat(toasts().getLast()).isEqualTo("Сборка в корзине");
+        assertThat(cart.lines(CHAT)).hasSize(7);
+        assertThat(lastText()).contains("Корзина");
+
+        callback("bclr");
+        assertThat(builds.botBuild(CHAT).isEmpty()).isTrue();
     }
 
     // ---------- Помощники: собираем Update из JSON, как его присылает Telegram ----------

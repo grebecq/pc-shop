@@ -27,6 +27,7 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
                 <input type="search" name="q" th:value="${q}" placeholder="Поиск: RTX 5070, Ryzen 7, DDR5…" aria-label="Поиск по каталогу" maxlength="100">
             </form>
+            <a class="header__link header__build" th:href="@{/configurator}">Собрать ПК</a>
             <a class="header__link" th:if="${user == null}" th:href="@{/login}">Войти</a>
             <a class="header__link" th:if="${user != null}" th:href="@{/account}" th:text="${user.displayName}">Кабинет</a>
             <a class="header__cart" th:href="@{/cart}">Корзина <span class="badge" data-cart-count hidden>0</span></a>
@@ -55,12 +56,14 @@
     <g th:case="'gpu'"><rect x="5" y="14" width="36" height="20" rx="2"/><circle cx="17" cy="24" r="6"/><circle cx="31" cy="24" r="6"/><path d="M41 18h2M41 30h2M9 34v4h12v-4"/></g>
     <g th:case="'ssd'"><rect x="5" y="18" width="38" height="12" rx="1.5"/><rect x="9" y="21" width="8" height="6"/><rect x="20" y="21" width="8" height="6"/><path d="M33 22v4M37 22v4"/></g>
     <g th:case="'psu'"><rect x="7" y="11" width="34" height="26" rx="2"/><circle cx="21" cy="24" r="8"/><path d="M21 16v16M13 24h16M35 17v4M35 29h0"/></g>
+    <g th:case="'cooler'"><circle cx="24" cy="24" r="16"/><circle cx="24" cy="24" r="3"/><path d="M24 21c-2-5-1-9 3-11M27 24c5-2 9-1 11 3M24 27c2 5 1 9-3 11M21 24c-5 2-9 1-11-3"/></g>
     <g th:case="*"><rect x="14" y="6" width="20" height="36" rx="2"/><circle cx="24" cy="14" r="2"/><path d="M19 22h10M19 26h10M19 30h10"/></g>
 </svg>
 
 <!-- Меню личного кабинета -->
 <nav th:fragment="account-tabs(tab)" class="tabs" aria-label="Личный кабинет">
     <a th:href="@{/account}" th:classappend="${tab == 'orders'} ? 'is-current'">Мои заказы</a>
+    <a th:href="@{/account/builds}" th:classappend="${tab == 'builds'} ? 'is-current'">Мои сборки</a>
     <a th:href="@{/account/addresses}" th:classappend="${tab == 'addresses'} ? 'is-current'">Адреса доставки</a>
     <a th:href="@{/account/profile}" th:classappend="${tab == 'profile'} ? 'is-current'">Профиль</a>
 </nav>

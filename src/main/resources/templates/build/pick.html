@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${slot.title()})}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap narrow">
+    <nav class="crumbs">
+        <a th:href="${build.link()}">Сборка</a> / <span th:text="${slot.title()}">Процессор</span>
+    </nav>
+    <div class="catalog-head">
+        <h1 th:text="${slot.title()}">Процессор</h1>
+        <p class="muted" th:text="${build.empty} ? 'Подходят все: остальные детали ещё не выбраны.'
+            : 'Подходят ' + ${fitCount} + ' из ' + ${candidates.size()} + ' с учётом уже выбранных деталей.'">Подходят</p>
+    </div>
+
+    <ul class="picks">
+        <li th:each="c : ${candidates}" class="pick" th:with="p=${c.product()}"
+            th:classappend="${!c.fits()} ? 'is-bad' : (${current != null and current.id == p.id} ? 'is-current')">
+            <div class="pick__body">
+                <a class="pick__name" th:href="@{/p/{x}(x=${p.slug})}" th:text="${p.name}">Название</a>
+                <p class="muted pick__specs" th:text="${@fmt.specs(p)}">AM5 · 6 ядер</p>
+                <p class="pick__note" th:if="${c.note() != null}" th:classappend="${c.fits()} ? 'is-warn' : 'is-error'"
+                   th:text="${c.note()}">Причина</p>
+            </div>
+            <div class="pick__side">
+                <span class="price" th:text="${@fmt.rub(p.price)}">0 ₽</span>
+                <span class="muted small-note" th:unless="${p.inStock()}">нет в наличии</span>
+                <span class="muted small-note" th:if="${current != null and current.id == p.id}">выбрано</span>
+                <a class="btn btn--small" th:if="${c.fits()} and ${current == null or current.id != p.id}"
+                   th:href="${c.link()}">Выбрать</a>
+                <a class="btn btn--small btn--ghost" th:unless="${c.fits()}" th:href="${c.link()}"
+                   title="Выбрать всё равно: сборка покажет, что нужно поменять">Всё равно</a>
+            </div>
+        </li>
+    </ul>
+    <p class="small"><a th:href="${build.link()}">← Вернуться к сборке</a></p>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

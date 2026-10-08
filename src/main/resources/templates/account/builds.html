@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Мои сборки')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap narrow">
+    <div th:replace="~{account/parts :: head}"></div>
+    <nav th:replace="~{fragments :: account-tabs('builds')}"></nav>
+    <div th:replace="~{fragments :: flash}"></div>
+
+    <div class="address-list" th:unless="${builds.empty}">
+        <div class="address" th:each="b : ${builds}">
+            <div>
+                <p class="address__label">
+                    <b th:text="${b.saved().name}">Сборка</b>
+                    <span class="pill pill--done" th:if="${b.complete()}">готова</span>
+                    <span class="pill pill--awaiting_payment" th:unless="${b.complete()}">не закончена</span>
+                </p>
+                <p class="muted" th:text="${b.build().products().size()} + ' деталей · ' + ${@fmt.rub(b.build().total())}
+                    + ' · ' + ${@fmt.date(b.saved().createdAt)}">8 деталей</p>
+            </div>
+            <div class="address__actions">
+                <a class="btn btn--small" th:href="${b.build().link()}">Открыть</a>
+                <form method="post" th:action="@{/account/builds/{id}/delete(id=${b.saved().id})}">
+                    <button class="link-btn" type="submit">Удалить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="empty" th:if="${builds.empty}">
+        <p>Сохранённых сборок пока нет.</p>
+        <a class="btn btn--ghost" th:href="@{/configurator}" style="margin-top:14px">Собрать ПК</a>
+    </div>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>
