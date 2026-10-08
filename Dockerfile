@@ -14,4 +14,6 @@ RUN useradd --system shop
 COPY --from=build /src/build/libs/*.jar app.jar
 USER shop
 EXPOSE 8080
+# На маленьких тарифах (512 МБ) JVM должна брать память от лимита контейнера
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
 ENTRYPOINT ["java", "-jar", "app.jar"]

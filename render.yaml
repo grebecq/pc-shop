@@ -1,0 +1,34 @@
+# Деплой на Render одной кнопкой: Dashboard → New → Blueprint → этот репозиторий.
+# Поднимаются приложение (Docker) и PostgreSQL на бесплатных тарифах.
+services:
+  - type: web
+    name: pc-shop
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: stage-1-shop
+    healthCheckPath: /
+    envVars:
+      - key: DB_HOST
+        fromDatabase: { name: pc-shop-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: pc-shop-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: pc-shop-db, property: database }
+      - key: DB_USER
+        fromDatabase: { name: pc-shop-db, property: user }
+      - key: DB_PASSWORD
+        fromDatabase: { name: pc-shop-db, property: password }
+      - key: ADMIN_USER
+        value: admin
+      # Пароль админки Render сгенерирует сам: Dashboard → pc-shop → Environment
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      # Токены бота можно добавить там же позже: BOT_TOKEN, BOT_USERNAME, ADMIN_CHAT_ID
+
+databases:
+  - name: pc-shop-db
+    plan: free
+    region: frankfurt
+    databaseName: pcshop
+    user: pcshop

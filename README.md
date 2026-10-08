@@ -114,6 +114,19 @@ docker run -d --name pcshop-db -p 5432:5432 \
 В тестовом режиме платёж проводится тестовой картой провайдера, деньги не списываются. Для приёма реальных платежей
 нужен договор с провайдером и боевой токен (`…:LIVE:…`).
 
+## Деплой на Render (бесплатно, для демо)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/grebecq/pc-shop/tree/stage-1-shop)
+
+В репозитории лежит `render.yaml`: Render сам поднимет приложение из Dockerfile и бесплатный PostgreSQL.
+
+1. Зарегистрируйтесь на [render.com](https://render.com) через GitHub.
+2. Нажмите кнопку выше (или Dashboard → New → Blueprint → репозиторий `pc-shop`) и подтвердите **Apply**.
+3. Дождитесь окончания сборки. Адрес сайта будет на странице сервиса `pc-shop`, вида `https://pc-shop-xxxx.onrender.com`.
+4. Пароль админки: сервис `pc-shop` → Environment → `ADMIN_PASSWORD`, логин `admin`.
+
+Ограничения бесплатного тарифа: после 15 минут без запросов сервис засыпает, и первый заход потом занимает около минуты. Бесплатная база на Render живёт 30 дней.
+
 ## Деплой на VPS
 
 1. Установите Docker на сервер и скопируйте проект (`git clone`).
