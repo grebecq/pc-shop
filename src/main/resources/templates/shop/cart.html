@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Корзина')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap">
+    <h1>Корзина</h1>
+
+    <p class="empty" data-cart-empty hidden>Корзина пуста. <a th:href="@{/}">Перейти в каталог</a></p>
+
+    <div class="checkout" data-cart-full hidden>
+        <section>
+            <table class="cart-table">
+                <thead><tr><th>Товар</th><th>Цена</th><th>Количество</th><th>Сумма</th><th></th></tr></thead>
+                <tbody data-cart-rows></tbody>
+            </table>
+            <p class="cart-total">Итого: <b data-cart-total>0 ₽</b></p>
+        </section>
+
+        <form class="panel order-form" data-order-form novalidate>
+            <h2 class="h3">Оформление</h2>
+            <label for="name">Имя</label>
+            <input id="name" name="name" autocomplete="name" required maxlength="128">
+            <label for="phone">Телефон</label>
+            <input id="phone" name="phone" type="tel" autocomplete="tel" required placeholder="+7 900 000-00-00">
+            <label for="address">Адрес доставки</label>
+            <input id="address" name="address" autocomplete="street-address" required maxlength="512" placeholder="Город, улица, дом, квартира">
+            <label for="comment">Комментарий</label>
+            <textarea id="comment" name="comment" rows="2" maxlength="1000"></textarea>
+            <button class="btn btn--wide" type="submit">Перейти к оплате</button>
+            <p class="form-error" data-order-error role="alert"></p>
+        </form>
+    </div>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

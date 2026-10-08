@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Общий <head>: title передаётся параметром -->
+<head th:fragment="head(title)">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' · Сборка'">Сборка</title>
+    <meta name="description" content="Демо-магазин комплектующих для ПК: сайт, Telegram-бот и админка на Spring Boot.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/shop.css}">
+    <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+</head>
+
+<div th:fragment="header">
+    <div class="demo-bar">Демо-магазин для портфолио: товары не продаются, оплата тестовая.</div>
+    <header class="header">
+        <div class="wrap header__inner">
+            <a class="logo" th:href="@{/}"><span class="logo__mark"></span>Сборка</a>
+            <nav class="header__nav" aria-label="Категории">
+                <a th:each="c : ${categories}" th:href="@{/c/{s}(s=${c.slug})}" th:text="${c.name}">Категория</a>
+            </nav>
+            <a class="header__cart" th:href="@{/cart}">Корзина <span class="badge" data-cart-count hidden>0</span></a>
+        </div>
+    </header>
+</div>
+
+<footer th:fragment="footer" class="footer">
+    <div class="wrap footer__inner">
+        <span>«Сборка» — демо-проект: сайт, Telegram-бот и админка работают на одном бэкенде.</span>
+        <span>Spring Boot · PostgreSQL · Telegram Bot API</span>
+    </div>
+    <script th:src="@{/js/cart.js}"></script>
+</footer>
+
+<!-- Иконка категории вместо фотографии товара -->
+<svg th:fragment="icon(slug)" class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" th:switch="${slug}">
+    <g th:case="'cpu'"><rect x="13" y="13" width="22" height="22" rx="2"/><rect x="19" y="19" width="10" height="10"/><path d="M18 8v5M24 8v5M30 8v5M18 35v5M24 35v5M30 35v5M8 18h5M8 24h5M8 30h5M35 18h5M35 24h5M35 30h5"/></g>
+    <g th:case="'motherboard'"><rect x="8" y="8" width="32" height="32" rx="2"/><rect x="13" y="13" width="10" height="10"/><path d="M28 13h7M28 17h7M28 21h7M13 30h22M13 35h14"/></g>
+    <g th:case="'ram'"><rect x="5" y="16" width="38" height="13" rx="1.5"/><path d="M10 20h4v5h-4zM17 20h4v5h-4zM24 20h4v5h-4zM31 20h4v5h-4zM9 29v4M14 29v4M19 29v4M29 29v4M34 29v4M39 29v4"/></g>
+    <g th:case="'gpu'"><rect x="5" y="14" width="36" height="20" rx="2"/><circle cx="17" cy="24" r="6"/><circle cx="31" cy="24" r="6"/><path d="M41 18h2M41 30h2M9 34v4h12v-4"/></g>
+    <g th:case="'ssd'"><rect x="5" y="18" width="38" height="12" rx="1.5"/><rect x="9" y="21" width="8" height="6"/><rect x="20" y="21" width="8" height="6"/><path d="M33 22v4M37 22v4"/></g>
+    <g th:case="'psu'"><rect x="7" y="11" width="34" height="26" rx="2"/><circle cx="21" cy="24" r="8"/><path d="M21 16v16M13 24h16M35 17v4M35 29h0"/></g>
+    <g th:case="*"><rect x="14" y="6" width="20" height="36" rx="2"/><circle cx="24" cy="14" r="2"/><path d="M19 22h10M19 26h10M19 30h10"/></g>
+</svg>
+
+<!-- Карточка товара в сетке -->
+<article th:fragment="card(p)" class="card">
+    <a class="card__media" th:href="@{/p/{s}(s=${p.slug})}">
+        <svg th:replace="~{fragments :: icon(${p.category.slug})}"></svg>
+    </a>
+    <div class="card__body">
+        <a class="card__title" th:href="@{/p/{s}(s=${p.slug})}" th:text="${p.name}">Название</a>
+        <p class="card__specs" th:text="${@fmt.specs(p)}">AM5 · 6 · 12</p>
+        <div class="card__foot">
+            <span class="price" th:text="${@fmt.rub(p.price)}">0 ₽</span>
+            <button th:if="${p.inStock()}" class="btn btn--small" type="button"
+                    th:attr="data-add-to-cart=${p.id}">В корзину</button>
+            <span th:unless="${p.inStock()}" class="muted">Нет в наличии</span>
+        </div>
+    </div>
+</article>
+
+</body>
+</html>

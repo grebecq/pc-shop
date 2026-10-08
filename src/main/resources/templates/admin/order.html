@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head('Заказ ' + ${order.number()})}"></head>
+<body>
+<header th:replace="~{admin/layout :: nav}"></header>
+<main class="wrap narrow">
+    <a class="muted" th:href="@{/admin/orders}">← Все заказы</a>
+    <div th:replace="~{admin/layout :: flash}"></div>
+    <div class="catalog-head">
+        <h1 th:text="'Заказ ' + ${order.number()}">Заказ</h1>
+        <span class="pill" th:classappend="'pill--' + ${#strings.toLowerCase(order.status)}" th:text="${order.status.label()}">Статус</span>
+    </div>
+    <p class="muted" th:text="${@fmt.date(order.createdAt)} + ' · ' + ${order.channel.label()} + (${order.paidAt != null} ? ' · оплачен ' + ${@fmt.date(order.paidAt)} : '')">дата</p>
+
+    <table class="cart-table">
+        <thead><tr><th>Товар</th><th>Цена</th><th>Кол-во</th><th>Сумма</th></tr></thead>
+        <tbody>
+        <tr th:each="i : ${order.items}">
+            <td th:text="${i.name}">Товар</td>
+            <td class="num" th:text="${@fmt.rub(i.price)}">0 ₽</td>
+            <td class="num" th:text="${i.quantity}">1</td>
+            <td class="num" th:text="${@fmt.rub(i.sum())}">0 ₽</td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="cart-total">Итого: <b th:text="${@fmt.rub(order.total)}">0 ₽</b></p>
+
+    <dl class="details">
+        <div><dt>Покупатель</dt><dd th:text="${order.customerName}">Имя</dd></div>
+        <div><dt>Телефон</dt><dd th:text="${order.phone}">Телефон</dd></div>
+        <div><dt>Адрес</dt><dd th:text="${order.address}">Адрес</dd></div>
+        <div th:if="${order.comment}"><dt>Комментарий</dt><dd th:text="${order.comment}">Комментарий</dd></div>
+    </dl>
+
+    <form class="panel inline-form" method="post" th:action="@{/admin/orders/{id}/status(id=${order.id})}" th:unless="${order.status.isFinal()}">
+        <label for="status">Новый статус</label>
+        <select id="status" name="status">
+            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s.label()}" th:selected="${s == order.status}">Статус</option>
+        </select>
+        <button class="btn" type="submit">Сохранить</button>
+        <p class="muted small" th:if="${order.telegramChatId}">Покупатель получит уведомление в Telegram. При отмене товар вернётся на склад.</p>
+    </form>
+</main>
+</body>
+</html>

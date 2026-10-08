@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head('Заказы')}"></head>
+<body>
+<header th:replace="~{admin/layout :: nav}"></header>
+<main class="wrap">
+    <div class="catalog-head">
+        <h1>Заказы</h1>
+        <span class="muted" th:text="${orders.totalElements} + ' всего'">0</span>
+    </div>
+    <nav class="tabs">
+        <a th:href="@{/admin/orders}" th:classappend="${status == null} ? 'is-current'">Все</a>
+        <a th:each="s : ${statuses}" th:href="@{/admin/orders(status=${s})}" th:text="${s.label()}"
+           th:classappend="${status == s} ? 'is-current'">Статус</a>
+    </nav>
+    <div class="table-scroll">
+        <table class="cart-table admin-table">
+            <thead><tr><th>№</th><th>Дата</th><th>Канал</th><th>Покупатель</th><th>Сумма</th><th>Статус</th></tr></thead>
+            <tbody>
+            <tr th:each="o : ${orders.content}">
+                <td><a th:href="@{/admin/orders/{id}(id=${o.id})}" th:text="${o.number()}">№1001</a></td>
+                <td th:text="${@fmt.date(o.createdAt)}">дата</td>
+                <td th:text="${o.channel.label()}">Сайт</td>
+                <td th:text="${o.customerName} + ', ' + ${o.phone}">Имя</td>
+                <td class="num" th:text="${@fmt.rub(o.total)}">0 ₽</td>
+                <td><span class="pill" th:classappend="'pill--' + ${#strings.toLowerCase(o.status)}" th:text="${o.status.label()}">Статус</span></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="empty" th:if="${orders.empty}">Заказов пока нет. Оформите тестовый заказ на сайте или в боте.</p>
+    <nav class="pages" th:if="${orders.totalPages > 1}">
+        <a th:each="i : ${#numbers.sequence(0, orders.totalPages - 1)}" th:href="@{/admin/orders(page=${i}, status=${status})}"
+           th:text="${i + 1}" th:classappend="${i == orders.number} ? 'is-current'">1</a>
+    </nav>
+</main>
+</body>
+</html>
