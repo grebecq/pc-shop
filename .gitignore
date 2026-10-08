@@ -1,0 +1,12 @@
+# Gradle / IDE
+.gradle/
+build/
+out/
+.idea/
+*.iml
+.vscode/
+
+# Секреты
+.env
+
+.DS_Store
