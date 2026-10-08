@@ -3,9 +3,12 @@ spring:
     name: pc-shop
   datasource:
     # Либо целиком DB_URL, либо по частям (так их отдают хостинги вроде Render)
-    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:pcshop}}
+    # DB_SCHEMA — отдельная схема, если база общая с другим проектом (Flyway создаст её сам)
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:pcshop}?currentSchema=${DB_SCHEMA:public}}
     username: ${DB_USER:pcshop}
     password: ${DB_PASSWORD:pcshop}
+  flyway:
+    schemas: ${DB_SCHEMA:public}
   jpa:
     open-in-view: false
     hibernate:
