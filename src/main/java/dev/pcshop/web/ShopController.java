@@ -1,5 +1,7 @@
 package dev.pcshop.web;
 
+import dev.pcshop.account.AccountService;
+import dev.pcshop.account.ShopUser;
 import dev.pcshop.catalog.Attributes;
 import dev.pcshop.catalog.CatalogQueries;
 import dev.pcshop.catalog.CatalogService;
@@ -7,6 +9,7 @@ import dev.pcshop.catalog.Category;
 import dev.pcshop.catalog.Product;
 import dev.pcshop.catalog.ProductQuery;
 import dev.pcshop.order.OrderService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.MultiValueMap;
@@ -24,10 +27,12 @@ class ShopController {
 
     private final CatalogService catalog;
     private final OrderService orders;
+    private final AccountService accounts;
 
-    ShopController(CatalogService catalog, OrderService orders) {
+    ShopController(CatalogService catalog, OrderService orders, AccountService accounts) {
         this.catalog = catalog;
         this.orders = orders;
+        this.accounts = accounts;
     }
 
     @GetMapping("/")
@@ -60,8 +65,26 @@ class ShopController {
         return "shop/product";
     }
 
+    @GetMapping("/search")
+    String search(@RequestParam(defaultValue = "") String q, @RequestParam(defaultValue = "0") int page, Model model) {
+        String query = q.strip();
+        model.addAttribute("q", query);
+        if (!query.isEmpty()) {
+            var result = catalog.searchText(query, Math.max(0, page));
+            model.addAttribute("page", result);
+            model.addAttribute("pageLinks", java.util.stream.IntStream.range(0, result.getTotalPages())
+                    .mapToObj(i -> "/search?q=" + enc(query) + "&page=" + i).toList());
+        }
+        return "shop/search";
+    }
+
     @GetMapping("/cart")
-    String cart() {
+    String cart(@AuthenticationPrincipal ShopUser user, Model model) {
+        // Вошедшему покупателю подставляем имя, телефон и сохранённые адреса
+        if (user != null) {
+            model.addAttribute("account", accounts.get(user.getAccountId()));
+            model.addAttribute("addresses", accounts.addresses(user.getAccountId()));
+        }
         return "shop/cart";
     }
 

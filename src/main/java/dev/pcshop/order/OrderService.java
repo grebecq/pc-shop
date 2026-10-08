@@ -36,6 +36,12 @@ public class OrderService {
      */
     @Transactional
     public Order create(Channel channel, Customer customer, List<OrderLine> lines, Long telegramChatId) {
+        return create(channel, customer, lines, telegramChatId, null);
+    }
+
+    /** То же, но заказ привязывается к аккаунту покупателя на сайте. */
+    @Transactional
+    public Order create(Channel channel, Customer customer, List<OrderLine> lines, Long telegramChatId, Long accountId) {
         // Одинаковые товары в запросе складываем в одну позицию
         Map<Long, Integer> quantities = new LinkedHashMap<>();
         lines.forEach(l -> quantities.merge(l.productId(), l.quantity(), Integer::sum));
@@ -49,7 +55,7 @@ public class OrderService {
         Map<Long, Product> byId = products.findAllById(quantities.keySet()).stream()
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
 
-        Order order = new Order(channel, customer, telegramChatId);
+        Order order = new Order(channel, customer, telegramChatId, accountId);
         quantities.forEach((productId, qty) -> {
             Product product = byId.get(productId);
             if (product == null || !product.isActive()) {
@@ -103,6 +109,11 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<Order> recentForChat(long chatId) {
         return orders.findTop5ByTelegramChatIdOrderByCreatedAtDesc(chatId);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Order> forAccount(long accountId, int page) {
+        return orders.findAllByAccountIdOrderByCreatedAtDesc(accountId, PageRequest.of(page, 10));
     }
 
     @Transactional(readOnly = true)

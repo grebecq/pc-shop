@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Изменить адрес')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap narrow">
+    <div th:replace="~{account/parts :: head}"></div>
+    <nav th:replace="~{fragments :: account-tabs('addresses')}"></nav>
+
+    <form class="panel form-grid" method="post" th:action="@{/account/addresses/{id}(id=${address.id})}" th:object="${form}" novalidate>
+        <h2 class="h3">Изменить адрес</h2>
+        <th:block th:replace="~{account/parts :: address-fields}"></th:block>
+        <div class="form-actions">
+            <button class="btn" type="submit">Сохранить</button>
+            <a class="btn btn--ghost" th:href="@{/account/addresses}">Отмена</a>
+        </div>
+    </form>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

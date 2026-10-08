@@ -73,10 +73,37 @@ class ProductSearch {
                 params, Long.class);
 
         // Загружаем сущности одним запросом и восстанавливаем порядок сортировки
-        Map<Long, Product> byId = products.findAllById(ids).stream()
+        Map<Long, Product> byId = products.findAllByIdInAndActiveTrue(ids).stream()
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
         List<Product> page = ids.stream().map(byId::get).toList();
         return new PageImpl<>(page, PageRequest.of(query.page(), query.size()), total);
+    }
+
+    /**
+     * Каждое слово запроса должно встретиться в названии или бренде: «rtx 5070 asus».
+     * Спецсимволы LIKE экранируем, чтобы «%» в запросе не превращался в шаблон.
+     */
+    Page<Product> searchText(String text, int page, int size) {
+        String[] words = text.toLowerCase().split("\\s+");
+        var params = new MapSqlParameterSource();
+        var where = new StringBuilder("p.active");
+        int n = 0;
+        for (String word : words) {
+            if (word.isBlank() || n == 6) {
+                continue;
+            }
+            String like = "%" + word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+            where.append(" AND (lower(p.name) LIKE :w").append(n).append(" OR lower(p.brand) LIKE :w").append(n).append(')');
+            params.addValue("w" + n, like);
+            n++;
+        }
+        long total = jdbc.queryForObject("SELECT count(*) FROM product p WHERE " + where, params, Long.class);
+        params.addValue("limit", size).addValue("offset", (long) page * size);
+        List<Long> ids = jdbc.queryForList("SELECT p.id FROM product p WHERE " + where
+                + " ORDER BY (p.stock > 0) DESC, p.price DESC, p.id LIMIT :limit OFFSET :offset", params, Long.class);
+        Map<Long, Product> byId = products.findAllByIdInAndActiveTrue(ids).stream()
+                .collect(Collectors.toMap(Product::getId, Function.identity()));
+        return new PageImpl<>(ids.stream().map(byId::get).toList(), PageRequest.of(page, size), total);
     }
 
     /** Значения каждой характеристики категории с количеством товаров — для фильтра. */

@@ -37,6 +37,7 @@ public class Order {
     private String address;
     private String comment;
     private Long telegramChatId;
+    private Long accountId;
     private int total;
     private Instant createdAt = Instant.now();
     private Instant paidAt;
@@ -48,7 +49,8 @@ public class Order {
     protected Order() {
     }
 
-    Order(Channel channel, Customer customer, Long telegramChatId) {
+    Order(Channel channel, Customer customer, Long telegramChatId, Long accountId) {
+        this.accountId = accountId;
         this.channel = channel;
         this.customerName = customer.name();
         this.phone = customer.phone();
@@ -91,6 +93,7 @@ public class Order {
     public String getAddress() { return address; }
     public String getComment() { return comment; }
     public Long getTelegramChatId() { return telegramChatId; }
+    public Long getAccountId() { return accountId; }
     public int getTotal() { return total; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getPaidAt() { return paidAt; }

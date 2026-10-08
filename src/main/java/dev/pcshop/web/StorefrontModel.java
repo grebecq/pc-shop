@@ -1,13 +1,19 @@
 package dev.pcshop.web;
 
+import dev.pcshop.account.AccountException;
+import dev.pcshop.account.ShopUser;
 import dev.pcshop.catalog.CatalogService;
 import dev.pcshop.config.ShopProperties;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
-/** Данные шапки сайта (категории, ссылка на бота) для всех страниц витрины. */
-@ControllerAdvice(assignableTypes = {ShopController.class, PaymentController.class})
+/** Общие данные шапки (категории, ссылка на бота, вошедший покупатель) для всех страниц сайта. */
+@ControllerAdvice(basePackageClasses = StorefrontModel.class)
 class StorefrontModel {
 
     private final CatalogService catalog;
@@ -19,8 +25,16 @@ class StorefrontModel {
     }
 
     @ModelAttribute
-    void common(Model model) {
+    void common(Model model, @AuthenticationPrincipal ShopUser user) {
         model.addAttribute("categories", catalog.categories());
         model.addAttribute("botLink", props.telegram().botLink());
+        model.addAttribute("user", user);
+    }
+
+    /** Чужой или удалённый адрес в кабинете — обычная 404, без подробностей. */
+    @ExceptionHandler(AccountException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    String notFound() {
+        return "error/404";
     }
 }

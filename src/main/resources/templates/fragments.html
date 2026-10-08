@@ -13,6 +13,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/shop.css}">
     <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+    <!-- CSRF-токен для запросов из JS (оформление заказа) -->
+    <meta name="csrf-token" th:if="${_csrf}" th:content="${_csrf.token}">
+    <meta name="csrf-header" th:if="${_csrf}" th:content="${_csrf.headerName}">
 </head>
 
 <div th:fragment="header">
@@ -20,11 +23,18 @@
     <header class="header">
         <div class="wrap header__inner">
             <a class="logo" th:href="@{/}"><span class="logo__mark"></span>Сборка</a>
-            <nav class="header__nav" aria-label="Категории">
-                <a th:each="c : ${categories}" th:href="@{/c/{s}(s=${c.slug})}" th:text="${c.name}">Категория</a>
-            </nav>
+            <form class="search" role="search" method="get" th:action="@{/search}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+                <input type="search" name="q" th:value="${q}" placeholder="Поиск: RTX 5070, Ryzen 7, DDR5…" aria-label="Поиск по каталогу" maxlength="100">
+            </form>
+            <a class="header__link" th:if="${user == null}" th:href="@{/login}">Войти</a>
+            <a class="header__link" th:if="${user != null}" th:href="@{/account}" th:text="${user.displayName}">Кабинет</a>
             <a class="header__cart" th:href="@{/cart}">Корзина <span class="badge" data-cart-count hidden>0</span></a>
         </div>
+        <div class="header__cats"><nav class="wrap header__nav" aria-label="Категории">
+            <a th:each="c : ${categories}" th:href="@{/c/{s}(s=${c.slug})}" th:text="${c.name}"
+               th:classappend="${category != null and category.slug == c.slug} ? 'is-current'">Категория</a>
+        </nav></div>
     </header>
 </div>
 
@@ -48,10 +58,24 @@
     <g th:case="*"><rect x="14" y="6" width="20" height="36" rx="2"/><circle cx="24" cy="14" r="2"/><path d="M19 22h10M19 26h10M19 30h10"/></g>
 </svg>
 
+<!-- Меню личного кабинета -->
+<nav th:fragment="account-tabs(tab)" class="tabs" aria-label="Личный кабинет">
+    <a th:href="@{/account}" th:classappend="${tab == 'orders'} ? 'is-current'">Мои заказы</a>
+    <a th:href="@{/account/addresses}" th:classappend="${tab == 'addresses'} ? 'is-current'">Адреса доставки</a>
+    <a th:href="@{/account/profile}" th:classappend="${tab == 'profile'} ? 'is-current'">Профиль</a>
+</nav>
+
+<!-- Сообщения после действий -->
+<div th:fragment="flash">
+    <p class="notice" th:if="${message}" th:text="${message}">Сохранено</p>
+    <p class="notice notice--error" th:if="${error}" th:text="${error}">Ошибка</p>
+</div>
+
 <!-- Карточка товара в сетке -->
 <article th:fragment="card(p)" class="card">
-    <a class="card__media" th:href="@{/p/{s}(s=${p.slug})}">
-        <svg th:replace="~{fragments :: icon(${p.category.slug})}"></svg>
+    <a class="card__media" th:href="@{/p/{s}(s=${p.slug})}" th:classappend="${p.imageUrl != null} ? 'has-photo'">
+        <img th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" th:alt="${p.name}" loading="lazy">
+        <th:block th:if="${p.imageUrl == null}"><svg th:replace="~{fragments :: icon(${p.category.slug})}"></svg></th:block>
     </a>
     <div class="card__body">
         <a class="card__title" th:href="@{/p/{s}(s=${p.slug})}" th:text="${p.name}">Название</a>

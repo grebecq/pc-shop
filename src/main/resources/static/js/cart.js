@@ -81,7 +81,22 @@
       write(cart);
       renderCart();
     });
-    document.querySelector("[data-order-form]").addEventListener("submit", submitOrder);
+    var orderForm = document.querySelector("[data-order-form]");
+    orderForm.addEventListener("submit", submitOrder);
+    // Выбор «Другой адрес» открывает поля нового адреса
+    orderForm.addEventListener("change", function (e) {
+      if (e.target.name === "addressId") {
+        orderForm.querySelector("[data-new-address]").hidden = e.target.value !== "";
+      }
+    });
+  }
+
+  function csrfHeaders() {
+    var token = document.querySelector("meta[name=csrf-token]");
+    var header = document.querySelector("meta[name=csrf-header]");
+    var h = { "Content-Type": "application/json" };
+    if (token && header) h[header.content] = token.content;
+    return h;
   }
 
   var products = {};
@@ -139,17 +154,38 @@
     var error = form.querySelector("[data-order-error]");
     var button = form.querySelector("button[type=submit]");
     var cart = read();
+    var picked = form.querySelector("input[name=addressId]:checked");
+    var addressId = picked && picked.value ? Number(picked.value) : null;
+    var newAddress = null;
+    var address = "";
+
+    if (addressId) {
+      // Сохранённый адрес: сервер возьмёт его из базы, здесь только текст для проверки формы
+      address = picked.closest("label").querySelector(".muted").textContent;
+    } else {
+      var city = form.city.value.trim(), street = form.street.value.trim(), apt = form.apartment.value.trim();
+      if (!city || !street) {
+        error.textContent = "Укажите город, улицу и дом.";
+        return;
+      }
+      address = city + ", " + street + (apt ? ", кв. " + apt : "");
+      newAddress = { label: street.slice(0, 64), city: city, street: street, apartment: apt || null, postalCode: "", makeDefault: false };
+    }
+
     var body = {
       customer: {
         name: form.name.value.trim(),
         phone: form.phone.value.trim(),
-        address: form.address.value.trim(),
+        address: address,
         comment: form.comment.value.trim() || null
       },
-      items: Object.keys(cart).map(function (id) { return { productId: Number(id), quantity: cart[id] }; })
+      items: Object.keys(cart).map(function (id) { return { productId: Number(id), quantity: cart[id] }; }),
+      addressId: addressId,
+      newAddress: newAddress,
+      saveAddress: !!(form.saveAddress && form.saveAddress.checked && newAddress)
     };
-    if (!body.customer.name || !body.customer.phone || !body.customer.address) {
-      error.textContent = "Заполните имя, телефон и адрес.";
+    if (!body.customer.name || !body.customer.phone) {
+      error.textContent = "Укажите имя и телефон.";
       return;
     }
     error.textContent = "";
@@ -157,12 +193,13 @@
 
     fetch("/api/orders", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: csrfHeaders(),
       body: JSON.stringify(body)
     })
       .then(function (r) {
-        return r.json().then(function (data) {
-          if (!r.ok) throw new Error(data.detail || "Не удалось оформить заказ");
+        // Ответ может быть не JSON (например, истекла сессия) — тогда общее сообщение
+        return r.json().catch(function () { return {}; }).then(function (data) {
+          if (!r.ok) throw new Error(data.detail || "Не удалось оформить заказ. Обновите страницу и попробуйте ещё раз.");
           return data;
         });
       })

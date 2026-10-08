@@ -9,12 +9,23 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   thymeleaf:
     cache: ${THYMELEAF_CACHE:true}
 
 server:
   port: ${PORT:8080}
   forward-headers-strategy: framework
+  servlet:
+    session:
+      # Покупатель остаётся в аккаунте две недели (сессии живут в памяти приложения)
+      timeout: 14d
+      cookie:
+        http-only: true
+        same-site: lax
 
 shop:
   # Публичный адрес сайта: нужен для ссылок в сообщениях бота

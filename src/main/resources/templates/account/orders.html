@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Мои заказы')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap narrow">
+    <div th:replace="~{account/parts :: head}"></div>
+    <nav th:replace="~{fragments :: account-tabs('orders')}"></nav>
+    <p class="notice" th:if="${param.welcome}">Аккаунт создан. Добавьте адрес доставки, чтобы оформлять заказы в пару кликов.</p>
+
+    <div class="order-list" th:unless="${orders.empty}">
+        <a class="order-row" th:each="o : ${orders.content}" th:href="@{/order/{id}(id=${o.publicId})}">
+            <span class="order-row__main">
+                <b th:text="${o.number()}">№1001</b>
+                <span class="muted" th:text="${@fmt.date(o.createdAt)}">дата</span>
+            </span>
+            <span class="num" th:text="${@fmt.rub(o.total)}">0 ₽</span>
+            <span class="pill" th:classappend="'pill--' + ${#strings.toLowerCase(o.status.name())}" th:text="${o.status.label()}">Статус</span>
+        </a>
+    </div>
+    <div class="empty" th:if="${orders.empty}">
+        <p>Заказов пока нет.</p>
+        <a class="btn btn--ghost" th:href="@{/}" style="margin-top:14px">Перейти в каталог</a>
+    </div>
+    <nav class="pages" th:if="${orders.totalPages > 1}" aria-label="Страницы">
+        <a th:each="i : ${#numbers.sequence(0, orders.totalPages - 1)}" th:href="@{/account(page=${i})}" th:text="${i + 1}"
+           th:classappend="${i == orders.number} ? 'is-current'">1</a>
+    </nav>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

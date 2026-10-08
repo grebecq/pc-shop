@@ -12,8 +12,9 @@
     </nav>
 
     <div class="product">
-        <div class="product__media">
-            <svg th:replace="~{fragments :: icon(${product.category.slug})}"></svg>
+        <div class="product__media" th:classappend="${product.imageUrl != null} ? 'has-photo'">
+            <img th:if="${product.imageUrl != null}" th:src="${product.imageUrl}" th:alt="${product.name}">
+            <th:block th:if="${product.imageUrl == null}"><svg th:replace="~{fragments :: icon(${product.category.slug})}"></svg></th:block>
         </div>
         <div class="product__info">
             <p class="muted" th:text="${product.brand}">Бренд</p>

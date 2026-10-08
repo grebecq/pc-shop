@@ -19,6 +19,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findTop5ByTelegramChatIdOrderByCreatedAtDesc(long chatId);
 
+    Page<Order> findAllByAccountIdOrderByCreatedAtDesc(long accountId, Pageable pageable);
+
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     Page<Order> findAllByStatusOrderByCreatedAtDesc(OrderStatus status, Pageable pageable);

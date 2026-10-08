@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Адреса доставки')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap narrow">
+    <div th:replace="~{account/parts :: head}"></div>
+    <nav th:replace="~{fragments :: account-tabs('addresses')}"></nav>
+    <div th:replace="~{fragments :: flash}"></div>
+
+    <div class="address-list" th:unless="${addresses.empty}">
+        <article class="address panel" th:each="a : ${addresses}">
+            <div>
+                <p class="address__label">
+                    <b th:text="${a.label}">Дом</b>
+                    <span class="pill pill--done" th:if="${a.defaultAddress}">Основной</span>
+                </p>
+                <p th:text="${a.oneLine()}">Москва, Тверская 7</p>
+            </div>
+            <div class="address__actions">
+                <a class="btn btn--ghost btn--small" th:href="@{/account/addresses/{id}(id=${a.id})}">Изменить</a>
+                <form th:unless="${a.defaultAddress}" method="post" th:action="@{/account/addresses/{id}/default(id=${a.id})}">
+                    <button class="btn btn--ghost btn--small" type="submit">Сделать основным</button>
+                </form>
+                <form method="post" th:action="@{/account/addresses/{id}/delete(id=${a.id})}"
+                      onsubmit="return confirm('Удалить этот адрес?')">
+                    <button class="remove" type="submit">Удалить</button>
+                </form>
+            </div>
+        </article>
+    </div>
+    <p class="empty" th:if="${addresses.empty}">Адресов пока нет. Добавьте первый: он станет основным и подставится при оформлении заказа.</p>
+
+    <form class="panel form-grid" method="post" th:action="@{/account/addresses}" th:object="${form}" novalidate>
+        <h2 class="h3">Новый адрес</h2>
+        <th:block th:replace="~{account/parts :: address-fields}"></th:block>
+        <div><button class="btn" type="submit">Добавить адрес</button></div>
+    </form>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

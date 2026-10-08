@@ -34,6 +34,11 @@ public class CatalogService {
         return search.search(category(query.categorySlug()), query);
     }
 
+    /** Поиск по названию и бренду из строки поиска в шапке сайта. */
+    public Page<Product> searchText(String text, int page) {
+        return search.searchText(text, page, CatalogQueries.PAGE_SIZE);
+    }
+
     public Map<String, List<FacetValue>> facets(String categorySlug) {
         return search.facets(category(categorySlug));
     }

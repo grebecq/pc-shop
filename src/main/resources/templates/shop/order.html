@@ -31,7 +31,11 @@
     </dl>
 
     <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn" th:href="@{/pay/{id}(id=${order.publicId})}">Перейти к оплате</a>
-    <p class="muted small">Сохраните ссылку на эту страницу: по ней видно статус заказа.</p>
+    <p class="muted small" th:if="${user != null and order.accountId == user.accountId}">
+        Заказ сохранён в <a th:href="@{/account}">личном кабинете</a>.</p>
+    <p class="muted small" th:unless="${user != null and order.accountId == user.accountId}">
+        Сохраните ссылку на эту страницу: по ней видно статус заказа.
+        <a th:href="@{/register}">Создайте аккаунт</a>, чтобы следующие заказы были в одном месте.</p>
 </main>
 
 <footer th:replace="~{fragments :: footer}"></footer>

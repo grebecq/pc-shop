@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Регистрация')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap auth">
+    <form class="panel auth__form" method="post" th:action="@{/register}" th:object="${form}" novalidate>
+        <h1>Регистрация</h1>
+        <p class="muted">Сохраните адреса доставки и следите за всеми заказами.</p>
+        <label for="name">Имя</label>
+        <input id="name" th:field="*{name}" autocomplete="name" required maxlength="128">
+        <p class="form-error" th:errors="*{name}"></p>
+        <label for="email">Email</label>
+        <input id="email" th:field="*{email}" type="email" autocomplete="email" required>
+        <p class="form-error" th:errors="*{email}"></p>
+        <label for="password">Пароль</label>
+        <input id="password" th:field="*{password}" type="password" autocomplete="new-password" required minlength="8" th:value="''">
+        <p class="hint">Не короче 8 символов.</p>
+        <p class="form-error" th:errors="*{password}"></p>
+        <input type="hidden" name="next" th:if="${param.next}" th:value="${param.next}">
+        <button class="btn btn--wide" type="submit">Создать аккаунт</button>
+        <p class="auth__alt">Уже есть аккаунт? <a th:href="@{/login(next=${param.next})}">Войти</a></p>
+    </form>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

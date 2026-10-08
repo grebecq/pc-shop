@@ -1,6 +1,7 @@
 package dev.pcshop.admin;
 
 import dev.pcshop.catalog.ProductRepository;
+import dev.pcshop.media.ProductPhotos;
 import dev.pcshop.order.OrderService;
 import dev.pcshop.order.OrderStatus;
 import org.springframework.stereotype.Controller;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /** Админка владельца: заказы и товары. Доступ по логину и паролю из ADMIN_USER / ADMIN_PASSWORD. */
@@ -20,10 +22,12 @@ class AdminController {
 
     private final OrderService orders;
     private final ProductRepository products;
+    private final ProductPhotos photos;
 
-    AdminController(OrderService orders, ProductRepository products) {
+    AdminController(OrderService orders, ProductRepository products, ProductPhotos photos) {
         this.orders = orders;
         this.products = products;
+        this.photos = photos;
     }
 
     @GetMapping
@@ -77,6 +81,24 @@ class AdminController {
             product.setActive(active);
             flash.addFlashAttribute("message", "Сохранено: " + product.getName());
         }
+        return "redirect:/admin/products#p" + id;
+    }
+
+    @PostMapping("/products/{id}/photo")
+    String uploadPhoto(@PathVariable long id, @RequestParam("photo") MultipartFile file, RedirectAttributes flash) {
+        try {
+            photos.save(id, file.getBytes());
+            flash.addFlashAttribute("message", "Фото обновлено");
+        } catch (IllegalArgumentException | java.io.IOException e) {
+            flash.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/admin/products#p" + id;
+    }
+
+    @PostMapping("/products/{id}/photo/delete")
+    String deletePhoto(@PathVariable long id, RedirectAttributes flash) {
+        photos.delete(id);
+        flash.addFlashAttribute("message", "Фото удалено");
         return "redirect:/admin/products#p" + id;
     }
 }

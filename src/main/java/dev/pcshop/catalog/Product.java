@@ -37,6 +37,7 @@ public class Product {
     private Map<String, Object> attributes = new LinkedHashMap<>();
 
     private boolean active = true;
+    private String imageUrl;
     private Instant createdAt = Instant.now();
 
     protected Product() {
@@ -53,6 +54,11 @@ public class Product {
     public Map<String, Object> getAttributes() { return attributes; }
     public boolean isActive() { return active; }
     public Instant getCreatedAt() { return createdAt; }
+    public String getImageUrl() { return imageUrl; }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
 
     public boolean inStock() {
         return stock > 0;
