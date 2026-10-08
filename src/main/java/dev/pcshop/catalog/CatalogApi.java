@@ -48,7 +48,8 @@ class CatalogApi {
     /** Данные для корзины: цены и остатки берутся с сервера, а не из браузера. */
     @GetMapping("/products/by-ids")
     List<ProductDto> byIds(@RequestParam List<Long> ids) {
-        return catalog.productsByIds(ids).stream().map(ProductDto::of).toList();
+        // Корзина больше 50 позиций не бывает; ограничение защищает от огромных IN-запросов
+        return catalog.productsByIds(ids.stream().distinct().limit(50).toList()).stream().map(ProductDto::of).toList();
     }
 
     record CategoryDto(String slug, String name, List<FilterDef> filters) {

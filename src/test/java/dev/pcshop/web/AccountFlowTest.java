@@ -51,7 +51,8 @@ class AccountFlowTest {
             var b = HttpRequest.newBuilder(uri(path)).header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json));
             if (withCsrf) {
-                b.header("X-CSRF-TOKEN", metaCsrf(get("/cart").body()));
+                String cart = get("/cart").body();
+                b.header(find(cart, "name=\"csrf-header\" content=\"([^\"]+)\""), metaCsrf(cart));
             }
             return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
         }
@@ -133,6 +134,31 @@ class AccountFlowTest {
         other.postForm("/logout", "/account");
         var evil = other.postForm("/login", "/login", "email", email, "password", "secret-123", "next", "//evil.example");
         assertThat(evil.headers().firstValue("Location").orElseThrow()).doesNotContain("evil");
+    }
+
+    @Test
+    void anonymousVisitorGetsNoSession() throws Exception {
+        var home = new Browser().get("/");
+        assertThat(home.headers().allValues("Set-Cookie")).noneMatch(c -> c.startsWith("JSESSIONID"));
+    }
+
+    @Test
+    void tooManyWrongPasswordsLockLogin() throws Exception {
+        var b = new Browser();
+        String email = "brute-" + UUID.randomUUID() + "@example.com";
+        b.register(email);
+        b.postForm("/logout", "/account");
+        for (int i = 0; i < 10; i++) {
+            b.postForm("/login", "/login", "email", email, "password", "wrong-" + i);
+        }
+        var correct = b.postForm("/login", "/login", "email", email, "password", "secret-123");
+        assertThat(correct.headers().firstValue("Location").orElseThrow()).endsWith("/login?locked");
+    }
+
+    @Test
+    void brokenLinksGive404() throws Exception {
+        assertThat(new Browser().get("/order/not-a-uuid").statusCode()).isEqualTo(404);
+        assertThat(new Browser().get("/order/" + UUID.randomUUID()).statusCode()).isEqualTo(404);
     }
 
     @Test

@@ -58,7 +58,9 @@ class AuthController {
             return "account/register";
         }
         // Сразу входим под новым аккаунтом: новая сессия против фиксации, контекст сохраняем в сессию
-        request.changeSessionId();
+        if (request.getSession(false) != null) {
+            request.changeSessionId();
+        }
         var context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
         SecurityContextHolder.setContext(context);

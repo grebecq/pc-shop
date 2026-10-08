@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -25,6 +26,9 @@ public class Order {
     private Long id;
 
     private UUID publicId = UUID.randomUUID();
+
+    @Version
+    private long version;
 
     @Enumerated(EnumType.STRING)
     private Channel channel;
@@ -78,6 +82,10 @@ public class Order {
         if (status.isFinal()) {
             throw new IllegalStateException("Заказ уже " + status.label().toLowerCase() + ", статус менять нельзя");
         }
+        if (next == OrderStatus.AWAITING_PAYMENT) {
+            // Иначе заказ снова попадёт под автоотмену и вернёт на склад уже отданный товар
+            throw new IllegalStateException("Вернуть заказ в «ждёт оплаты» нельзя");
+        }
         if (next == OrderStatus.PAID && paidAt == null) {
             paidAt = Instant.now();
         }
@@ -98,6 +106,11 @@ public class Order {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getPaidAt() { return paidAt; }
     public List<OrderItem> getItems() { return items; }
+
+    /** До какого момента нужно оплатить, иначе заказ отменится автоматически. */
+    public Instant payBefore(java.time.Duration timeout) {
+        return createdAt.plus(timeout);
+    }
 
     /** Короткий номер для людей: «№1042». */
     public String number() {

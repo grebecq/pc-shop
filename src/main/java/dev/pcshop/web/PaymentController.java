@@ -3,12 +3,14 @@ package dev.pcshop.web;
 import dev.pcshop.order.Order;
 import dev.pcshop.order.OrderService;
 import dev.pcshop.order.OrderStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 
+import java.time.Duration;
 import java.util.UUID;
 
 /**
@@ -19,9 +21,11 @@ import java.util.UUID;
 class PaymentController {
 
     private final OrderService orders;
+    private final Duration timeout;
 
-    PaymentController(OrderService orders) {
+    PaymentController(OrderService orders, @Value("${shop.orders.payment-timeout:30m}") Duration timeout) {
         this.orders = orders;
+        this.timeout = timeout;
     }
 
     @GetMapping("/pay/{publicId}")
@@ -31,12 +35,14 @@ class PaymentController {
             return "redirect:/order/" + publicId;
         }
         model.addAttribute("order", order);
+        model.addAttribute("payBefore", order.payBefore(timeout));
         return "shop/pay";
     }
 
     @PostMapping("/pay/{publicId}")
     String pay(@PathVariable UUID publicId) {
-        orders.markPaid(publicId);
-        return "redirect:/order/" + publicId + "?paid";
+        Order order = orders.markPaid(publicId);
+        // «Оплата прошла» показываем, только если заказ действительно оплачен (а не отменён по таймауту)
+        return "redirect:/order/" + publicId + (order.getStatus() == OrderStatus.PAID ? "?paid" : "");
     }
 }

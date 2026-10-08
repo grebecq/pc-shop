@@ -96,6 +96,15 @@ public class OrderService {
         return order;
     }
 
+    /** Отмена неоплаченного заказа по таймауту. Если заказ уже оплачен, ничего не делает. */
+    @Transactional
+    public void cancelUnpaid(long orderId) {
+        Order order = orders.findWithItemsById(orderId).orElseThrow(() -> new NotFoundException("Заказ не найден"));
+        if (order.getStatus() == OrderStatus.AWAITING_PAYMENT) {
+            changeStatus(orderId, OrderStatus.CANCELLED);
+        }
+    }
+
     @Transactional(readOnly = true)
     public Order byPublicId(UUID publicId) {
         return orders.findByPublicId(publicId).orElseThrow(() -> new NotFoundException("Заказ не найден"));

@@ -14,6 +14,8 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 
@@ -42,7 +44,8 @@ public class SecurityConfig {
 
     @Bean
     @Order(2)
-    SecurityFilterChain shopChain(HttpSecurity http, AccountService accounts, PasswordEncoder encoder) throws Exception {
+    SecurityFilterChain shopChain(HttpSecurity http, AccountService accounts, PasswordEncoder encoder,
+                                  LoginLimiter loginLimiter) throws Exception {
         http
                 .authenticationManager(manager(accounts, encoder))
                 .authorizeHttpRequests(auth -> auth
@@ -52,10 +55,14 @@ public class SecurityConfig {
                         .loginPage("/login")
                         .usernameParameter("email")
                         .successHandler(afterLogin())
-                        .failureUrl("/login?error")
+                        .failureHandler(loginLimiter)
                         .permitAll())
-                .logout(logout -> logout.logoutUrl("/logout").logoutSuccessUrl("/"));
-        // CSRF включён везде, в том числе для /api: JS сайта передаёт токен в заголовке X-CSRF-TOKEN
+                .logout(logout -> logout.logoutUrl("/logout").logoutSuccessUrl("/"))
+                // CSRF включён везде, в том числе для /api: JS сайта берёт токен и имя заголовка из meta-тегов страницы.
+                // Токен храним в cookie, а не в сессии: иначе каждый анонимный посетитель (и поисковый бот)
+                // получал бы сессию в памяти на 14 дней
+                .csrf(csrf -> csrf.csrfTokenRepository(new CookieCsrfTokenRepository()))
+                .addFilterBefore(loginLimiter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
@@ -67,6 +74,7 @@ public class SecurityConfig {
         var fallback = new SavedRequestAwareAuthenticationSuccessHandler();
         fallback.setDefaultTargetUrl("/account");
         return (request, response, authentication) -> {
+            LoginLimiter.reset(request);
             String next = request.getParameter("next");
             if (isSafeNext(next)) {
                 response.sendRedirect(next);

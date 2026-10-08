@@ -5,7 +5,7 @@
 <div th:replace="~{fragments :: header}"></div>
 
 <main class="wrap narrow">
-    <p class="notice" th:if="${param.paid}">Оплата прошла. Спасибо за заказ!</p>
+    <p class="notice" th:if="${param.paid != null and order.paidAt != null}">Оплата прошла. Спасибо за заказ!</p>
     <div class="catalog-head">
         <h1 th:text="'Заказ ' + ${order.number()}">Заказ №1001</h1>
         <span class="pill" th:classappend="'pill--' + ${#strings.toLowerCase(order.status)}" th:text="${order.status.label()}">Статус</span>
@@ -31,6 +31,8 @@
     </dl>
 
     <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn" th:href="@{/pay/{id}(id=${order.publicId})}">Перейти к оплате</a>
+    <p class="muted" th:if="${order.status.name() == 'CANCELLED' and order.paidAt == null}">
+        Заказ отменён: оплата не поступила вовремя, товар вернулся на склад. Его можно оформить заново.</p>
     <p class="muted small" th:if="${user != null and order.accountId == user.accountId}">
         Заказ сохранён в <a th:href="@{/account}">личном кабинете</a>.</p>
     <p class="muted small" th:unless="${user != null and order.accountId == user.accountId}">

@@ -9,7 +9,7 @@
         <h1>Вход</h1>
         <p class="muted">Заказы, адреса доставки и данные для оформления в одном месте.</p>
         <p class="notice notice--error" th:if="${param.error}">Неверный email или пароль.</p>
-        <p class="notice" th:if="${param.logout}">Вы вышли из аккаунта.</p>
+        <p class="notice notice--error" th:if="${param.locked}">Слишком много неудачных попыток. Попробуйте через 15 минут.</p>
         <label for="email">Email</label>
         <input id="email" name="email" type="email" autocomplete="email" required autofocus>
         <label for="password">Пароль</label>

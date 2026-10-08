@@ -19,6 +19,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findTop5ByTelegramChatIdOrderByCreatedAtDesc(long chatId);
 
+    @org.springframework.data.jpa.repository.Query(
+            "select o.id from Order o where o.status = dev.pcshop.order.OrderStatus.AWAITING_PAYMENT and o.createdAt < :before")
+    List<Long> findAwaitingCreatedBefore(java.time.Instant before);
+
     Page<Order> findAllByAccountIdOrderByCreatedAtDesc(long accountId, Pageable pageable);
 
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /** Общие данные шапки (категории, ссылка на бота, вошедший покупатель) для всех страниц сайта. */
 @ControllerAdvice(basePackageClasses = StorefrontModel.class)
@@ -31,8 +32,8 @@ class StorefrontModel {
         model.addAttribute("user", user);
     }
 
-    /** Чужой или удалённый адрес в кабинете — обычная 404, без подробностей. */
-    @ExceptionHandler(AccountException.class)
+    /** Чужой или удалённый адрес в кабинете, кривая ссылка на заказ — обычная 404, без подробностей. */
+    @ExceptionHandler({AccountException.class, MethodArgumentTypeMismatchException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
     String notFound() {
         return "error/404";

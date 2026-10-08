@@ -6,6 +6,7 @@ import dev.pcshop.account.AddressForm;
 import dev.pcshop.account.ShopUser;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -89,7 +90,7 @@ class OrderApi {
      * @param newAddress  новый адрес по полям — сохраняется в кабинет, если saveAddress
      */
     record CreateOrderRequest(@Valid Customer customer,
-                              @NotEmpty(message = "Корзина пуста") List<@Valid OrderLine> items,
+                              @NotEmpty(message = "Корзина пуста") @Size(max = 50, message = "Слишком много позиций в заказе") List<@Valid OrderLine> items,
                               Long addressId,
                               @Valid AddressForm newAddress,
                               Boolean saveAddress) {

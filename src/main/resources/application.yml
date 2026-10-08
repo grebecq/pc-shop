@@ -29,6 +29,9 @@ server:
         same-site: lax
 
 shop:
+  orders:
+    # Сколько ждём оплату. Потом заказ отменяется, а товар возвращается на склад
+    payment-timeout: ${PAYMENT_TIMEOUT:30m}
   # Публичный адрес сайта: нужен для ссылок в сообщениях бота
   base-url: ${SHOP_BASE_URL:${RENDER_EXTERNAL_URL:http://localhost:8080}}
   admin:

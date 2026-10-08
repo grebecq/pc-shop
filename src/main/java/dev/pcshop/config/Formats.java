@@ -16,10 +16,12 @@ public class Formats {
 
     private static final ZoneId ZONE = ZoneId.of("Europe/Moscow");
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm").withZone(ZONE);
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm").withZone(ZONE);
 
     /** 17490 → «17 490 ₽» */
     public static String price(long rubles) {
-        return String.format("%,d", rubles).replace(',', ' ') + " ₽";
+        // Locale.ROOT: иначе на сервере с русской локалью разделитель будет другим и замена не сработает
+        return String.format(java.util.Locale.ROOT, "%,d", rubles).replace(',', ' ') + " ₽";
     }
 
     public static String dateTime(Instant instant) {
@@ -32,6 +34,14 @@ public class Formats {
 
     public String date(Instant instant) {
         return dateTime(instant);
+    }
+
+    public static String timeOfDay(Instant instant) {
+        return instant == null ? "" : TIME.format(instant);
+    }
+
+    public String time(Instant instant) {
+        return timeOfDay(instant);
     }
 
     /** Короткая строка характеристик для карточки: «AM5 · 6 · 12». */

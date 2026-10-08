@@ -1,5 +1,6 @@
 package dev.pcshop.account;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -40,8 +41,13 @@ public class AccountService implements UserDetailsService {
         if (accounts.existsByEmail(email)) {
             throw new AccountException("Аккаунт с таким email уже есть. Войдите или используйте другой email.");
         }
-        Account account = accounts.save(new Account(email, encoder.encode(form.password()), form.name().strip()));
-        return new ShopUser(account);
+        try {
+            Account account = accounts.saveAndFlush(new Account(email, encoder.encode(form.password()), form.name().strip()));
+            return new ShopUser(account);
+        } catch (DataIntegrityViolationException e) {
+            // Две регистрации с одним email одновременно: вторая упирается в UNIQUE
+            throw new AccountException("Аккаунт с таким email уже есть. Войдите или используйте другой email.");
+        }
     }
 
     @Transactional(readOnly = true)

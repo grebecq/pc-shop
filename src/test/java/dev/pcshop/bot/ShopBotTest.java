@@ -48,7 +48,7 @@ class ShopBotTest {
     void setUp() {
         telegram = mock(TelegramClient.class);
         var props = new ShopProperties("http://localhost:8080", null, new ShopProperties.Telegram("test", null, null, null));
-        bot = new ShopBot(telegram, catalog, orders, cart, props);
+        bot = new ShopBot(telegram, catalog, orders, cart, props, java.time.Duration.ofMinutes(30));
         cart.clear(CHAT);
     }
 
@@ -100,6 +100,32 @@ class ShopBotTest {
         assertThat(lastText()).contains("Не понял команду");
     }
 
+    @Test
+    void staleOrFakeButtonsAreAnswered() throws Exception {
+        callback("a:999999");
+        callback("p:999999");
+        callback("c:nope:0");
+        callback("garbage");
+        // Каждое нажатие получило ответ (иначе у кнопки вечно крутятся часики), в корзину ничего не попало
+        assertThat(toasts()).containsExactly("Товара нет в наличии", "Кнопка устарела", "Кнопка устарела", "Кнопка устарела");
+        assertThat(cart.lines(CHAT)).isEmpty();
+    }
+
+    @Test
+    void payButtonForCancelledOrderDoesNotSayPaid() throws Exception {
+        callback("a:" + catalog.product("deepcool-cc560").getId());
+        callback("co");
+        text("Иван");
+        text("+7 900 000-00-00");
+        text("Москва, ул. Тверская, 1");
+        String payData = lastButtons().stream().filter(d -> d.startsWith("pay:")).findFirst().orElseThrow();
+        assertThat(lastText()).contains("зарезервирован до");
+
+        orders.changeStatus(orders.byPublicId(UUID.fromString(payData.substring(4))).getId(), OrderStatus.CANCELLED);
+        callback(payData);
+        assertThat(lastText()).contains("отменён").doesNotContain("оплачен (");
+    }
+
     // ---------- Помощники: собираем Update из JSON, как его присылает Telegram ----------
 
     private void text(String text) throws Exception {
@@ -133,6 +159,14 @@ class ShopBotTest {
         return mockingDetails(telegram).getInvocations().stream()
                 .map(Invocation::getArguments).filter(a -> a.length == 1).map(a -> a[0])
                 .filter(a -> a instanceof SendMessage || a instanceof EditMessageText)
+                .toList();
+    }
+
+    private List<String> toasts() {
+        return mockingDetails(telegram).getInvocations().stream()
+                .map(Invocation::getArguments).filter(a -> a.length == 1).map(a -> a[0])
+                .filter(a -> a instanceof org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery)
+                .map(a -> ((org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery) a).getText())
                 .toList();
     }
 
