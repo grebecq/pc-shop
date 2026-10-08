@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${product.name})}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap">
+    <nav class="crumbs">
+        <a th:href="@{/}">Главная</a> /
+        <a th:href="@{/c/{s}(s=${product.category.slug})}" th:text="${product.category.name}">Категория</a> /
+        <span th:text="${product.name}">Товар</span>
+    </nav>
+
+    <div class="product">
+        <div class="product__media">
+            <svg th:replace="~{fragments :: icon(${product.category.slug})}"></svg>
+        </div>
+        <div class="product__info">
+            <p class="muted" th:text="${product.brand}">Бренд</p>
+            <h1 th:text="${product.name}">Название</h1>
+            <p class="product__price" th:text="${@fmt.rub(product.price)}">0 ₽</p>
+            <p th:if="${product.inStock()}" class="stock stock--ok" th:text="'В наличии: ' + ${product.stock} + ' шт.'">В наличии</p>
+            <p th:unless="${product.inStock()}" class="stock">Нет в наличии</p>
+
+            <div class="buy" th:if="${product.inStock()}">
+                <div class="qty">
+                    <button type="button" data-qty="-1" aria-label="Меньше">−</button>
+                    <input id="qty" type="number" value="1" min="1" th:max="${product.stock < 20 ? product.stock : 20}" aria-label="Количество">
+                    <button type="button" data-qty="1" aria-label="Больше">+</button>
+                </div>
+                <button class="btn" type="button" th:attr="data-add-to-cart=${product.id}" data-with-qty>Добавить в корзину</button>
+            </div>
+
+            <p class="product__desc" th:text="${product.description}">Описание</p>
+
+            <h2 class="h3">Характеристики</h2>
+            <table class="specs">
+                <tr th:each="s : ${specs}"><th th:text="${s.key}">Сокет</th><td th:text="${s.value}">AM5</td></tr>
+            </table>
+        </div>
+    </div>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

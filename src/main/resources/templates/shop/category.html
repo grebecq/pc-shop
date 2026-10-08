@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${category.name})}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap">
+    <nav class="crumbs"><a th:href="@{/}">Главная</a> / <span th:text="${category.name}">Категория</span></nav>
+    <div class="catalog-head">
+        <h1 th:text="${category.name}">Категория</h1>
+        <span class="muted" th:text="${page.totalElements} + ' товаров'">0 товаров</span>
+    </div>
+
+    <div class="catalog">
+        <!-- Фильтры: обычная GET-форма, отправляется при каждом изменении -->
+        <form class="filters" method="get" th:action="@{/c/{s}(s=${category.slug})}" data-autosubmit>
+            <input type="hidden" name="sort" th:value="${sort}">
+            <fieldset th:each="f : ${category.filters}" th:if="${facets[f.key()] != null and !facets[f.key()].isEmpty()}">
+                <legend th:text="${f.label()}">Характеристика</legend>
+                <label class="check" th:each="v : ${facets[f.key()]}">
+                    <input type="checkbox" th:name="${f.key()}" th:value="${v.value()}"
+                           th:checked="${@fmt.selected(selected, f.key(), v.value())}">
+                    <span th:text="${v.value()}">AM5</span>
+                    <small th:text="${v.count()}">3</small>
+                </label>
+            </fieldset>
+            <fieldset>
+                <legend>Цена, ₽</legend>
+                <div class="price-range">
+                    <input type="number" name="min" min="0" placeholder="от" th:value="${query.minPrice()}" aria-label="Цена от">
+                    <input type="number" name="max" min="0" placeholder="до" th:value="${query.maxPrice()}" aria-label="Цена до">
+                </div>
+            </fieldset>
+            <label class="check"><input type="checkbox" name="stock" value="1" th:checked="${query.inStockOnly()}"> Только в наличии</label>
+            <a class="reset" th:href="@{/c/{s}(s=${category.slug})}">Сбросить фильтры</a>
+        </form>
+
+        <section>
+            <div class="toolbar">
+                <label for="sort">Сортировка</label>
+                <select id="sort" data-sort>
+                    <option value="popular" th:selected="${sort == 'popular'}">Сначала в наличии</option>
+                    <option value="price_asc" th:selected="${sort == 'price_asc'}">Сначала дешевле</option>
+                    <option value="price_desc" th:selected="${sort == 'price_desc'}">Сначала дороже</option>
+                    <option value="name" th:selected="${sort == 'name'}">По названию</option>
+                </select>
+            </div>
+            <div class="grid grid--3" th:unless="${page.empty}">
+                <th:block th:each="p : ${page.content}"><article th:replace="~{fragments :: card(${p})}"></article></th:block>
+            </div>
+            <p class="empty" th:if="${page.empty}">По этим фильтрам ничего не нашлось. Попробуйте убрать часть условий.</p>
+            <nav class="pages" th:if="${page.totalPages > 1}" aria-label="Страницы">
+                <a th:each="link, it : ${pageLinks}" th:href="${link}" th:text="${it.count}"
+                   th:classappend="${it.index == page.number} ? 'is-current'">1</a>
+            </nav>
+        </section>
+    </div>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

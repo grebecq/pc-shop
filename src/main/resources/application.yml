@@ -25,6 +25,8 @@ shop:
   telegram:
     # Пустой токен = бот выключен, сайт и API работают без него
     bot-token: ${BOT_TOKEN:}
+    # Имя бота без @ — для кнопки «Открыть бота» на сайте
+    bot-username: ${BOT_USERNAME:}
     admin-chat-id: ${ADMIN_CHAT_ID:}
     # Токен платёжного провайдера из @BotFather (Payments). Пусто = демо-оплата кнопкой
     payment-token: ${TELEGRAM_PAYMENT_TOKEN:}

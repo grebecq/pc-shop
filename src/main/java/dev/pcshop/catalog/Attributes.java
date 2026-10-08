@@ -1,7 +1,10 @@
 package dev.pcshop.catalog;
 
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /** Человеческие названия характеристик и их форматирование для сайта и бота. */
 public final class Attributes {
@@ -29,6 +32,32 @@ public final class Attributes {
             Map.entry("max_gpu_mm", "Макс. длина видеокарты, мм"),
             Map.entry("color", "Цвет"));
 
+    // JSONB не хранит порядок ключей, поэтому порядок вывода задаём сами: важное сначала
+    private static final List<String> ORDER = List.of(
+            "socket", "chip_vendor", "memory_gb", "cores", "threads", "chipset", "memory_type", "capacity_gb",
+            "modules", "frequency", "form_factor", "interface", "read_mbps", "power", "certificate", "modular",
+            "max_gpu_mm", "length_mm", "recommended_psu", "tdp", "color");
+
+    // Короткая запись значения с единицами для карточек товара
+    private static final Map<String, String> SHORT = Map.ofEntries(
+            Map.entry("cores", "%s ядер"),
+            Map.entry("threads", "%s потоков"),
+            Map.entry("tdp", "%s Вт"),
+            Map.entry("capacity_gb", "%s ГБ"),
+            Map.entry("modules", "%s ГБ"),
+            Map.entry("frequency", "%s МГц"),
+            Map.entry("memory_gb", "%s ГБ"),
+            Map.entry("length_mm", "%s мм"),
+            Map.entry("recommended_psu", "БП от %s Вт"),
+            Map.entry("read_mbps", "до %s МБ/с"),
+            Map.entry("power", "%s Вт"),
+            Map.entry("max_gpu_mm", "GPU до %s мм"));
+
+    private static final Comparator<String> BY_ORDER = Comparator.comparingInt(k -> {
+        int i = ORDER.indexOf(k);
+        return i < 0 ? ORDER.size() : i;
+    });
+
     private Attributes() {
     }
 
@@ -46,7 +75,20 @@ public final class Attributes {
     /** Характеристики товара в виде «Название → значение» в исходном порядке. */
     public static Map<String, String> readable(Product product) {
         Map<String, String> result = new LinkedHashMap<>();
-        product.getAttributes().forEach((k, v) -> result.put(label(k), value(v)));
+        product.getAttributes().keySet().stream().sorted(BY_ORDER)
+                .forEach(k -> result.put(label(k), value(product.getAttributes().get(k))));
         return result;
+    }
+
+    /** Три главные характеристики одной строкой: «AM5 · 6 ядер · 65 Вт». */
+    public static String brief(Product product) {
+        return product.getAttributes().entrySet().stream()
+                .filter(e -> !(e.getValue() instanceof Boolean))
+                .sorted(Map.Entry.comparingByKey(BY_ORDER))
+                .limit(3)
+                .map(e -> SHORT.containsKey(e.getKey())
+                        ? SHORT.get(e.getKey()).formatted(value(e.getValue()))
+                        : value(e.getValue()))
+                .collect(Collectors.joining(" · "));
     }
 }
