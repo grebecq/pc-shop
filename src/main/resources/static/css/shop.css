@@ -377,3 +377,6 @@ button.link-btn { background: none; border: 0; padding: 0; font: inherit; font-s
   .pick__side { justify-content: space-between; }
   .presets { grid-template-columns: 1fr; }
 }
+
+/* Смена пароля */
+.auth__forgot { justify-self: end; font-size: 14px; }

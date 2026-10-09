@@ -28,15 +28,9 @@
 
         <form class="panel form-grid" method="post" th:action="@{/account/password}">
             <h2 class="h3">Пароль</h2>
-            <div class="field">
-                <label for="current">Текущий пароль</label>
-                <input id="current" name="current" type="password" autocomplete="current-password" required>
-            </div>
-            <div class="field">
-                <label for="password">Новый пароль</label>
-                <input id="password" name="password" type="password" autocomplete="new-password" required minlength="8">
-            </div>
-            <div><button class="btn btn--ghost" type="submit">Сменить пароль</button></div>
+            <p class="small-top">Отправим на <b th:text="${account.email}">email</b> ссылку для смены пароля.</p>
+            <p class="muted small-top">Ссылка действует 30 минут.</p>
+            <div><button class="btn btn--ghost" type="submit">Отправить письмо</button></div>
         </form>
     </div>
 </main>

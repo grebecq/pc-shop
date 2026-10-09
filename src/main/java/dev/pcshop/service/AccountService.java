@@ -1,7 +1,6 @@
 package dev.pcshop.service;
 
 import dev.pcshop.dto.request.AddressRequest;
-import dev.pcshop.dto.request.PasswordChangeRequest;
 import dev.pcshop.dto.request.ProfileRequest;
 import dev.pcshop.dto.request.RegisterRequest;
 import dev.pcshop.entity.Account;
@@ -79,15 +78,6 @@ public class AccountService implements UserDetailsService {
         if (account.getPhone() == null && phone != null && !phone.isBlank()) {
             account.setPhone(phone.strip());
         }
-    }
-
-    @Transactional
-    public void changePassword(long accountId, PasswordChangeRequest request) {
-        Account account = get(accountId);
-        if (!encoder.matches(request.current(), account.getPasswordHash())) {
-            throw new BadRequestException("Текущий пароль указан неверно");
-        }
-        account.setPasswordHash(encoder.encode(request.password()));
     }
 
     @Transactional(readOnly = true)
