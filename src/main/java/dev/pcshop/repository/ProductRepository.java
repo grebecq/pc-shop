@@ -33,6 +33,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @EntityGraph(attributePaths = "category")
     List<Product> findTop8ByActiveTrueAndStockGreaterThanOrderByPriceDesc(int stock);
 
+    /** Товары со скидкой. Их немного, поэтому сортируем по размеру скидки уже в Java. */
+    @EntityGraph(attributePaths = "category")
+    List<Product> findAllByActiveTrueAndOldPriceNotNull();
+
     /** Похожие товары: та же категория, в наличии, ближе всего по цене. */
     @Query(value = """
             SELECT p.id FROM product p

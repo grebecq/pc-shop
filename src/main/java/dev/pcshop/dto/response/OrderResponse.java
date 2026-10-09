@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 public record OrderResponse(UUID publicId, String number, OrderStatus status, String statusLabel,
-                            DeliveryMethod deliveryMethod, int deliveryPrice, int total,
+                            DeliveryMethod deliveryMethod, int deliveryPrice, String promoCode, int discount, int total,
                             List<OrderItemResponse> items) {
 }

@@ -8,7 +8,7 @@
     <nav class="crumbs"><a th:href="@{/}">Главная</a> / <span th:text="${category.name}">Категория</span></nav>
     <div class="catalog-head">
         <h1 th:text="${category.name}">Категория</h1>
-        <span class="muted" th:text="${page.totalElements} + ' товаров'">0 товаров</span>
+        <span class="muted" th:text="${page.totalElements} + ' ' + ${@fmt.goods(page.totalElements)}">0 товаров</span>
     </div>
 
     <div class="catalog">

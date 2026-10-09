@@ -572,6 +572,32 @@ input.is-invalid:focus { box-shadow: 0 0 0 3px rgba(180, 35, 24, .12); }
 .suggest__price { font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .suggest__all { color: var(--accent); grid-template-columns: 1fr !important; }
 
+/* ---------- Цены: скидки, промокод, «сообщить о поступлении» ---------- */
+.price--sale { color: var(--err); }
+.price-old { color: var(--muted); font-size: 13px; font-weight: 400; white-space: nowrap; }
+.card__price { display: grid; line-height: 1.25; }
+.sale-badge { position: absolute; top: 8px; left: 8px; background: var(--err); color: #fff; font-size: 13px; font-weight: 600; line-height: 1.5; padding: 1px 8px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+.sale-badge--inline { position: static; }
+.product__prices { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.product__prices .product__price { margin-top: 0; }
+.product__prices .price-old { font-size: 17px; }
+.header__nav a.header__nav-sale { color: var(--err); font-weight: 500; padding-right: 20px; border-right: 1px solid var(--line); }
+.section__head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.section__head h2 { margin: 0; }
+.section__head a { color: var(--accent); text-decoration: none; white-space: nowrap; }
+.sale-lead { margin: -6px 0 24px; font-size: 16px; }
+.promo { margin: 16px 0 0 auto; max-width: 340px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.promo label { font-size: 14px; color: var(--muted); }
+.promo__row { display: flex; gap: 8px; }
+.promo__row input { flex: 1; min-width: 0; }
+.promo__row input:read-only { background: var(--bg); font-weight: 500; }
+.promo__note { font-size: 13px; color: var(--ok); }
+.promo__note.is-error { color: var(--err); }
+.promo__note[hidden], .cart-sum [hidden] { display: none; }
+.cart-sum__discount dd { color: var(--err); }
+.stock-alert { display: grid; gap: 8px; justify-items: start; }
+.stock-alert .notice { margin: 0; }
+
 @media (max-width: 1000px) {
   .reviews__body { grid-template-columns: 1fr; }
   .reviews__side { order: -1; }
@@ -582,5 +608,7 @@ input.is-invalid:focus { box-shadow: 0 0 0 3px rgba(180, 35, 24, .12); }
   .header__build + .header__tools { margin-left: auto; }
   .header__tool-badge { right: -8px; }
   .card__tools { top: 6px; right: 6px; gap: 4px; }
+  .header__nav a.header__nav-sale { padding-right: 14px; }
+  .sale-badge { top: 6px; left: 6px; font-size: 12px; padding: 0 6px; }
   .tool { width: 28px; height: 28px; }
 }

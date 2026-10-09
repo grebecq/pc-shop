@@ -459,7 +459,8 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
 
         StringBuilder text = new StringBuilder()
                 .append("<b>").append(htmlEscape(p.getName())).append("</b>\n")
-                .append(Formats.price(p.getPrice())).append(" · ")
+                .append(Formats.price(p.getPrice()))
+                .append(p.onSale() ? " <s>" + Formats.price(p.getOldPrice()) + "</s> −" + p.discountPercent() + "%" : "").append(" · ")
                 .append(p.inStock() ? "в наличии " + p.getStock() + " шт." : "нет в наличии").append("\n\n")
                 .append(htmlEscape(p.getDescription())).append("\n\n");
         Attributes.readable(p).forEach((k, v) -> text.append(htmlEscape(k)).append(": ").append(htmlEscape(v)).append('\n'));
@@ -616,10 +617,11 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                 .build());
     }
 
-    /** Строки счёта в Telegram: товары и, если платная, доставка. Сумма строк равна total заказа. */
+    /** Строки счёта в Telegram: товары (со скидкой, если был промокод) и, если платная, доставка. Сумма строк равна total заказа. */
     private static List<LabeledPrice> invoicePrices(Order order) {
         var prices = new ArrayList<LabeledPrice>();
-        prices.add(new LabeledPrice("Товары", order.itemsTotal() * 100));
+        int items = order.itemsTotal() - order.getDiscount();
+        prices.add(new LabeledPrice(order.getDiscount() > 0 ? "Товары со скидкой" : "Товары", items * 100));
         if (order.getDeliveryPrice() > 0) {
             prices.add(new LabeledPrice("Доставка", order.getDeliveryPrice() * 100));
         }

@@ -24,6 +24,7 @@
         </tbody>
     </table>
     <p class="cart-total">
+        <span class="muted" th:if="${order.discount > 0}" th:text="'Промокод ' + ${order.promoCode} + ': −' + ${@fmt.rub(order.discount)} + ' · '">Промокод</span>
         <span class="muted" th:text="'Доставка: ' + (${order.deliveryPrice == 0} ? 'бесплатно' : ${@fmt.rub(order.deliveryPrice)}) + ' · '">Доставка</span>
         Итого: <b th:text="${@fmt.rub(order.total)}">0 ₽</b></p>
 

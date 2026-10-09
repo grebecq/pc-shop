@@ -62,13 +62,21 @@ public class Formats {
 
     /** 1 отзыв, 3 отзыва, 11 отзывов. */
     public String reviews(int count) {
-        int mod100 = count % 100;
-        int mod10 = count % 10;
-        String word = mod100 >= 11 && mod100 <= 14 ? "отзывов"
-                : mod10 == 1 ? "отзыв"
-                : mod10 >= 2 && mod10 <= 4 ? "отзыва"
-                : "отзывов";
-        return count + " " + word;
+        return count + " " + plural(count, "отзыв", "отзыва", "отзывов");
+    }
+
+    /** Только слово: «товар», «товара», «товаров» — число в шаблоне уже есть. */
+    public String goods(long count) {
+        return plural(count, "товар", "товара", "товаров");
+    }
+
+    private static String plural(long count, String one, String few, String many) {
+        long mod100 = count % 100;
+        long mod10 = count % 10;
+        return mod100 >= 11 && mod100 <= 14 ? many
+                : mod10 == 1 ? one
+                : mod10 >= 2 && mod10 <= 4 ? few
+                : many;
     }
 
     /** Короткая строка характеристик для карточки: «AM5 · 6 · 12». */

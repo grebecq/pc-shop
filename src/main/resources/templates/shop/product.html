@@ -22,9 +22,28 @@
                 <span class="star" aria-hidden="true">★</span> <b th:text="${@fmt.rating(product.rating)}">4,7</b>
                 <span class="muted" th:text="${@fmt.reviews(product.reviewsCount)}">3 отзыва</span></a>
             <a class="product__rating muted" href="#reviews" th:unless="${product.reviewsCount > 0}">Отзывов пока нет</a>
-            <p class="product__price" th:text="${@fmt.rub(product.price)}">0 ₽</p>
+            <div class="product__prices">
+                <p class="product__price" th:classappend="${product.onSale()} ? 'price--sale'" th:text="${@fmt.rub(product.price)}">0 ₽</p>
+                <th:block th:if="${product.onSale()}">
+                    <s class="price-old" th:text="${@fmt.rub(product.oldPrice)}">0 ₽</s>
+                    <span class="sale-badge sale-badge--inline" th:text="'−' + ${product.discountPercent()} + '%'">−10%</span>
+                </th:block>
+            </div>
             <p th:if="${product.inStock()}" class="stock stock--ok" th:text="'В наличии: ' + ${product.stock} + ' шт.'">В наличии</p>
             <p th:unless="${product.inStock()}" class="stock">Нет в наличии</p>
+            <div class="stock-alert" th:unless="${product.inStock()}">
+                <p class="notice" th:if="${stockMessage}" th:text="${stockMessage}">Готово</p>
+                <p class="notice notice--error" th:if="${stockError}" th:text="${stockError}">Ошибка</p>
+                <th:block th:if="${user == null}">
+                    <a class="btn" th:href="@{/login(next='/p/' + ${product.slug})}">Сообщить о поступлении</a>
+                    <p class="hint">Войдите, и мы напишем на email, как только товар появится.</p>
+                </th:block>
+                <form th:if="${user != null}" method="post" th:action="@{/p/{s}/stock-alert(s=${product.slug})}">
+                    <button class="btn" type="submit" th:classappend="${stockAlert} ? 'btn--ghost'"
+                            th:text="${stockAlert} ? 'Не сообщать' : 'Сообщить о поступлении'">Сообщить о поступлении</button>
+                </form>
+                <p class="hint" th:if="${stockAlert}">Напишем на email, как только товар появится.</p>
+            </div>
 
             <div class="buy" th:if="${product.inStock()}">
                 <div class="qty">

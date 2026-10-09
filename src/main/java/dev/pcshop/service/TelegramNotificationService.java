@@ -56,6 +56,9 @@ public class TelegramNotificationService {
         StringBuilder text = new StringBuilder();
         order.getItems().forEach(i -> text.append("• ").append(htmlEscape(i.getName()))
                 .append(" × ").append(i.getQuantity()).append('\n'));
+        if (order.getDiscount() > 0) {
+            text.append("Промокод ").append(htmlEscape(order.getPromoCode())).append(": −").append(Formats.price(order.getDiscount())).append('\n');
+        }
         if (order.getDeliveryPrice() > 0) {
             text.append("Доставка: ").append(Formats.price(order.getDeliveryPrice())).append('\n');
         }

@@ -81,14 +81,14 @@ class ShopFlowTest {
         var ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme");
         assertThat(ssd.getPrice()).as("один SSD дешевле порога бесплатной доставки, три — дороже").isBetween(16_667, 49_999);
 
-        var one = orders.create(Channel.SITE, CUSTOMER, DeliveryMethod.COURIER, List.of(new OrderLineRequest(ssd.getId(), 1)), null, null);
+        var one = orders.create(Channel.SITE, CUSTOMER, DeliveryMethod.COURIER, null, List.of(new OrderLineRequest(ssd.getId(), 1)), null, null);
         assertThat(one.getDeliveryPrice()).isEqualTo(490);
         assertThat(one.getTotal()).isEqualTo(ssd.getPrice() + 490);
 
-        var three = orders.create(Channel.SITE, CUSTOMER, DeliveryMethod.COURIER, List.of(new OrderLineRequest(ssd.getId(), 3)), null, null);
+        var three = orders.create(Channel.SITE, CUSTOMER, DeliveryMethod.COURIER, null, List.of(new OrderLineRequest(ssd.getId(), 3)), null, null);
         assertThat(three.getDeliveryPrice()).isZero();
 
-        var pickup = orders.create(Channel.SITE, CUSTOMER, DeliveryMethod.PICKUP, List.of(new OrderLineRequest(ssd.getId(), 1)), null, null);
+        var pickup = orders.create(Channel.SITE, CUSTOMER, DeliveryMethod.PICKUP, null, List.of(new OrderLineRequest(ssd.getId(), 1)), null, null);
         assertThat(pickup.getDeliveryPrice()).isZero();
         assertThat(pickup.getTotal()).isEqualTo(ssd.getPrice());
 
@@ -112,7 +112,7 @@ class ShopFlowTest {
     void adminEditRefreshesUpdatedAt() {
         var gpu = catalog.product("palit-geforce-rtx-5070-infinity-3-12-gb");
         var before = gpu.getUpdatedAt();
-        catalog.updateProduct(gpu.getId(), new ProductUpdateRequest(gpu.getPrice() + 100, gpu.getStock(), true));
+        catalog.updateProduct(gpu.getId(), new ProductUpdateRequest(gpu.getPrice() + 100, gpu.getOldPrice(), gpu.getStock(), true));
         assertThat(products.findById(gpu.getId()).orElseThrow().getUpdatedAt()).isAfter(before);
     }
 

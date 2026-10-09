@@ -15,8 +15,17 @@
                 <thead><tr><th>Товар</th><th>Цена</th><th>Количество</th><th>Сумма</th><th></th></tr></thead>
                 <tbody data-cart-rows></tbody>
             </table>
+            <div class="promo">
+                <label for="promo">Промокод</label>
+                <div class="promo__row">
+                    <input id="promo" maxlength="32" autocomplete="off" spellcheck="false" placeholder="Если есть" data-promo-input>
+                    <button class="btn btn--ghost btn--small" type="button" data-promo-apply>Применить</button>
+                </div>
+                <p class="promo__note" data-promo-note role="status" hidden></p>
+            </div>
             <dl class="cart-sum">
                 <div><dt>Товары</dt><dd data-cart-items>0 ₽</dd></div>
+                <div class="cart-sum__discount" data-discount-row hidden><dt data-discount-label>Промокод</dt><dd data-cart-discount>0 ₽</dd></div>
                 <div><dt>Доставка</dt><dd data-cart-delivery>бесплатно</dd></div>
                 <div class="cart-sum__total"><dt>Итого</dt><dd data-cart-total>0 ₽</dd></div>
             </dl>

@@ -101,8 +101,11 @@ public class OrderMailService {
     private void appendSummary(StringBuilder text, Order order) {
         order.getItems().forEach(i -> text.append("• ").append(i.getName()).append(" × ").append(i.getQuantity())
                 .append(" — ").append(Formats.price(i.sum())).append('\n'));
-        text.append("\nТовары: ").append(Formats.price(order.itemsTotal()))
-                .append("\nДоставка: ").append(order.getDeliveryPrice() == 0 ? "бесплатно" : Formats.price(order.getDeliveryPrice()))
+        text.append("\nТовары: ").append(Formats.price(order.itemsTotal()));
+        if (order.getDiscount() > 0) {
+            text.append("\nСкидка по промокоду ").append(order.getPromoCode()).append(": −").append(Formats.price(order.getDiscount()));
+        }
+        text.append("\nДоставка: ").append(order.getDeliveryPrice() == 0 ? "бесплатно" : Formats.price(order.getDeliveryPrice()))
                 .append("\nИтого: ").append(Formats.price(order.getTotal()))
                 .append("\n\n").append(order.getDeliveryMethod().label()).append(": ").append(order.getAddress())
                 .append("\nСтатус заказа: ").append(link("/order/" + order.getPublicId())).append('\n');

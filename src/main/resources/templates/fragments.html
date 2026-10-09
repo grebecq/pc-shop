@@ -44,6 +44,7 @@
             <a class="header__nav-build" th:href="@{/configurator}" th:classappend="${builderPage} ? 'is-current'">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="11" height="18" rx="1.5"/><path d="M7.5 7h4M7.5 10h4"/><circle cx="9.5" cy="16" r="1.6"/><path d="M18 8v8M15.5 12h5"/></svg>
                 Сборка ПК</a>
+            <a class="header__nav-sale" th:href="@{/sale}" th:classappend="${salePage} ? 'is-current'">Скидки</a>
             <a th:each="c : ${categories}" th:href="@{/c/{s}(s=${c.slug})}" th:text="${c.name}"
                th:classappend="${category != null and category.slug == c.slug} ? 'is-current'">Категория</a>
         </nav></div>
@@ -102,6 +103,7 @@
 <article th:fragment="card(p)" class="card">
     <a class="card__media" th:href="@{/p/{s}(s=${p.slug})}" th:classappend="${p.imageUrl != null} ? 'has-photo'">
         <th:block th:replace="~{fragments :: photo(${p})}"></th:block>
+        <span class="sale-badge" th:if="${p.onSale()}" th:text="'−' + ${p.discountPercent()} + '%'">−10%</span>
     </a>
     <div class="card__tools">
         <button type="button" class="tool" th:attr="data-fav=${p.id}" aria-label="В избранное" title="В избранное"
@@ -115,7 +117,10 @@
             <span class="muted" th:text="${@fmt.reviews(p.reviewsCount)}">3 отзыва</span></p>
         <p class="card__specs" th:text="${@fmt.specs(p)}">AM5 · 6 · 12</p>
         <div class="card__foot">
-            <span class="price" th:text="${@fmt.rub(p.price)}">0 ₽</span>
+            <span class="card__price">
+                <span class="price" th:classappend="${p.onSale()} ? 'price--sale'" th:text="${@fmt.rub(p.price)}">0 ₽</span>
+                <s class="price-old" th:if="${p.onSale()}" th:text="${@fmt.rub(p.oldPrice)}">0 ₽</s>
+            </span>
             <button th:if="${p.inStock()}" class="btn btn--small" type="button"
                     th:attr="data-add-to-cart=${p.id}">В корзину</button>
             <span th:unless="${p.inStock()}" class="muted">Нет в наличии</span>

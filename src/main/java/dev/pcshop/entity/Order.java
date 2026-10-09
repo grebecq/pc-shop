@@ -76,6 +76,14 @@ public class Order {
     @Column(name = "delivery_price", nullable = false)
     private int deliveryPrice;
 
+    /** Промокод, по которому дали скидку, или null. */
+    @Column(name = "promo_code")
+    private String promoCode;
+
+    /** Скидка по промокоду в рублях. Уже вычтена из total. */
+    @Column(nullable = false)
+    private int discount;
+
     /** Куда слать письма о заказе. У заказов из бота пусто. */
     private String email;
 
@@ -126,15 +134,25 @@ public class Order {
         total += price * quantity;
     }
 
+    /** Скидка по промокоду считается от суммы товаров, поэтому вызывается после addItem. */
+    public void applyPromo(String code, int discount) {
+        if (discount < 0 || discount > itemsTotal()) {
+            throw new IllegalArgumentException("Скидка не может быть больше суммы товаров");
+        }
+        total -= discount - this.discount;
+        this.discount = discount;
+        this.promoCode = code;
+    }
+
     /** Цена доставки считается от суммы товаров, поэтому вызывается после addItem. */
     public void chargeDelivery(int price) {
         total += price - deliveryPrice;
         deliveryPrice = price;
     }
 
-    /** Сумма товаров без доставки. */
+    /** Сумма товаров по их ценам, без скидки по промокоду и без доставки. */
     public int itemsTotal() {
-        return total - deliveryPrice;
+        return total - deliveryPrice + discount;
     }
 
     /** Покупатель может сам отменить заказ, пока его не передали в доставку. */
