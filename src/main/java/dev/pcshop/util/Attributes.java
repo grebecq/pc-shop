@@ -2,6 +2,7 @@ package dev.pcshop.util;
 
 import dev.pcshop.entity.Product;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -100,6 +101,11 @@ public final class Attributes {
             return b ? "да" : "нет";
         }
         return String.valueOf(value);
+    }
+
+    /** Ключи характеристик в порядке вывода: важное сначала. */
+    public static List<String> sorted(Collection<String> keys) {
+        return keys.stream().distinct().sorted(BY_ORDER).toList();
     }
 
     /** Характеристики товара в виде «Название → значение» в исходном порядке. */

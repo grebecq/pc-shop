@@ -64,6 +64,8 @@ public class ProductSearchRepository {
             case PRICE_ASC -> "p.price ASC";
             case PRICE_DESC -> "p.price DESC";
             case NAME -> "p.name ASC";
+            // Товары без отзывов — в конце
+            case RATING -> "p.rating DESC NULLS LAST, p.reviews_count DESC";
             // «Популярные»: сначала то, что есть в наличии, затем по остатку
             case POPULAR -> "(p.stock > 0) DESC, p.stock DESC, p.name ASC";
         };

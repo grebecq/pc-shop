@@ -34,4 +34,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     Page<Order> findAllByStatusOrderByCreatedAtDesc(OrderStatus status, Pageable pageable);
+
+    /** Покупатель оплатил заказ с этим товаром (и не отменил его) — значит, может оставить отзыв. */
+    @Query("""
+            select count(o) > 0 from Order o join o.items i
+            where o.accountId = :accountId and i.productId = :productId and o.paidAt is not null
+              and o.status <> dev.pcshop.enums.OrderStatus.CANCELLED""")
+    boolean hasBought(@Param("accountId") long accountId, @Param("productId") long productId);
 }

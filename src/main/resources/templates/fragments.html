@@ -19,7 +19,7 @@
 </head>
 
 <div th:fragment="header">
-    <header class="header">
+    <header class="header" th:attr="data-logged-in=${user != null}">
         <div class="wrap header__inner">
             <a class="logo" th:href="@{/}"><span class="logo__mark"></span>Сборка</a>
             <form class="search" role="search" method="get" th:action="@{/search}">
@@ -27,6 +27,15 @@
                 <input type="search" name="q" th:value="${q}" placeholder="Поиск: RTX 5070, Ryzen 7, DDR5…" aria-label="Поиск по каталогу" maxlength="100">
             </form>
             <a class="btn btn--small header__build" th:href="@{/configurator}">Собрать ПК</a>
+            <span class="header__tools">
+                <a class="header__tool" th:href="@{/compare}" data-compare-link title="Сравнение">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V11M12 20V4M18 20v-6"/></svg><span>Сравнение</span>
+                    <span class="badge header__tool-badge" data-compare-count hidden>0</span></a>
+                <a class="header__tool" th:href="@{/account/favorites}" title="Избранное">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg><span>Избранное</span>
+                    <span class="badge header__tool-badge" data-fav-count th:hidden="${favoriteIds == null or favoriteIds.empty}"
+                          th:text="${favoriteIds == null ? 0 : favoriteIds.size()}">0</span></a>
+            </span>
             <a class="header__link" th:if="${user == null}" th:href="@{/login}">Войти</a>
             <a class="header__link" th:if="${user != null}" th:href="@{/account}" th:text="${user.displayName}">Кабинет</a>
             <a class="header__cart" th:href="@{/cart}">Корзина <span class="badge" data-cart-count hidden>0</span></a>
@@ -50,6 +59,7 @@
         </nav>
     </div>
     <script th:src="@{/js/cart.js}"></script>
+    <script th:src="@{/js/catalog.js}"></script>
 </footer>
 
 <!-- Иконка категории вместо фотографии товара -->
@@ -70,6 +80,7 @@
     <a th:href="@{/account}" th:classappend="${tab == 'orders'} ? 'is-current'">Мои заказы</a>
     <a th:href="@{/account/builds}" th:classappend="${tab == 'builds'} ? 'is-current'">Мои сборки</a>
     <a th:href="@{/account/addresses}" th:classappend="${tab == 'addresses'} ? 'is-current'">Адреса доставки</a>
+    <a th:href="@{/account/favorites}" th:classappend="${tab == 'favorites'} ? 'is-current'">Избранное</a>
     <a th:href="@{/account/profile}" th:classappend="${tab == 'profile'} ? 'is-current'">Профиль</a>
 </nav>
 
@@ -92,8 +103,16 @@
     <a class="card__media" th:href="@{/p/{s}(s=${p.slug})}" th:classappend="${p.imageUrl != null} ? 'has-photo'">
         <th:block th:replace="~{fragments :: photo(${p})}"></th:block>
     </a>
+    <div class="card__tools">
+        <button type="button" class="tool" th:attr="data-fav=${p.id}" aria-label="В избранное" title="В избранное"
+                th:classappend="${favoriteIds != null and favoriteIds.contains(p.id)} ? 'is-on'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button>
+        <button type="button" class="tool" th:attr="data-compare=${p.id}" aria-label="Сравнить" title="Сравнить"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V11M12 20V4M18 20v-6"/></svg></button>
+    </div>
     <div class="card__body">
         <a class="card__title" th:href="@{/p/{s}(s=${p.slug})}" th:text="${p.name}">Название</a>
+        <p class="card__rating" th:if="${p.reviewsCount > 0}">
+            <span class="star" aria-hidden="true">★</span> <b th:text="${@fmt.rating(p.rating)}">4,7</b>
+            <span class="muted" th:text="${@fmt.reviews(p.reviewsCount)}">3 отзыва</span></p>
         <p class="card__specs" th:text="${@fmt.specs(p)}">AM5 · 6 · 12</p>
         <div class="card__foot">
             <span class="price" th:text="${@fmt.rub(p.price)}">0 ₽</span>

@@ -1,0 +1,4 @@
+<!-- Только карточки товаров: их вставляет JS в блок «Вы недавно смотрели» -->
+<th:block xmlns:th="http://www.thymeleaf.org" th:fragment="cards">
+    <th:block th:each="p : ${products}"><article th:replace="~{fragments :: card(${p})}"></article></th:block>
+</th:block>

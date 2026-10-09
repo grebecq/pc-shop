@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Сравнение товаров')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap compare-page" data-compare-page>
+    <div class="catalog-head">
+        <h1>Сравнение товаров</h1>
+        <label class="check" th:unless="${tables.empty}"><input type="checkbox" data-only-diff> Только различия</label>
+    </div>
+
+    <p class="empty" th:if="${tables.empty}">
+        Здесь пока пусто. Нажмите «Сравнить» у товаров в каталоге или на странице товара.
+        <a th:href="@{/}">Перейти в каталог</a></p>
+
+    <section class="compare" th:each="t : ${tables}">
+        <h2 th:text="${t.category.name}">Видеокарты</h2>
+        <div class="compare__scroll">
+            <table class="compare__table">
+                <thead>
+                <tr>
+                    <th></th>
+                    <th th:each="p : ${t.products}" class="compare__product">
+                        <a class="compare__media" th:href="@{/p/{s}(s=${p.slug})}" th:classappend="${p.imageUrl != null} ? 'has-photo'">
+                            <th:block th:replace="~{fragments :: photo(${p})}"></th:block>
+                        </a>
+                        <a class="compare__name" th:href="@{/p/{s}(s=${p.slug})}" th:text="${p.name}">Товар</a>
+                        <div class="compare__actions">
+                            <button th:if="${p.inStock()}" class="btn btn--small" type="button" th:attr="data-add-to-cart=${p.id}">В корзину</button>
+                            <span th:unless="${p.inStock()}" class="muted small">Нет в наличии</span>
+                            <button class="link-btn" type="button" th:attr="data-compare-remove=${p.id}">Убрать</button>
+                        </div>
+                    </th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="row : ${t.rows}" th:classappend="${row.differs} ? 'is-diff' : 'is-same'">
+                    <th th:text="${row.label}">Характеристика</th>
+                    <td th:each="v : ${row.values}" th:text="${v}">Значение</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

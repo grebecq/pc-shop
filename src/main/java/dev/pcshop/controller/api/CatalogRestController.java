@@ -78,4 +78,13 @@ public class CatalogRestController {
             List<@NotNull(message = "Пустой id товара") @Positive(message = "id товара — число больше 0") Long> ids) {
         return catalogMapper.toProductResponses(catalogService.productsByIds(ids.stream().distinct().toList()));
     }
+
+    @Operation(summary = "Подсказки для строки поиска",
+            description = "До 6 товаров, в названии или бренде которых есть все слова запроса. Запрос короче 2 символов — пустой список.")
+    @GetMapping("/products/suggest")
+    public List<ProductResponse> suggest(
+            @Parameter(example = "rtx 5070") @RequestParam @Size(max = 100, message = "Запрос — не длиннее 100 символов") String q) {
+        String query = q.strip();
+        return query.length() < 2 ? List.of() : catalogMapper.toProductResponses(catalogService.suggest(query, 6));
+    }
 }
