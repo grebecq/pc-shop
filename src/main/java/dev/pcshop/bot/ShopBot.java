@@ -1,29 +1,31 @@
 package dev.pcshop.bot;
 
-import dev.pcshop.build.Build;
-import dev.pcshop.build.BuildService;
-import dev.pcshop.build.Candidate;
-import dev.pcshop.build.Compatibility;
-import dev.pcshop.build.Issue;
-import dev.pcshop.build.Preset;
-import dev.pcshop.build.Slot;
-import dev.pcshop.catalog.Attributes;
-import dev.pcshop.catalog.CatalogService;
-import dev.pcshop.catalog.Category;
-import dev.pcshop.catalog.NotFoundException;
-import dev.pcshop.catalog.Product;
-import dev.pcshop.catalog.ProductQuery;
-import dev.pcshop.config.Formats;
 import dev.pcshop.config.ShopProperties;
-import dev.pcshop.order.Channel;
-import dev.pcshop.order.Customer;
-import dev.pcshop.order.Order;
-import dev.pcshop.order.OrderException;
-import dev.pcshop.order.OrderLine;
-import dev.pcshop.order.OrderService;
-import dev.pcshop.order.OrderStatus;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import dev.pcshop.dto.request.CustomerRequest;
+import dev.pcshop.dto.request.OrderLineRequest;
+import dev.pcshop.dto.request.ProductSearchRequest;
+import dev.pcshop.dto.response.CandidateResponse;
+import dev.pcshop.dto.response.PresetResponse;
+import dev.pcshop.entity.Category;
+import dev.pcshop.entity.Order;
+import dev.pcshop.entity.Product;
+import dev.pcshop.enums.Channel;
+import dev.pcshop.enums.OrderStatus;
+import dev.pcshop.enums.Slot;
+import dev.pcshop.exception.OrderException;
+import dev.pcshop.exception.ResourceNotFoundException;
+import dev.pcshop.model.Build;
+import dev.pcshop.model.Issue;
+import dev.pcshop.repository.BotCartRepository;
+import dev.pcshop.service.BotCartService;
+import dev.pcshop.service.BuildService;
+import dev.pcshop.service.CatalogService;
+import dev.pcshop.service.CompatibilityService;
+import dev.pcshop.service.OrderService;
+import dev.pcshop.util.Attributes;
+import dev.pcshop.util.Formats;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
@@ -69,39 +71,31 @@ import static org.springframework.web.util.HtmlUtils.htmlEscape;
  */
 @Component
 @ConditionalOnExpression("!'${shop.telegram.bot-token:}'.isBlank()")
-class ShopBot implements LongPollingSingleThreadUpdateConsumer {
+@Slf4j
+@RequiredArgsConstructor
+public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
 
-    private static final Logger log = LoggerFactory.getLogger(ShopBot.class);
     private static final int PAGE_SIZE = 6;
 
-    static final String BTN_CATALOG = "🛒 Каталог";
-    static final String BTN_CART = "🧺 Корзина";
-    static final String BTN_ORDERS = "📦 Мои заказы";
-    static final String BTN_SITE = "🌐 Сайт магазина";
-    static final String BTN_BUILD = "🛠 Собрать ПК";
-    static final String BTN_CANCEL = "Отменить оформление";
+    public static final String BTN_CATALOG = "🛒 Каталог";
+    public static final String BTN_CART = "🧺 Корзина";
+    public static final String BTN_ORDERS = "📦 Мои заказы";
+    public static final String BTN_SITE = "🌐 Сайт магазина";
+    public static final String BTN_BUILD = "🛠 Собрать ПК";
+    public static final String BTN_CANCEL = "Отменить оформление";
 
     private final TelegramClient telegram;
     private final CatalogService catalog;
     private final OrderService orders;
-    private final BotCart cart;
+    private final BotCartService cart;
     private final BuildService builds;
+    private final CompatibilityService compatibility;
     private final ShopProperties props;
+    @Value("${shop.orders.payment-timeout:30m}")
     private final Duration paymentTimeout;
 
     /** Незаконченные оформления заказа. В памяти: при перезапуске покупатель просто начнёт заново. */
     private final Map<Long, Checkout> checkouts = new ConcurrentHashMap<>();
-
-    ShopBot(TelegramClient telegram, CatalogService catalog, OrderService orders, BotCart cart, BuildService builds,
-            ShopProperties props, @Value("${shop.orders.payment-timeout:30m}") Duration paymentTimeout) {
-        this.builds = builds;
-        this.paymentTimeout = paymentTimeout;
-        this.telegram = telegram;
-        this.catalog = catalog;
-        this.orders = orders;
-        this.cart = cart;
-        this.props = props;
-    }
 
     @Override
     public void consume(Update update) {
@@ -171,7 +165,7 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         String toast;
         try {
             toast = handleCallback(cq);
-        } catch (NotFoundException | IllegalArgumentException | IndexOutOfBoundsException e) {
+        } catch (ResourceNotFoundException | IllegalArgumentException | IndexOutOfBoundsException e) {
             // Старая кнопка (товар сняли с продажи) или подделанные данные
             toast = "Кнопка устарела";
         } catch (RuntimeException | TelegramApiException e) {
@@ -233,7 +227,7 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                 ids.put(slot.key(), Long.parseLong(parts[2]));
                 Build build = builds.fromParams(ids);
                 if (!build.has(slot)) {
-                    throw new NotFoundException("Товар не найден");
+                    throw new ResourceNotFoundException("Товар не найден");
                 }
                 builds.saveBotBuild(chatId, build);
                 showBuild(chatId, messageId, build);
@@ -292,11 +286,11 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         if (build.isEmpty()) {
             return text.toString();
         }
-        List<Issue> issues = Compatibility.check(build);
+        List<Issue> issues = compatibility.check(build);
         text.append("\n<b>Итого: ").append(Formats.price(build.total())).append("</b>\n")
-                .append("Потребление ≈ ").append(Compatibility.estimatedDraw(build)).append(" Вт, блок питания от ")
-                .append(Compatibility.recommendedPsu(build)).append(" Вт\n\n");
-        if (Compatibility.complete(issues)) {
+                .append("Потребление ≈ ").append(compatibility.estimatedDraw(build)).append(" Вт, блок питания от ")
+                .append(compatibility.recommendedPsu(build)).append(" Вт\n\n");
+        if (compatibility.complete(issues)) {
             text.append("✅ Сборка совместима и готова к заказу\n");
         }
         for (Issue i : issues) {
@@ -334,13 +328,13 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
     /** Список деталей для слота: только совместимые и в наличии, чтобы в чате не было тупиков. */
     private void showSlot(long chatId, int messageId, Slot slot, int page) throws TelegramApiException {
         Build build = builds.botBuild(chatId);
-        List<Candidate> all = builds.candidates(build, slot);
-        List<Candidate> fit = all.stream().filter(c -> c.fits() && c.product().inStock()).toList();
+        List<CandidateResponse> all = builds.candidates(build, slot);
+        List<CandidateResponse> fit = all.stream().filter(c -> c.fits() && c.product().inStock()).toList();
         int pages = Math.max(1, (fit.size() + PAGE_SIZE - 1) / PAGE_SIZE);
         int current = Math.min(Math.max(page, 0), pages - 1);
 
         List<InlineKeyboardRow> rows = new ArrayList<>();
-        for (Candidate c : fit.subList(current * PAGE_SIZE, Math.min(fit.size(), (current + 1) * PAGE_SIZE))) {
+        for (CandidateResponse c : fit.subList(current * PAGE_SIZE, Math.min(fit.size(), (current + 1) * PAGE_SIZE))) {
             Product p = c.product();
             String mark = build.get(slot).filter(x -> x.getId().equals(p.getId())).isPresent() ? "✅ "
                     : c.note() != null ? "⚠️ " : "";
@@ -373,11 +367,11 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
     }
 
     private void showPresets(long chatId, int messageId) throws TelegramApiException {
-        List<Preset> presets = builds.presets();
+        List<PresetResponse> presets = builds.presets();
         StringBuilder text = new StringBuilder("<b>Готовые сборки</b>\nВозьмите за основу и поменяйте то, что нужно.\n\n");
         List<InlineKeyboardRow> rows = new ArrayList<>();
         for (int i = 0; i < presets.size(); i++) {
-            Preset pr = presets.get(i);
+            PresetResponse pr = presets.get(i);
             text.append("<b>").append(htmlEscape(pr.name())).append("</b> · ").append(Formats.price(pr.build().total()))
                     .append('\n').append(htmlEscape(pr.purpose())).append("\n\n");
             rows.add(new InlineKeyboardRow(button(pr.name() + " · " + Formats.price(pr.build().total()), "bpre:" + i)));
@@ -400,7 +394,7 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         boolean ok;
         try {
             ok = orders.byPublicId(UUID.fromString(q.getInvoicePayload())).getStatus() == OrderStatus.AWAITING_PAYMENT;
-        } catch (NotFoundException | IllegalArgumentException e) {
+        } catch (ResourceNotFoundException | IllegalArgumentException e) {
             ok = false;
         }
         var answer = AnswerPreCheckoutQuery.builder().preCheckoutQueryId(q.getId()).ok(ok);
@@ -431,8 +425,8 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
 
     private void showCategory(long chatId, int messageId, String slug, int page) throws TelegramApiException {
         Category category = catalog.category(slug);
-        var result = catalog.search(new ProductQuery(slug, Map.of(), null, null, false,
-                ProductQuery.Sort.POPULAR, page, PAGE_SIZE));
+        var result = catalog.search(new ProductSearchRequest(slug, Map.of(), null, null, false,
+                ProductSearchRequest.Sort.POPULAR, page, PAGE_SIZE));
 
         List<InlineKeyboardRow> rows = new ArrayList<>();
         for (Product p : result.getContent()) {
@@ -459,7 +453,7 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
 
     private void showProduct(long chatId, int messageId, long productId) throws TelegramApiException {
         Product p = catalog.productsByIds(List.of(productId)).stream().findFirst()
-                .orElseThrow(() -> new NotFoundException("Товар не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("Товар не найден"));
 
         StringBuilder text = new StringBuilder()
                 .append("<b>").append(htmlEscape(p.getName())).append("</b>\n")
@@ -493,7 +487,7 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         StringBuilder text = new StringBuilder("<b>Корзина</b>\n\n");
         long total = 0;
         int n = 1;
-        for (BotCart.Line line : lines) {
+        for (BotCartRepository.Line line : lines) {
             Product p = products.get(line.productId());
             if (p == null) {
                 continue;
@@ -511,7 +505,7 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         var lines = cart.lines(chatId);
         List<InlineKeyboardRow> rows = new ArrayList<>();
         Map<Long, Product> products = productsFor(lines);
-        for (BotCart.Line line : lines) {
+        for (BotCartRepository.Line line : lines) {
             Product p = products.get(line.productId());
             if (p == null) {
                 continue;
@@ -528,8 +522,8 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         return new InlineKeyboardMarkup(rows);
     }
 
-    private Map<Long, Product> productsFor(List<BotCart.Line> lines) {
-        return catalog.productsByIds(lines.stream().map(BotCart.Line::productId).toList()).stream()
+    private Map<Long, Product> productsFor(List<BotCartRepository.Line> lines) {
+        return catalog.productsByIds(lines.stream().map(BotCartRepository.Line::productId).toList()).stream()
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
     }
 
@@ -565,14 +559,14 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                     return;
                 }
                 checkouts.remove(chatId);
-                placeOrder(chatId, new Customer(checkout.name, checkout.phone, text, null));
+                placeOrder(chatId, new CustomerRequest(checkout.name, checkout.phone, text, null));
             }
         }
     }
 
-    private void placeOrder(long chatId, Customer customer) throws TelegramApiException {
-        List<OrderLine> lines = cart.lines(chatId).stream()
-                .map(l -> new OrderLine(l.productId(), l.quantity())).toList();
+    private void placeOrder(long chatId, CustomerRequest customer) throws TelegramApiException {
+        List<OrderLineRequest> lines = cart.lines(chatId).stream()
+                .map(l -> new OrderLineRequest(l.productId(), l.quantity())).toList();
         Order order;
         try {
             order = orders.create(Channel.TELEGRAM, customer, lines, chatId);

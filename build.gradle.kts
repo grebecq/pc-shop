@@ -14,6 +14,7 @@ java {
 repositories { mavenCentral() }
 
 val telegrambotsVersion = "10.3.0"
+val mapstructVersion = "1.6.3"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
@@ -26,6 +27,14 @@ dependencies {
     implementation("org.telegram:telegrambots-longpolling:$telegrambotsVersion")
     implementation("org.telegram:telegrambots-client:$telegrambotsVersion")
     runtimeOnly("org.postgresql:postgresql")
+
+    implementation("org.mapstruct:mapstruct:$mapstructVersion")
+
+    compileOnly("org.projectlombok:lombok")
+    annotationProcessor("org.projectlombok:lombok")
+    annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
+    testCompileOnly("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")

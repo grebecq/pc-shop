@@ -2,12 +2,15 @@ package dev.pcshop.bot;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.pcshop.TestcontainersConfig;
-import dev.pcshop.catalog.CatalogService;
 import dev.pcshop.config.ShopProperties;
-import dev.pcshop.order.Channel;
-import dev.pcshop.order.Order;
-import dev.pcshop.order.OrderService;
-import dev.pcshop.order.OrderStatus;
+import dev.pcshop.entity.Order;
+import dev.pcshop.enums.Channel;
+import dev.pcshop.enums.OrderStatus;
+import dev.pcshop.service.BotCartService;
+import dev.pcshop.service.BuildService;
+import dev.pcshop.service.CatalogService;
+import dev.pcshop.service.CompatibilityService;
+import dev.pcshop.service.OrderService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.Invocation;
@@ -20,6 +23,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -38,8 +42,9 @@ class ShopBotTest {
 
     @Autowired CatalogService catalog;
     @Autowired OrderService orders;
-    @Autowired BotCart cart;
-    @Autowired dev.pcshop.build.BuildService builds;
+    @Autowired BotCartService cart;
+    @Autowired BuildService builds;
+    @Autowired CompatibilityService compatibility;
 
     TelegramClient telegram;
     ShopBot bot;
@@ -49,7 +54,7 @@ class ShopBotTest {
     void setUp() {
         telegram = mock(TelegramClient.class);
         var props = new ShopProperties("http://localhost:8080", null, new ShopProperties.Telegram("test", null, null, null));
-        bot = new ShopBot(telegram, catalog, orders, cart, builds, props, java.time.Duration.ofMinutes(30));
+        bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, props, Duration.ofMinutes(30));
         cart.clear(CHAT);
     }
 
@@ -129,7 +134,7 @@ class ShopBotTest {
 
     @Test
     void buildPcInBot() throws Exception {
-        builds.saveBotBuild(CHAT, dev.pcshop.build.Build.empty());
+        builds.saveBotBuild(CHAT, dev.pcshop.model.Build.empty());
         text(ShopBot.BTN_BUILD);
         assertThat(lastText()).contains("Сборка ПК", "Процессор: —");
         assertThat(lastButtons()).contains("bs:cpu:0", "bpl");
@@ -155,7 +160,7 @@ class ShopBotTest {
         callback("bs:zzz:0");
         callback("bpre:99");
         assertThat(toasts()).containsSequence("Кнопка устарела", "Кнопка устарела", "Кнопка устарела");
-        assertThat(builds.botBuild(CHAT).part(dev.pcshop.build.Slot.MOTHERBOARD).getId()).isEqualTo(am5Board);
+        assertThat(builds.botBuild(CHAT).part(dev.pcshop.enums.Slot.MOTHERBOARD).getId()).isEqualTo(am5Board);
 
         callback("br:gpu");
         assertThat(lastText()).contains("Видеокарта: —");

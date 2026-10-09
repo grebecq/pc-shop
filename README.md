@@ -160,14 +160,17 @@ docker run -d --name pcshop-db -p 5432:5432 \
 
 ```
 src/main/java/dev/pcshop/
-  catalog/   товары, категории, поиск с фильтрами по JSONB, REST /api/products
-  build/     конфигуратор: сборка, правила совместимости, готовые и сохранённые сборки
-  order/     заказы, резерв склада, статусы, события, REST /api/orders
-  bot/       Telegram-бот: каталог, корзина, оформление, оплата
-  notify/    уведомления владельцу и покупателю
-  web/       страницы сайта и тестовая оплата
-  admin/     админка
-  config/    настройки, безопасность, форматирование цен
+  controller/web/  страницы сайта, кабинет, конфигуратор, админка (Thymeleaf)
+  controller/api/  REST: /api/products, /api/categories, /api/orders
+  service/         бизнес-логика: каталог, заказы, сборки, совместимость, уведомления
+  repository/      Spring Data JPA и JDBC-запросы (поиск по JSONB, корзина бота)
+  entity/          JPA-сущности (Lombok)
+  dto/             запросы с валидацией и ответы API
+  mapper/          MapStruct: сущность → ответ API
+  model/, enums/   сборка, замечания совместимости, слоты, статусы
+  exception/       ошибки и общий обработчик для API и страниц
+  bot/             Telegram-бот
+  config/, security/, util/  настройки, вход, форматирование
 src/main/resources/
   db/migration/  схема и каталог (Flyway)
   templates/     страницы (Thymeleaf)
