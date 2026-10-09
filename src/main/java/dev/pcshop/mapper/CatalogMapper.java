@@ -6,10 +6,12 @@ import dev.pcshop.entity.Category;
 import dev.pcshop.entity.Product;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring")
+// Новое поле в DTO без маппинга — ошибка компиляции, а не тихий null в ответе
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface CatalogMapper {
 
     CategoryResponse toResponse(Category category);

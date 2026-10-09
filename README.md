@@ -61,6 +61,7 @@ docker compose up -d --build
 
 - Сайт: http://localhost:8080
 - Админка: http://localhost:8080/admin (логин и пароль из `.env`, по умолчанию `admin` / `change-me`)
+- Swagger (описание REST API): http://localhost:8080/swagger-ui.html. Выключается `SWAGGER_ENABLED=false`
 
 Бот запускается, только если в `.env` указан `BOT_TOKEN`. Без него сайт и админка работают как обычно.
 
@@ -95,7 +96,7 @@ docker run -d --name pcshop-db -p 5432:5432 \
 | `DB_SCHEMA` | своя схема, если база общая с другим проектом | `public` |
 | `PORT` | порт сайта | `8080` |
 | `SHOP_BASE_URL` | публичный адрес сайта для ссылок из бота | `http://localhost:8080` |
-| `ADMIN_USER`, `ADMIN_PASSWORD` | вход в админку | `admin` / `admin` |
+| `ADMIN_USER`, `ADMIN_PASSWORD` | вход в админку; без пароля (от 8 символов) приложение не запустится | `admin` / обязателен |
 | `BOT_TOKEN` | токен бота от BotFather; пусто = бот выключен | — |
 | `BOT_USERNAME` | имя бота без `@`, для ссылки на сайте | — |
 | `ADMIN_CHAT_ID` | куда слать уведомления о заказах | — |

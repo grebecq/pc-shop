@@ -2,7 +2,7 @@ package dev.pcshop.controller.web;
 
 import dev.pcshop.config.ShopProperties;
 import dev.pcshop.enums.Slot;
-import dev.pcshop.exception.AccountException;
+import dev.pcshop.exception.BadRequestException;
 import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.model.Build;
 import dev.pcshop.model.Issue;
@@ -11,6 +11,7 @@ import dev.pcshop.service.BuildService;
 import dev.pcshop.service.CompatibilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -71,6 +72,7 @@ public class ConfiguratorController {
         return "build/pick";
     }
 
+    @PreAuthorize("hasRole('CUSTOMER')")
     @PostMapping("/configurator/save")
     public String save(@AuthenticationPrincipal ShopUser user, @RequestParam Map<String, String> params,
                 @RequestParam(defaultValue = "") String name, RedirectAttributes flash) {
@@ -79,12 +81,13 @@ public class ConfiguratorController {
             builds.save(user.getAccountId(), name, build);
             flash.addFlashAttribute("message", "Сборка сохранена");
             return "redirect:/account/builds";
-        } catch (AccountException e) {
+        } catch (BadRequestException e) {
             flash.addFlashAttribute("error", e.getMessage());
             return "redirect:" + build.link();
         }
     }
 
+    @PreAuthorize("hasRole('CUSTOMER')")
     @GetMapping("/account/builds")
     public String saved(@AuthenticationPrincipal ShopUser user, Model model) {
         model.addAttribute("builds", builds.saved(user.getAccountId()));
@@ -92,6 +95,7 @@ public class ConfiguratorController {
         return "account/builds";
     }
 
+    @PreAuthorize("hasRole('CUSTOMER')")
     @PostMapping("/account/builds/{id}/delete")
     public String delete(@AuthenticationPrincipal ShopUser user, @PathVariable long id, RedirectAttributes flash) {
         builds.deleteSaved(user.getAccountId(), id);

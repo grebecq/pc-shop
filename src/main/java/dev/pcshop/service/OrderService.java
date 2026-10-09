@@ -11,12 +11,17 @@ import dev.pcshop.exception.OrderException;
 import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.repository.OrderRepository;
 import dev.pcshop.repository.ProductRepository;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,7 +30,13 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Заказы с сайта и из бота. Данные покупателя проверяются здесь же (@Validated), поэтому
+ * одни правила действуют для любого канала, даже если он сам что-то не проверил.
+ */
+@Slf4j
 @Service
+@Validated
 @RequiredArgsConstructor
 public class OrderService {
 
@@ -39,13 +50,19 @@ public class OrderService {
      * Создаёт заказ и резервирует товар. Если чего-то не хватает, откатывается весь заказ целиком.
      */
     @Transactional
-    public Order create(Channel channel, CustomerRequest customer, List<OrderLineRequest> lines, Long telegramChatId) {
+    public Order create(@NotNull(message = "Не указан канал заказа") Channel channel,
+                        @NotNull(message = "Укажите данные покупателя") @Valid CustomerRequest customer,
+                        @NotEmpty(message = "Корзина пуста") List<@NotNull @Valid OrderLineRequest> lines,
+                        Long telegramChatId) {
         return create(channel, customer, lines, telegramChatId, null);
     }
 
     /** То же, но заказ привязывается к аккаунту покупателя на сайте. */
     @Transactional
-    public Order create(Channel channel, CustomerRequest customer, List<OrderLineRequest> lines, Long telegramChatId, Long accountId) {
+    public Order create(@NotNull(message = "Не указан канал заказа") Channel channel,
+                        @NotNull(message = "Укажите данные покупателя") @Valid CustomerRequest customer,
+                        @NotEmpty(message = "Корзина пуста") List<@NotNull @Valid OrderLineRequest> lines,
+                        Long telegramChatId, Long accountId) {
         // Одинаковые товары в запросе складываем в одну позицию
         Map<Long, Integer> quantities = new LinkedHashMap<>();
         lines.forEach(l -> quantities.merge(l.productId(), l.quantity(), Integer::sum));
@@ -72,6 +89,7 @@ public class OrderService {
         });
 
         orders.save(order);
+        log.info("Заказ {} создан: {}, {} поз., {} ₽", order.number(), channel, order.getItems().size(), order.getTotal());
         events.publishEvent(new OrderEvents.Created(order.getId()));
         return order;
     }
@@ -80,6 +98,7 @@ public class OrderService {
     public Order markPaid(UUID publicId) {
         Order order = byPublicId(publicId);
         if (order.markPaid()) {
+            log.info("Заказ {} оплачен", order.number());
             events.publishEvent(new OrderEvents.Paid(order.getId()));
         }
         return order;
@@ -92,6 +111,7 @@ public class OrderService {
             return order;
         }
         order.changeStatus(status);
+        log.info("Заказ {}: статус {}", order.number(), status);
         if (status == OrderStatus.CANCELLED) {
             // Отменённый заказ возвращает товар на склад
             order.getItems().forEach(i -> products.release(i.getProductId(), i.getQuantity()));

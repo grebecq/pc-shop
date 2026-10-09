@@ -1,13 +1,32 @@
 package dev.pcshop.dto.request;
 
+import dev.pcshop.util.Strings;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/** Контакты покупателя в заказе. Одни правила для сайта и для бота. */
 public record CustomerRequest(
-        @NotBlank(message = "Укажите имя") @Size(max = 128) String name,
+
+        @NotBlank(message = "Укажите имя")
+        @Size(max = 128, message = "Имя — не длиннее 128 символов")
+        String name,
+
         @NotBlank(message = "Укажите телефон")
-        @Pattern(regexp = "^[+0-9 ()-]{6,32}$", message = "Телефон в формате +7 900 000-00-00") String phone,
-        @NotBlank(message = "Укажите адрес доставки") @Size(max = 512) String address,
-        @Size(max = 1000) String comment) {
+        @Pattern(regexp = "^[+0-9 ()-]{6,32}$", message = "Телефон в формате +7 900 000-00-00")
+        String phone,
+
+        @NotBlank(message = "Укажите адрес доставки")
+        @Size(min = 5, max = 512, message = "Адрес — от 5 до 512 символов")
+        String address,
+
+        @Size(max = 1000, message = "Комментарий — не длиннее 1000 символов")
+        String comment) {
+
+    public CustomerRequest {
+        name = Strings.strip(name);
+        phone = Strings.strip(phone);
+        address = Strings.strip(address);
+        comment = Strings.blankToNull(comment);
+    }
 }

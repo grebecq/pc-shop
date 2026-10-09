@@ -3,6 +3,7 @@ package dev.pcshop.exception;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -30,9 +31,20 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, "Conflict", e.getMessage());
     }
 
-    @ExceptionHandler({AccountException.class, BadRequestException.class})
-    public ResponseEntity<ErrorResponseDto> handleBadRequest(RuntimeException e) {
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResponseDto> handleBadRequest(BadRequestException e) {
         return build(HttpStatus.BAD_REQUEST, "Bad request", e.getMessage());
+    }
+
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ErrorResponseDto> handleDuplicate(DuplicateResourceException e) {
+        return build(HttpStatus.CONFLICT, "Conflict", e.getMessage());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponseDto> handleDataIntegrity(DataIntegrityViolationException e) {
+        log.debug("Нарушено ограничение БД", e);
+        return build(HttpStatus.CONFLICT, "Conflict", "Запись уже существует или конфликтует с другими данными");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

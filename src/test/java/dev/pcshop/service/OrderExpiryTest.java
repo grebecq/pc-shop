@@ -6,6 +6,7 @@ import dev.pcshop.dto.request.OrderLineRequest;
 import dev.pcshop.entity.Order;
 import dev.pcshop.enums.Channel;
 import dev.pcshop.enums.OrderStatus;
+import dev.pcshop.exception.OrderException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -57,7 +58,7 @@ class OrderExpiryTest {
         Order order = orders.create(Channel.SITE, CUSTOMER, List.of(new OrderLineRequest(ssd.getId(), 1)), null);
         orders.markPaid(order.getPublicId());
         assertThatThrownBy(() -> orders.changeStatus(order.getId(), OrderStatus.AWAITING_PAYMENT))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(OrderException.class);
     }
 
     private void ageOrder(Order order) {

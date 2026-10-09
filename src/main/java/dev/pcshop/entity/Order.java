@@ -3,6 +3,7 @@ package dev.pcshop.entity;
 import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.enums.Channel;
 import dev.pcshop.enums.OrderStatus;
+import dev.pcshop.exception.OrderException;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,6 +21,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Duration;
@@ -79,6 +81,10 @@ public class Order {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @LastModifiedDate
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
     @Column(name = "paid_at")
     private Instant paidAt;
 
@@ -113,11 +119,11 @@ public class Order {
 
     public void changeStatus(OrderStatus next) {
         if (status.isFinal()) {
-            throw new IllegalStateException("Заказ уже " + status.label().toLowerCase() + ", статус менять нельзя");
+            throw new OrderException("Заказ уже " + status.label().toLowerCase() + ", статус менять нельзя");
         }
         if (next == OrderStatus.AWAITING_PAYMENT) {
             // Иначе заказ снова попадёт под автоотмену и вернёт на склад уже отданный товар
-            throw new IllegalStateException("Вернуть заказ в «ждёт оплаты» нельзя");
+            throw new OrderException("Вернуть заказ в «ждёт оплаты» нельзя");
         }
         if (next == OrderStatus.PAID && paidAt == null) {
             paidAt = Instant.now();

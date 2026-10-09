@@ -1,11 +1,14 @@
 package dev.pcshop.service;
 
 import dev.pcshop.dto.request.AddressRequest;
+import dev.pcshop.dto.request.PasswordChangeRequest;
 import dev.pcshop.dto.request.ProfileRequest;
 import dev.pcshop.dto.request.RegisterRequest;
 import dev.pcshop.entity.Account;
 import dev.pcshop.entity.DeliveryAddress;
-import dev.pcshop.exception.AccountException;
+import dev.pcshop.exception.BadRequestException;
+import dev.pcshop.exception.DuplicateResourceException;
+import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.repository.AccountRepository;
 import dev.pcshop.repository.AddressRepository;
 import dev.pcshop.security.ShopUser;
@@ -28,6 +31,7 @@ import java.util.Locale;
 public class AccountService implements UserDetailsService {
 
     public static final int MAX_ADDRESSES = 10;
+    private static final String EMAIL_TAKEN = "Аккаунт с таким email уже есть. Войдите или используйте другой email.";
 
     private final AccountRepository accounts;
     private final AddressRepository addresses;
@@ -45,26 +49,26 @@ public class AccountService implements UserDetailsService {
     public ShopUser register(RegisterRequest form) {
         String email = normalize(form.email());
         if (accounts.existsByEmail(email)) {
-            throw new AccountException("Аккаунт с таким email уже есть. Войдите или используйте другой email.");
+            throw new DuplicateResourceException(EMAIL_TAKEN);
         }
         try {
-            Account account = accounts.saveAndFlush(new Account(email, encoder.encode(form.password()), form.name().strip()));
+            Account account = accounts.saveAndFlush(new Account(email, encoder.encode(form.password()), form.name()));
             return new ShopUser(account);
         } catch (DataIntegrityViolationException e) {
             // Две регистрации с одним email одновременно: вторая упирается в UNIQUE
-            throw new AccountException("Аккаунт с таким email уже есть. Войдите или используйте другой email.");
+            throw new DuplicateResourceException(EMAIL_TAKEN);
         }
     }
 
     @Transactional(readOnly = true)
     public Account get(long accountId) {
-        return accounts.findById(accountId).orElseThrow(() -> new AccountException("Аккаунт не найден"));
+        return accounts.findById(accountId).orElseThrow(() -> new ResourceNotFoundException("Аккаунт не найден"));
     }
 
     @Transactional
     public void updateProfile(long accountId, ProfileRequest form) {
         Account account = get(accountId);
-        account.setName(form.name().strip());
+        account.setName(form.name());
         account.setPhone(Strings.blankToNull(form.phone()));
     }
 
@@ -78,15 +82,12 @@ public class AccountService implements UserDetailsService {
     }
 
     @Transactional
-    public void changePassword(long accountId, String current, String next) {
+    public void changePassword(long accountId, PasswordChangeRequest request) {
         Account account = get(accountId);
-        if (!encoder.matches(current, account.getPasswordHash())) {
-            throw new AccountException("Текущий пароль указан неверно");
+        if (!encoder.matches(request.current(), account.getPasswordHash())) {
+            throw new BadRequestException("Текущий пароль указан неверно");
         }
-        if (next == null || next.length() < 8 || next.length() > 72) {
-            throw new AccountException("Новый пароль — от 8 до 72 символов");
-        }
-        account.setPasswordHash(encoder.encode(next));
+        account.setPasswordHash(encoder.encode(request.password()));
     }
 
     @Transactional(readOnly = true)
@@ -98,14 +99,14 @@ public class AccountService implements UserDetailsService {
     public DeliveryAddress address(long accountId, long addressId) {
         // Ищем только среди адресов этого аккаунта: чужой id даст «не найден»
         return addresses.findByIdAndAccountId(addressId, accountId)
-                .orElseThrow(() -> new AccountException("Адрес не найден"));
+                .orElseThrow(() -> new ResourceNotFoundException("Адрес не найден"));
     }
 
     @Transactional
     public DeliveryAddress addAddress(long accountId, AddressRequest form) {
         long count = addresses.countByAccountId(accountId);
         if (count >= MAX_ADDRESSES) {
-            throw new AccountException("Можно сохранить не больше " + MAX_ADDRESSES + " адресов");
+            throw new BadRequestException("Можно сохранить не больше " + MAX_ADDRESSES + " адресов");
         }
         DeliveryAddress address = new DeliveryAddress(accountId);
         address.apply(form);

@@ -2,11 +2,14 @@ package dev.pcshop.controller.web;
 
 import dev.pcshop.dto.request.ProductUpdateRequest;
 import dev.pcshop.enums.OrderStatus;
+import dev.pcshop.exception.BadRequestException;
+import dev.pcshop.exception.OrderException;
 import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.OrderService;
 import dev.pcshop.service.ProductPhotoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -22,6 +25,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.io.IOException;
 
 /** Админка владельца: заказы и товары. Доступ по логину и паролю из ADMIN_USER / ADMIN_PASSWORD. */
+@PreAuthorize("hasRole('ADMIN')")
 @Controller
 @RequestMapping("/admin")
 @RequiredArgsConstructor
@@ -56,7 +60,7 @@ public class AdminController {
         try {
             orders.changeStatus(id, status);
             flash.addFlashAttribute("message", "Статус изменён: " + status.label());
-        } catch (IllegalStateException e) {
+        } catch (OrderException e) {
             flash.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/admin/orders/" + id;
@@ -85,7 +89,7 @@ public class AdminController {
         try {
             photos.save(id, file.getBytes());
             flash.addFlashAttribute("message", "Фото обновлено");
-        } catch (IllegalArgumentException | IOException e) {
+        } catch (BadRequestException | IOException e) {
             flash.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/admin/products#p" + id;

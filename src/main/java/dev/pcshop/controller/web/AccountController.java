@@ -1,14 +1,16 @@
 package dev.pcshop.controller.web;
 
 import dev.pcshop.dto.request.AddressRequest;
+import dev.pcshop.dto.request.PasswordChangeRequest;
 import dev.pcshop.dto.request.ProfileRequest;
-import dev.pcshop.exception.AccountException;
+import dev.pcshop.exception.BadRequestException;
 import dev.pcshop.security.ShopUser;
 import dev.pcshop.service.AccountService;
 import dev.pcshop.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /** Личный кабинет: заказы, профиль, пароль и адреса доставки. Доступен только после входа. */
+@PreAuthorize("hasRole('CUSTOMER')")
 @Controller
 @RequestMapping("/account")
 @RequiredArgsConstructor
@@ -60,12 +63,16 @@ public class AccountController {
     }
 
     @PostMapping("/password")
-    public String changePassword(@AuthenticationPrincipal ShopUser user, @RequestParam String current,
-                          @RequestParam String password, RedirectAttributes flash) {
+    public String changePassword(@AuthenticationPrincipal ShopUser user, @Valid @ModelAttribute PasswordChangeRequest request,
+                                 BindingResult errors, RedirectAttributes flash) {
+        if (errors.hasErrors()) {
+            flash.addFlashAttribute("error", errors.getAllErrors().getFirst().getDefaultMessage());
+            return "redirect:/account/profile";
+        }
         try {
-            accounts.changePassword(user.getAccountId(), current, password);
+            accounts.changePassword(user.getAccountId(), request);
             flash.addFlashAttribute("message", "Пароль изменён");
-        } catch (AccountException e) {
+        } catch (BadRequestException e) {
             flash.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/account/profile";
@@ -87,7 +94,7 @@ public class AccountController {
                 accounts.addAddress(user.getAccountId(), form);
                 flash.addFlashAttribute("message", "Адрес добавлен");
                 return "redirect:/account/addresses";
-            } catch (AccountException e) {
+            } catch (BadRequestException e) {
                 model.addAttribute("error", e.getMessage());
             }
         }

@@ -1,11 +1,37 @@
 package dev.pcshop.config;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
+/** Настройки магазина из application.yml и .env. Проверяются при старте: без пароля админки приложение не запустится. */
+@Validated
 @ConfigurationProperties("shop")
-public record ShopProperties(String baseUrl, Admin admin, Telegram telegram) {
+public record ShopProperties(
 
-    public record Admin(String username, String password) {
+        @NotBlank(message = "Задайте SHOP_BASE_URL — адрес сайта для ссылок из бота")
+        String baseUrl,
+
+        @NotNull
+        @Valid
+        Admin admin,
+
+        @NotNull
+        @Valid
+        Telegram telegram) {
+
+    public record Admin(
+
+            @NotBlank(message = "Задайте ADMIN_USER — логин админки")
+            String username,
+
+            // Пароля по умолчанию нет специально: иначе на хостинге легко забыть его сменить
+            @NotBlank(message = "Задайте ADMIN_PASSWORD — пароль админки")
+            @Size(min = 8, message = "ADMIN_PASSWORD — не короче 8 символов")
+            String password) {
     }
 
     public record Telegram(String botToken, String botUsername, Long adminChatId, String paymentToken) {

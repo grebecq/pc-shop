@@ -11,7 +11,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class WebExceptionHandler {
 
     /** Чужой или удалённый адрес в кабинете, несуществующий товар, кривая ссылка на заказ. */
-    @ExceptionHandler({ResourceNotFoundException.class, AccountException.class, MethodArgumentTypeMismatchException.class})
+    @ExceptionHandler({ResourceNotFoundException.class, MethodArgumentTypeMismatchException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public String notFound() {
         return "error/404";

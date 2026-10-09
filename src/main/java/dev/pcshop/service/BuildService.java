@@ -6,7 +6,8 @@ import dev.pcshop.dto.response.SavedBuildResponse;
 import dev.pcshop.entity.Product;
 import dev.pcshop.entity.SavedBuild;
 import dev.pcshop.enums.Slot;
-import dev.pcshop.exception.AccountException;
+import dev.pcshop.exception.BadRequestException;
+import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.model.Build;
 import dev.pcshop.model.Issue;
 import dev.pcshop.repository.BotBuildRepository;
@@ -124,10 +125,10 @@ public class BuildService {
     @Transactional
     public SavedBuild save(long accountId, String name, Build build) {
         if (build.isEmpty()) {
-            throw new AccountException("Сборка пустая, сохранять нечего");
+            throw new BadRequestException("Сборка пустая, сохранять нечего");
         }
         if (saved.countByAccountId(accountId) >= MAX_SAVED) {
-            throw new AccountException("Можно сохранить не больше " + MAX_SAVED + " сборок. Удалите ненужные в кабинете.");
+            throw new BadRequestException("Можно сохранить не больше " + MAX_SAVED + " сборок. Удалите ненужные в кабинете.");
         }
         String clean = name == null ? "" : name.strip();
         if (clean.isEmpty()) {
@@ -152,7 +153,7 @@ public class BuildService {
     @Transactional
     public void deleteSaved(long accountId, long id) {
         saved.delete(saved.findByIdAndAccountId(id, accountId)
-                .orElseThrow(() -> new AccountException("Сборка не найдена")));
+                .orElseThrow(() -> new ResourceNotFoundException("Сборка не найдена")));
     }
 
     // ---------- Текущая сборка в Telegram-боте ----------

@@ -7,8 +7,13 @@ import dev.pcshop.dto.response.ProductResponse;
 import dev.pcshop.mapper.CatalogMapper;
 import dev.pcshop.service.CatalogService;
 import dev.pcshop.util.CatalogQueries;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.util.MultiValueMap;
@@ -23,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 /** REST API каталога: его используют корзина на сайте и может использовать любой внешний клиент. */
+@Tag(name = "Каталог", description = "Категории, фильтры и товары")
 @Validated
 @RestController
 @RequestMapping("/api")
@@ -32,34 +38,44 @@ public class CatalogRestController {
     private final CatalogService catalogService;
     private final CatalogMapper catalogMapper;
 
+    @Operation(summary = "Категории", description = "В порядке меню сайта, с характеристиками для фильтра.")
     @GetMapping("/categories")
     public List<CategoryResponse> getCategories() {
         return catalogMapper.toCategoryResponses(catalogService.categories());
     }
 
+    @Operation(summary = "Значения фильтров категории", description = "Характеристика → значения и сколько товаров с каждым.")
     @GetMapping("/categories/{slug}/facets")
-    public Map<String, List<FacetValueResponse>> getFacets(@PathVariable String slug) {
+    public Map<String, List<FacetValueResponse>> getFacets(@Parameter(example = "gpu") @PathVariable String slug) {
         return catalogService.facets(slug);
     }
 
-    /** Пример: /api/products?category=cpu&socket=AM5&socket=AM4&sort=price_asc */
+    @Operation(summary = "Поиск товаров",
+            description = "Фильтры передаются параметрами с ключами характеристик, список — повтором: "
+                    + "?category=cpu&socket=AM5&socket=AM4. Также min, max (цена), stock=1 (в наличии), "
+                    + "sort=price_asc|price_desc|name, page (с 0). На странице 12 товаров.")
     @GetMapping("/products")
-    public PageResponse<ProductResponse> searchProducts(@RequestParam @NotBlank String category,
-                                                       @RequestParam MultiValueMap<String, String> params) {
+    public PageResponse<ProductResponse> searchProducts(
+            @Parameter(example = "gpu") @RequestParam @NotBlank(message = "Укажите категорию") String category,
+            @Parameter(hidden = true) @RequestParam MultiValueMap<String, String> params) {
         var query = CatalogQueries.fromParams(category, params);
         return PageResponse.of(catalogService.search(query).map(catalogMapper::toResponse));
     }
 
+    @Operation(summary = "Товар по slug")
     @GetMapping("/products/{slug}")
-    public ProductResponse getProduct(@PathVariable String slug) {
+    public ProductResponse getProduct(@Parameter(example = "amd-ryzen-7-7800x3d-oem") @PathVariable String slug) {
         return catalogMapper.toResponse(catalogService.product(slug));
     }
 
-    /** Данные для корзины: цены и остатки берутся с сервера, а не из браузера. */
+    @Operation(summary = "Товары для корзины", description = "Актуальные цены и остатки по id. Снятые с продажи не возвращаются.")
     @GetMapping("/products/by-ids")
     public List<ProductResponse> getProductsByIds(
             // Корзина больше 50 позиций не бывает; ограничение защищает от огромных IN-запросов
-            @RequestParam @NotEmpty @Size(max = 50, message = "Не больше 50 товаров за запрос") List<Long> ids) {
+            @RequestParam
+            @NotEmpty(message = "Передайте хотя бы один id")
+            @Size(max = 50, message = "Не больше 50 товаров за запрос")
+            List<@NotNull(message = "Пустой id товара") @Positive(message = "id товара — число больше 0") Long> ids) {
         return catalogMapper.toProductResponses(catalogService.productsByIds(ids.stream().distinct().toList()));
     }
 }

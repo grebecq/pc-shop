@@ -15,6 +15,7 @@ repositories { mavenCentral() }
 
 val telegrambotsVersion = "10.3.0"
 val mapstructVersion = "1.6.3"
+val springdocVersion = "3.1.1"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
@@ -29,10 +30,13 @@ dependencies {
     runtimeOnly("org.postgresql:postgresql")
 
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocVersion")
 
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
+    // Чтобы MapStruct видел геттеры и сеттеры, которые генерирует Lombok
+    annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
 

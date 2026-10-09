@@ -99,7 +99,9 @@ class AccountFlowTest {
         var boris = new Browser();
         boris.register("boris-" + UUID.randomUUID() + "@example.com");
         assertThat(boris.get("/account/addresses/" + addressId).statusCode()).isEqualTo(404);
-        assertThat(boris.postJson("/api/orders", order, true).statusCode()).isEqualTo(400);
+        var foreign = boris.postJson("/api/orders", order, true);
+        assertThat(foreign.statusCode()).isEqualTo(404);
+        assertThat(foreign.body()).contains("Адрес не найден");
     }
 
     @Test
@@ -122,9 +124,56 @@ class AccountFlowTest {
 
         String tooMany = String.join(",", Collections.nCopies(51, "1"));
         assertThat(b.get("/api/products/by-ids?ids=" + tooMany).statusCode()).isEqualTo(400);
+        var badId = b.get("/api/products/by-ids?ids=0");
+        assertThat(badId.statusCode()).isEqualTo(400);
+        assertThat(badId.body()).contains("id товара — число больше 0");
+        var shortAddress = b.postJson("/api/orders", """
+                {"customer": {"name": "Иван", "phone": "+7 900 000-00-00", "address": "Мск"},
+                 "items": [{"productId": %d, "quantity": 1}]}""".formatted(ssd), true);
+        assertThat(shortAddress.body()).contains("Адрес — от 5 до 512 символов");
         var missing = b.get("/api/products/no-such-product");
         assertThat(missing.statusCode()).isEqualTo(404);
         assertThat(missing.body()).contains("\"error\":\"Not found\"");
+    }
+
+    @Test
+    void registrationTrimsEmailAndRejectsDuplicates() throws Exception {
+        String email = "dup-" + UUID.randomUUID() + "@example.com";
+        new Browser().register("  " + email.toUpperCase() + " ");
+
+        var again = new Browser();
+        var r = again.postForm("/register", "/register", "name", "Анна", "email", email, "password", "secret-123");
+        assertThat(r.statusCode()).as("форма с ошибкой, а не вход").isEqualTo(200);
+        assertThat(r.body()).contains("Аккаунт с таким email уже есть");
+    }
+
+    @Test
+    void passwordChangeIsValidated() throws Exception {
+        var b = new Browser();
+        String email = "pass-" + UUID.randomUUID() + "@example.com";
+        b.register(email);
+
+        b.postForm("/account/password", "/account/profile", "current", "secret-123", "password", "short");
+        assertThat(b.get("/account/profile").body()).contains("Новый пароль — от 8 до 72 символов");
+
+        b.postForm("/account/password", "/account/profile", "current", "wrong-pass", "password", "new-secret-1");
+        assertThat(b.get("/account/profile").body()).contains("Текущий пароль указан неверно");
+
+        b.postForm("/account/password", "/account/profile", "current", "secret-123", "password", "new-secret-1");
+        assertThat(b.get("/account/profile").body()).contains("Пароль изменён");
+
+        b.postForm("/logout", "/account");
+        var login = b.postForm("/login", "/login", "email", email, "password", "new-secret-1");
+        assertThat(login.headers().firstValue("Location").orElseThrow()).endsWith("/account");
+    }
+
+    @Test
+    void swaggerDescribesOnlyApi() throws Exception {
+        var docs = new Browser().get("/v3/api-docs");
+        assertThat(docs.statusCode()).isEqualTo(200);
+        assertThat(docs.body()).contains("/api/orders", "/api/products/by-ids", "Оформить заказ")
+                .doesNotContain("\"/account").doesNotContain("\"/admin");
+        assertThat(new Browser().get("/swagger-ui/index.html").statusCode()).isEqualTo(200);
     }
 
     @Test
@@ -196,7 +245,7 @@ class AccountFlowTest {
 
     @Test
     void adminUploadsProductPhoto() throws Exception {
-        String auth = "Basic " + Base64.getEncoder().encodeToString("admin:admin".getBytes());
+        String auth = "Basic " + Base64.getEncoder().encodeToString("admin:admin-test-pass".getBytes());
         var http = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
         var page = http.send(HttpRequest.newBuilder(uri("/admin/products")).header("Authorization", auth).build(),
                 HttpResponse.BodyHandlers.ofString()).body();
@@ -223,6 +272,13 @@ class AccountFlowTest {
                 .POST(HttpRequest.BodyPublishers.ofByteArray(fake)).build(), HttpResponse.BodyHandlers.ofString());
         assertThat(http.send(HttpRequest.newBuilder(uri("/media/products/" + id)).build(), HttpResponse.BodyHandlers.ofByteArray())
                 .headers().firstValue("Content-Type").orElseThrow()).isEqualTo("image/png");
+
+        // Фото к несуществующему товару — 404, а не ошибка сервера
+        var missing = http.send(HttpRequest.newBuilder(uri("/admin/products/999999/photo"))
+                .header("Authorization", auth).header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                .POST(HttpRequest.BodyPublishers.ofByteArray(multipart(boundary, formCsrf(page), "photo.png", png))).build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(missing.statusCode()).isEqualTo(404);
     }
 
     private static byte[] multipart(String boundary, String csrf, String filename, byte[] file) {

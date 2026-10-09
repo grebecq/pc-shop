@@ -2,7 +2,7 @@ package dev.pcshop.controller.web;
 
 import dev.pcshop.config.SecurityConfig;
 import dev.pcshop.dto.request.RegisterRequest;
-import dev.pcshop.exception.AccountException;
+import dev.pcshop.exception.DuplicateResourceException;
 import dev.pcshop.security.ShopUser;
 import dev.pcshop.service.AccountService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -51,7 +51,7 @@ public class AuthController {
         ShopUser user;
         try {
             user = accounts.register(form);
-        } catch (AccountException e) {
+        } catch (DuplicateResourceException e) {
             errors.rejectValue("email", "taken", e.getMessage());
             return "account/register";
         }

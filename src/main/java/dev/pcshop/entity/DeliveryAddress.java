@@ -60,9 +60,9 @@ public class DeliveryAddress {
     }
 
     public void apply(AddressRequest request) {
-        this.label = request.label().strip();
-        this.city = request.city().strip();
-        this.street = request.street().strip();
+        this.label = request.label();
+        this.city = request.city();
+        this.street = request.street();
         this.apartment = Strings.blankToNull(request.apartment());
         this.postalCode = Strings.blankToNull(request.postalCode());
     }

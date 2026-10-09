@@ -1,5 +1,7 @@
 package dev.pcshop.service;
 
+import dev.pcshop.exception.BadRequestException;
+import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -24,14 +26,14 @@ public class ProductPhotoService {
     @Transactional
     public void save(long productId, byte[] data) {
         if (data.length == 0 || data.length > MAX_BYTES) {
-            throw new IllegalArgumentException("Фото должно быть не больше 3 МБ");
+            throw new BadRequestException("Фото должно быть не больше 3 МБ");
         }
         // Тип определяем по содержимому файла, а не по имени или заголовку из браузера
         String type = detectType(data);
         if (type == null) {
-            throw new IllegalArgumentException("Подойдёт JPEG, PNG или WebP");
+            throw new BadRequestException("Подойдёт JPEG, PNG или WebP");
         }
-        var product = products.findById(productId).orElseThrow();
+        var product = products.findById(productId).orElseThrow(() -> new ResourceNotFoundException("Товар не найден"));
         jdbc.sql("""
                         INSERT INTO product_photo (product_id, content_type, data, updated_at) VALUES (:id, :type, :data, now())
                         ON CONFLICT (product_id) DO UPDATE SET content_type = :type, data = :data, updated_at = now()""")

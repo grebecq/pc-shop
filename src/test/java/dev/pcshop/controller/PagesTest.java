@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(TestcontainersConfig.class)
 class PagesTest {
 
-    private static final String ADMIN = "Basic " + Base64.getEncoder().encodeToString("admin:admin".getBytes());
+    private static final String ADMIN = "Basic " + Base64.getEncoder().encodeToString("admin:admin-test-pass".getBytes());
 
     @LocalServerPort int port;
     @Autowired OrderService orders;

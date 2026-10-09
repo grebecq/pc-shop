@@ -4,7 +4,8 @@ import dev.pcshop.TestcontainersConfig;
 import dev.pcshop.dto.request.RegisterRequest;
 import dev.pcshop.dto.response.CandidateResponse;
 import dev.pcshop.enums.Slot;
-import dev.pcshop.exception.AccountException;
+import dev.pcshop.exception.BadRequestException;
+import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.model.Build;
 import dev.pcshop.model.Issue;
 import org.junit.jupiter.api.Test;
@@ -172,8 +173,8 @@ class CompatibilityServiceTest {
         assertThat(list.getFirst().complete()).isTrue();
         assertThat(builds.saved(boris)).isEmpty();
 
-        assertThatThrownBy(() -> builds.deleteSaved(boris, saved.getId())).isInstanceOf(AccountException.class);
-        assertThatThrownBy(() -> builds.save(anna, "", Build.empty())).isInstanceOf(AccountException.class);
+        assertThatThrownBy(() -> builds.deleteSaved(boris, saved.getId())).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> builds.save(anna, "", Build.empty())).isInstanceOf(BadRequestException.class);
         assertThat(builds.save(anna, "", preset).getName()).startsWith("Сборка за ");
         builds.deleteSaved(anna, saved.getId());
         assertThat(builds.saved(anna)).hasSize(1);

@@ -15,11 +15,21 @@ import java.util.List;
  * @param newAddress новый адрес по полям — сохраняется в кабинет, если saveAddress
  */
 public record CreateOrderRequest(
-        @NotNull(message = "Укажите данные покупателя") @Valid CustomerRequest customer,
+
+        @NotNull(message = "Укажите данные покупателя")
+        @Valid
+        CustomerRequest customer,
+
         @NotEmpty(message = "Корзина пуста")
-        @Size(max = 50, message = "Слишком много позиций в заказе") List<@NotNull @Valid OrderLineRequest> items,
-        @Positive Long addressId,
-        @Valid AddressRequest newAddress,
+        @Size(max = 50, message = "Слишком много позиций в заказе")
+        List<@NotNull(message = "Пустая позиция в заказе") @Valid OrderLineRequest> items,
+
+        @Positive(message = "Неизвестный адрес")
+        Long addressId,
+
+        @Valid
+        AddressRequest newAddress,
+
         Boolean saveAddress) {
 
     public boolean wantsToSaveAddress() {

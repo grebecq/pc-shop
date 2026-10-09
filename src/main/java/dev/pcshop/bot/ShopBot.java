@@ -24,6 +24,8 @@ import dev.pcshop.service.CompatibilityService;
 import dev.pcshop.service.OrderService;
 import dev.pcshop.util.Attributes;
 import dev.pcshop.util.Formats;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -572,6 +574,11 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
             order = orders.create(Channel.TELEGRAM, customer, lines, chatId);
         } catch (OrderException e) {
             send(chatId, "Не получилось оформить заказ: " + htmlEscape(e.getMessage()) + "\nПоправьте корзину и попробуйте ещё раз.", mainMenu());
+            return;
+        } catch (ConstraintViolationException e) {
+            // Сюда попадаем, только если проверки шагов выше разошлись с правилами CustomerRequest
+            String reason = e.getConstraintViolations().stream().findFirst().map(ConstraintViolation::getMessage).orElse("проверьте данные");
+            send(chatId, "Не получилось оформить заказ: " + htmlEscape(reason) + "\nНачните оформление заново.", mainMenu());
             return;
         }
         cart.clear(chatId);

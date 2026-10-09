@@ -4,7 +4,7 @@ import dev.pcshop.dto.request.CreateOrderRequest;
 import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.entity.Order;
 import dev.pcshop.enums.Channel;
-import dev.pcshop.exception.AccountException;
+import dev.pcshop.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,7 +36,7 @@ public class CheckoutService {
             if (request.wantsToSaveAddress()) {
                 try {
                     accountService.addAddress(accountId, request.newAddress());
-                } catch (AccountException e) {
+                } catch (BadRequestException e) {
                     // Заказ уже создан; если адрес не сохранился (лимит), покупатель добавит его в кабинете
                     log.info("Адрес из заказа {} не сохранён: {}", order.number(), e.getMessage());
                 }

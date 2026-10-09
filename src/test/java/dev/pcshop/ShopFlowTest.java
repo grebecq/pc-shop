@@ -3,12 +3,14 @@ package dev.pcshop;
 import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.dto.request.OrderLineRequest;
 import dev.pcshop.dto.request.ProductSearchRequest;
+import dev.pcshop.dto.request.ProductUpdateRequest;
 import dev.pcshop.enums.Channel;
 import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.exception.OrderException;
 import dev.pcshop.repository.ProductRepository;
 import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.OrderService;
+import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -70,6 +72,27 @@ class ShopFlowTest {
 
         orders.changeStatus(order.getId(), OrderStatus.CANCELLED);
         assertThat(products.findById(ssd.getId()).orElseThrow().getStock()).isEqualTo(before);
+    }
+
+    @Test
+    void orderServiceChecksCustomerForEveryChannel() {
+        long ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme").getId();
+        // Бот проверяет ввод сам, но сервис не доверяет никакому каналу
+        var bad = new CustomerRequest(" ", "не телефон", "Мск", null);
+        assertThatThrownBy(() -> orders.create(Channel.TELEGRAM, bad, List.of(new OrderLineRequest(ssd, 1)), 1L))
+                .isInstanceOf(ConstraintViolationException.class)
+                .hasMessageContaining("Укажите имя")
+                .hasMessageContaining("Телефон в формате");
+        assertThatThrownBy(() -> orders.create(Channel.TELEGRAM, CUSTOMER, List.of(), 1L))
+                .isInstanceOf(ConstraintViolationException.class);
+    }
+
+    @Test
+    void adminEditRefreshesUpdatedAt() {
+        var gpu = catalog.product("palit-geforce-rtx-5070-infinity-3-12-gb");
+        var before = gpu.getUpdatedAt();
+        catalog.updateProduct(gpu.getId(), new ProductUpdateRequest(gpu.getPrice() + 100, gpu.getStock(), true));
+        assertThat(products.findById(gpu.getId()).orElseThrow().getUpdatedAt()).isAfter(before);
     }
 
     @Test
