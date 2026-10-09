@@ -3,7 +3,8 @@ FROM eclipse-temurin:21-jdk AS build
 WORKDIR /src
 COPY gradlew settings.gradle.kts build.gradle.kts ./
 COPY gradle gradle
-RUN ./gradlew --no-daemon dependencies > /dev/null
+# На Windows git может заменить переводы строк в gradlew на CRLF, тогда Linux его не запустит
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew && ./gradlew --no-daemon dependencies > /dev/null
 COPY src src
 RUN ./gradlew --no-daemon bootJar -x test
 
