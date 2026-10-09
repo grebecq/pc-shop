@@ -30,13 +30,25 @@ public final class Attributes {
             Map.entry("certificate", "Сертификат"),
             Map.entry("modular", "Модульный"),
             Map.entry("max_gpu_mm", "Макс. длина видеокарты, мм"),
-            Map.entry("color", "Цвет"));
+            Map.entry("color", "Цвет"),
+            Map.entry("igpu", "Встроенная графика"),
+            Map.entry("box_cooler", "Кулер в комплекте"),
+            Map.entry("m2_gen5", "M.2 с PCIe 5.0"),
+            Map.entry("max_cooler_mm", "Макс. высота кулера, мм"),
+            Map.entry("max_radiator_mm", "Макс. радиатор СЖО, мм"),
+            Map.entry("cooler_type", "Тип"),
+            Map.entry("sockets", "Сокеты"),
+            Map.entry("height_mm", "Высота, мм"),
+            Map.entry("radiator_mm", "Радиатор, мм"),
+            Map.entry("max_tdp", "Рассеивает до, Вт"));
 
     // JSONB не хранит порядок ключей, поэтому порядок вывода задаём сами: важное сначала
     private static final List<String> ORDER = List.of(
             "socket", "chip_vendor", "memory_gb", "cores", "threads", "chipset", "memory_type", "capacity_gb",
             "modules", "frequency", "form_factor", "interface", "read_mbps", "power", "certificate", "modular",
-            "max_gpu_mm", "length_mm", "recommended_psu", "tdp", "color");
+            "cooler_type", "max_tdp", "height_mm", "radiator_mm", "sockets",
+            "max_gpu_mm", "max_cooler_mm", "max_radiator_mm", "length_mm", "recommended_psu", "tdp", "color",
+            "igpu", "box_cooler", "m2_gen5");
 
     // Короткая запись значения с единицами для карточек товара
     private static final Map<String, String> SHORT = Map.ofEntries(
@@ -51,7 +63,12 @@ public final class Attributes {
             Map.entry("recommended_psu", "БП от %s Вт"),
             Map.entry("read_mbps", "до %s МБ/с"),
             Map.entry("power", "%s Вт"),
-            Map.entry("max_gpu_mm", "GPU до %s мм"));
+            Map.entry("max_gpu_mm", "GPU до %s мм"),
+            Map.entry("max_tdp", "до %s Вт"),
+            Map.entry("max_cooler_mm", "кулер до %s мм"),
+            Map.entry("max_radiator_mm", "СЖО до %s мм"),
+            Map.entry("height_mm", "%s мм"),
+            Map.entry("radiator_mm", "радиатор %s мм"));
 
     private static final Comparator<String> BY_ORDER = Comparator.comparingInt(k -> {
         int i = ORDER.indexOf(k);

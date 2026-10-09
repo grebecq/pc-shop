@@ -60,6 +60,21 @@ public class Product {
         this.imageUrl = imageUrl;
     }
 
+    /** Числовая характеристика или 0, если её нет. */
+    public int num(String key) {
+        return attributes.get(key) instanceof Number n ? n.intValue() : 0;
+    }
+
+    /** Строковая характеристика или пустая строка. */
+    public String str(String key) {
+        Object v = attributes.get(key);
+        return v == null ? "" : v.toString();
+    }
+
+    public boolean flag(String key) {
+        return Boolean.TRUE.equals(attributes.get(key));
+    }
+
     public boolean inStock() {
         return stock > 0;
     }

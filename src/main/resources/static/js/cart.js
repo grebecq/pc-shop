@@ -45,6 +45,29 @@
     setTimeout(function () { btn.textContent = label; btn.classList.remove("is-done"); }, 1400);
   });
 
+  // Конфигуратор: вся сборка в корзину одной кнопкой
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-add-build]");
+    if (!btn) return;
+    var cart = read();
+    btn.getAttribute("data-add-build").split(",").forEach(function (id) {
+      if (id) cart[id] = Math.min((cart[id] || 0) + 1, MAX_QTY);
+    });
+    write(cart);
+    location.href = "/cart";
+  });
+
+  // Копирование ссылки на сборку
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-copy]");
+    if (!btn) return;
+    var input = document.querySelector(btn.getAttribute("data-copy"));
+    input.select();
+    var done = function () { btn.textContent = "Скопировано"; };
+    if (navigator.clipboard) navigator.clipboard.writeText(input.value).then(done, function () { document.execCommand("copy"); done(); });
+    else { document.execCommand("copy"); done(); }
+  });
+
   // +/− на странице товара
   document.querySelectorAll("[data-qty]").forEach(function (b) {
     b.addEventListener("click", function () {

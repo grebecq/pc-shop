@@ -22,6 +22,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findAllByOrderByCategorySortOrderAscNameAsc();
 
     @EntityGraph(attributePaths = "category")
+    List<Product> findAllByCategorySlugAndActiveTrueOrderByPriceAsc(String categorySlug);
+
+    @EntityGraph(attributePaths = "category")
+    List<Product> findAllBySlugInAndActiveTrue(Collection<String> slugs);
+
+    @EntityGraph(attributePaths = "category")
     List<Product> findTop8ByActiveTrueAndStockGreaterThanOrderByPriceDesc(int stock);
 
     /**

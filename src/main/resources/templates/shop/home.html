@@ -11,13 +11,15 @@
             <p class="lead">Процессоры, видеокарты, память и всё остальное для сборки. Заказ можно оформить здесь
                 или в Telegram-боте: корзина, оплата и статусы работают одинаково.</p>
             <div class="hero__actions">
-                <a class="btn" href="#catalog">Перейти в каталог</a>
+                <a class="btn" th:href="@{/configurator}">Собрать ПК</a>
+                <a class="btn btn--ghost" href="#catalog">Перейти в каталог</a>
                 <a class="btn btn--ghost" th:if="${botLink}" th:href="${botLink}" target="_blank" rel="noopener">Открыть бота</a>
             </div>
         </div>
         <dl class="hero__facts">
             <div><dt>Каналы продаж</dt><dd>Сайт и Telegram</dd></div>
             <div><dt>Оплата</dt><dd>Карта, СБП, Telegram</dd></div>
+            <div><dt>Конфигуратор</dt><dd>Проверка совместимости</dd></div>
             <div><dt>Админка</dt><dd>Заказы и остатки</dd></div>
         </dl>
     </section>

@@ -51,6 +51,15 @@ public class CatalogService {
         return products.findAllByIdInAndActiveTrue(ids);
     }
 
+    /** Все товары категории в продаже, от дешёвых к дорогим (для конфигуратора). */
+    public List<Product> productsIn(String categorySlug) {
+        return products.findAllByCategorySlugAndActiveTrueOrderByPriceAsc(categorySlug);
+    }
+
+    public List<Product> productsBySlugs(Collection<String> slugs) {
+        return products.findAllBySlugInAndActiveTrue(slugs);
+    }
+
     public List<Product> featured() {
         return products.findTop8ByActiveTrueAndStockGreaterThanOrderByPriceDesc(0);
     }

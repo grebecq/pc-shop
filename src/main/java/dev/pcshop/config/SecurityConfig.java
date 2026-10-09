@@ -49,7 +49,7 @@ public class SecurityConfig {
         http
                 .authenticationManager(manager(accounts, encoder))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/account/**").authenticated()
+                        .requestMatchers("/account/**", "/configurator/save").authenticated()
                         .anyRequest().permitAll())
                 .formLogin(form -> form
                         .loginPage("/login")
@@ -84,9 +84,12 @@ public class SecurityConfig {
         };
     }
 
-    /** Внутренний путь сайта: начинается с одного «/», без хоста и параметров. */
+    /**
+     * Внутренний путь сайта: начинается с одного «/», без хоста. Параметры — только из букв, цифр, «=» и «&»
+     * (нужно, чтобы после входа вернуться к своей сборке в конфигураторе: /configurator?cpu=1&mb=5).
+     */
     public static boolean isSafeNext(String next) {
-        return next != null && next.matches("^/(?!/)[a-z0-9/-]*$");
+        return next != null && next.matches("^/(?!/)[a-z0-9/-]*(\\?[a-z0-9=&]*)?$");
     }
 
     private static ProviderManager manager(UserDetailsService users, PasswordEncoder encoder) {
