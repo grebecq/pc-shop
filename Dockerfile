@@ -4,7 +4,8 @@ WORKDIR /src
 COPY gradlew settings.gradle.kts build.gradle.kts ./
 COPY gradle gradle
 # На Windows git может заменить переводы строк в gradlew на CRLF, тогда Linux его не запустит
-RUN sed -i 's/\r$//' gradlew && chmod +x gradlew && ./gradlew --no-daemon dependencies > /dev/null
+# Первая сборка качает Gradle и библиотеки (несколько минут), прогресс виден с --progress=plain
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew && ./gradlew --no-daemon dependencies --console=plain
 COPY src src
 RUN ./gradlew --no-daemon bootJar -x test
 
