@@ -4,6 +4,7 @@ import dev.pcshop.dto.request.CreateOrderRequest;
 import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.entity.Order;
 import dev.pcshop.enums.Channel;
+import dev.pcshop.enums.DeliveryMethod;
 import dev.pcshop.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,16 +21,26 @@ public class CheckoutService {
 
     private final OrderService orderService;
     private final AccountService accountService;
+    private final DeliveryService deliveryService;
 
     public Order checkout(CreateOrderRequest request, Long accountId) {
-        CustomerRequest customer = request.customer();
-        if (accountId != null && request.addressId() != null) {
-            // Сохранённый адрес берём из базы, а не из текста от браузера
-            String address = accountService.address(accountId, request.addressId()).oneLine();
-            customer = new CustomerRequest(customer.name(), customer.phone(), address, customer.comment());
+        if (accountId == null && !request.hasConsent()) {
+            throw new BadRequestException("Нужно согласие на обработку персональных данных");
         }
+        CustomerRequest customer = request.customer();
 
-        Order order = orderService.create(Channel.SITE, customer, request.items(), null, accountId);
+        // Магазин и сохранённый адрес берём из базы, а не из текста от браузера
+        String address = customer.address();
+        if (request.delivery() == DeliveryMethod.PICKUP) {
+            address = deliveryService.pickupPoint(request.pickupPointId()).oneLine();
+        } else if (accountId != null && request.addressId() != null) {
+            address = accountService.address(accountId, request.addressId()).oneLine();
+        }
+        // Вошедшему без email в форме письма о заказе идут на email аккаунта
+        String email = customer.email() == null && accountId != null ? accountService.get(accountId).getEmail() : customer.email();
+        customer = customer.withAddressAndEmail(address, email);
+
+        Order order = orderService.create(Channel.SITE, customer, request.delivery(), request.items(), null, accountId);
 
         if (accountId != null) {
             accountService.rememberPhone(accountId, customer.phone());

@@ -74,6 +74,10 @@ shop:
     payment-timeout: ${PAYMENT_TIMEOUT:30m}
   # Публичный адрес сайта: нужен для ссылок в сообщениях бота и в письмах
   base-url: ${SHOP_BASE_URL:${RENDER_EXTERNAL_URL:http://localhost:8080}}
+  delivery:
+    # Доставка курьером в рублях и сумма заказа, от которой она бесплатная
+    courier-price: 490
+    free-from: 50000
   mail:
     # Отправитель писем покупателям
     from: "${MAIL_FROM:Сборка <noreply@pc-shop.local>}"

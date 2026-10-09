@@ -1,8 +1,10 @@
 package dev.pcshop.dto.request;
 
 import dev.pcshop.util.Strings;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /** Регистрация покупателя на сайте. */
@@ -20,7 +22,12 @@ public record RegisterRequest(
         // Пароль не обрезаем: пробелы по краям — тоже часть пароля
         @NotBlank(message = "Придумайте пароль")
         @Size(min = 8, max = 72, message = "Пароль — от 8 до 72 символов")
-        String password) {
+        String password,
+
+        // Галочка в форме. Без неё браузер не присылает поле вовсе, поэтому null тоже ошибка
+        @NotNull(message = "Нужно согласие на обработку персональных данных")
+        @AssertTrue(message = "Нужно согласие на обработку персональных данных")
+        Boolean consent) {
 
     public RegisterRequest {
         name = Strings.strip(name);
@@ -29,6 +36,6 @@ public record RegisterRequest(
     }
 
     public static RegisterRequest empty() {
-        return new RegisterRequest("", "", "");
+        return new RegisterRequest("", "", "", false);
     }
 }

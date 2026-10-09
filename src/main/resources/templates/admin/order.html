@@ -23,12 +23,16 @@
         </tr>
         </tbody>
     </table>
-    <p class="cart-total">Итого: <b th:text="${@fmt.rub(order.total)}">0 ₽</b></p>
+    <p class="cart-total">
+        <span class="muted" th:text="'Доставка: ' + (${order.deliveryPrice == 0} ? 'бесплатно' : ${@fmt.rub(order.deliveryPrice)}) + ' · '">Доставка</span>
+        Итого: <b th:text="${@fmt.rub(order.total)}">0 ₽</b></p>
 
     <dl class="details">
         <div><dt>Покупатель</dt><dd th:text="${order.customerName}">Имя</dd></div>
         <div><dt>Телефон</dt><dd th:text="${order.phone}">Телефон</dd></div>
-        <div><dt>Адрес</dt><dd th:text="${order.address}">Адрес</dd></div>
+        <div th:if="${order.email}"><dt>Email</dt><dd th:text="${order.email}">Email</dd></div>
+        <div><dt>Получение</dt><dd th:text="${order.deliveryMethod.label()}">Курьер</dd></div>
+        <div><dt th:text="${order.deliveryMethod.name() == 'PICKUP'} ? 'Магазин' : 'Адрес'">Адрес</dt><dd th:text="${order.address}">Адрес</dd></div>
         <div th:if="${order.comment}"><dt>Комментарий</dt><dd th:text="${order.comment}">Комментарий</dd></div>
         <div th:if="${order.paymentCard}"><dt>Оплата</dt><dd th:text="${order.paymentCard} + ' · тестовая оплата на сайте'">Visa •• 4242</dd></div>
     </dl>
@@ -40,6 +44,7 @@
         </select>
         <button class="btn" type="submit">Сохранить</button>
         <p class="muted small" th:if="${order.telegramChatId}">Покупатель получит уведомление в Telegram. При отмене товар вернётся на склад.</p>
+        <p class="muted small" th:if="${order.email}">Покупатель получит письмо о новом статусе. При отмене товар вернётся на склад.</p>
     </form>
 </main>
 </body>

@@ -53,7 +53,8 @@ class ShopBotTest {
     @BeforeEach
     void setUp() {
         telegram = mock(TelegramClient.class);
-        var props = new ShopProperties("http://localhost:8080", null, new ShopProperties.Telegram("test", null, null, null));
+        var props = new ShopProperties("http://localhost:8080", null, new ShopProperties.Telegram("test", null, null, null),
+                new ShopProperties.Delivery(490, 50000));
         bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, props, Duration.ofMinutes(30));
         cart.clear(CHAT);
     }

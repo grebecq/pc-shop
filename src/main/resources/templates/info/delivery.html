@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Доставка и оплата')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap narrow info">
+    <h1>Доставка и оплата</h1>
+    <p class="lead">Заберите заказ в магазине или закажите курьера. Оплатить можно картой на сайте или в Telegram-боте.</p>
+
+    <h2>Как получить заказ</h2>
+    <div class="info-cards">
+        <div class="info-card">
+            <b>Самовывоз из магазина</b>
+            <span class="price">Бесплатно</span>
+            <span class="muted">Забрать можно на следующий день после оплаты. Заказ ждёт в магазине 7 дней.</span>
+        </div>
+        <div class="info-card">
+            <b>Доставка курьером</b>
+            <span class="price" th:text="${@fmt.rub(courierPrice)}">490 ₽</span>
+            <span class="muted" th:text="'Бесплатно для заказов от ' + ${@fmt.rub(freeFrom)} + '. Привезём за 1–2 дня после оплаты, курьер позвонит перед приездом.'">Бесплатно от 50 000 ₽.</span>
+        </div>
+    </div>
+
+    <h2>Магазины для самовывоза</h2>
+    <div class="info-cards">
+        <div class="info-card" th:each="p : ${pickupPoints}">
+            <b th:text="${p.name}">Магазин</b>
+            <span th:text="${p.address}">Адрес</span>
+            <span class="muted" th:text="${p.hours}">Часы работы</span>
+        </div>
+    </div>
+
+    <h2>Оплата</h2>
+    <ul>
+        <li>Картой Visa, Mastercard или МИР на сайте сразу после оформления заказа.</li>
+        <li>В Telegram-боте: кнопкой оплаты прямо в чате.</li>
+        <li>Пока заказ ждёт оплаты, товар отложен для вас. Если не оплатить вовремя, заказ отменится, а товар вернётся в продажу.</li>
+    </ul>
+    <p class="after-list">Номер карты и CVC мы не храним: в заказе остаются только платёжная система и последние 4 цифры.</p>
+
+    <p class="info-note">Это демо-магазин: оплата тестовая, деньги не списываются, а товары не доставляются.</p>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

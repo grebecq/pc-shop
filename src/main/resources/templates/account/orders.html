@@ -16,7 +16,7 @@
                 <span class="muted" th:text="${@fmt.date(o.createdAt)}">дата</span>
             </span>
             <span class="num" th:text="${@fmt.rub(o.total)}">0 ₽</span>
-            <span class="pill" th:classappend="'pill--' + ${#strings.toLowerCase(o.status.name())}" th:text="${o.status.label()}">Статус</span>
+            <span class="pill" th:classappend="'pill--' + ${#strings.toLowerCase(o.status.name())}" th:text="${o.statusLabel()}">Статус</span>
         </a>
     </div>
     <div class="empty" th:if="${orders.empty}">

@@ -2,6 +2,7 @@ package dev.pcshop.entity;
 
 import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.enums.Channel;
+import dev.pcshop.enums.DeliveryMethod;
 import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.exception.OrderException;
 import jakarta.persistence.CascadeType;
@@ -63,8 +64,20 @@ public class Order {
     @Column(nullable = false)
     private String phone;
 
+    /** Адрес доставки или магазин самовывоза, одной строкой. */
     @Column(nullable = false)
     private String address;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "delivery_method", nullable = false)
+    private DeliveryMethod deliveryMethod = DeliveryMethod.COURIER;
+
+    /** Цена доставки на момент заказа. Уже входит в total. */
+    @Column(name = "delivery_price", nullable = false)
+    private int deliveryPrice;
+
+    /** Куда слать письма о заказе. У заказов из бота пусто. */
+    private String email;
 
     private String comment;
 
@@ -96,19 +109,42 @@ public class Order {
     @OrderBy("id")
     private List<OrderItem> items = new ArrayList<>();
 
-    public Order(Channel channel, CustomerRequest customer, Long telegramChatId, Long accountId) {
+    public Order(Channel channel, CustomerRequest customer, DeliveryMethod deliveryMethod, Long telegramChatId, Long accountId) {
         this.accountId = accountId;
         this.channel = channel;
         this.customerName = customer.name();
         this.phone = customer.phone();
         this.address = customer.address();
         this.comment = customer.comment();
+        this.email = customer.email();
+        this.deliveryMethod = deliveryMethod;
         this.telegramChatId = telegramChatId;
     }
 
     public void addItem(long productId, String name, int price, int quantity) {
         items.add(new OrderItem(this, productId, name, price, quantity));
         total += price * quantity;
+    }
+
+    /** Цена доставки считается от суммы товаров, поэтому вызывается после addItem. */
+    public void chargeDelivery(int price) {
+        total += price - deliveryPrice;
+        deliveryPrice = price;
+    }
+
+    /** Сумма товаров без доставки. */
+    public int itemsTotal() {
+        return total - deliveryPrice;
+    }
+
+    /** Покупатель может сам отменить заказ, пока его не передали в доставку. */
+    public boolean cancellableByCustomer() {
+        return status == OrderStatus.AWAITING_PAYMENT || status == OrderStatus.PAID || status == OrderStatus.ASSEMBLING;
+    }
+
+    /** Статус для покупателя: при самовывозе «передан в доставку» значит, что заказ ждёт в магазине. */
+    public String statusLabel() {
+        return status == OrderStatus.SHIPPED && deliveryMethod == DeliveryMethod.PICKUP ? "Ждёт в магазине" : status.label();
     }
 
     /** Возвращает true, если статус действительно поменялся (повторная оплата не считается). */

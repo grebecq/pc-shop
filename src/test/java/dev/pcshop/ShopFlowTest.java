@@ -5,6 +5,7 @@ import dev.pcshop.dto.request.OrderLineRequest;
 import dev.pcshop.dto.request.ProductSearchRequest;
 import dev.pcshop.dto.request.ProductUpdateRequest;
 import dev.pcshop.enums.Channel;
+import dev.pcshop.enums.DeliveryMethod;
 import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.exception.OrderException;
 import dev.pcshop.repository.ProductRepository;
@@ -64,7 +65,8 @@ class ShopFlowTest {
         var order = orders.create(Channel.SITE, CUSTOMER, List.of(new OrderLineRequest(ssd.getId(), 2), new OrderLineRequest(ssd.getId(), 1)), null);
 
         assertThat(order.getItems()).hasSize(1);
-        assertThat(order.getTotal()).isEqualTo(ssd.getPrice() * 3);
+        assertThat(order.itemsTotal()).isEqualTo(ssd.getPrice() * 3);
+        assertThat(order.getTotal()).isEqualTo(order.itemsTotal() + order.getDeliveryPrice());
         assertThat(products.findById(ssd.getId()).orElseThrow().getStock()).isEqualTo(before - 3);
 
         orders.markPaid(order.getPublicId());
@@ -72,6 +74,25 @@ class ShopFlowTest {
 
         orders.changeStatus(order.getId(), OrderStatus.CANCELLED);
         assertThat(products.findById(ssd.getId()).orElseThrow().getStock()).isEqualTo(before);
+    }
+
+    @Test
+    void courierIsFreeFromThresholdAndPickupIsAlwaysFree() {
+        var ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme");
+        assertThat(ssd.getPrice()).as("один SSD дешевле порога бесплатной доставки, три — дороже").isBetween(16_667, 49_999);
+
+        var one = orders.create(Channel.SITE, CUSTOMER, DeliveryMethod.COURIER, List.of(new OrderLineRequest(ssd.getId(), 1)), null, null);
+        assertThat(one.getDeliveryPrice()).isEqualTo(490);
+        assertThat(one.getTotal()).isEqualTo(ssd.getPrice() + 490);
+
+        var three = orders.create(Channel.SITE, CUSTOMER, DeliveryMethod.COURIER, List.of(new OrderLineRequest(ssd.getId(), 3)), null, null);
+        assertThat(three.getDeliveryPrice()).isZero();
+
+        var pickup = orders.create(Channel.SITE, CUSTOMER, DeliveryMethod.PICKUP, List.of(new OrderLineRequest(ssd.getId(), 1)), null, null);
+        assertThat(pickup.getDeliveryPrice()).isZero();
+        assertThat(pickup.getTotal()).isEqualTo(ssd.getPrice());
+
+        List.of(one, three, pickup).forEach(o -> orders.changeStatus(o.getId(), OrderStatus.CANCELLED));
     }
 
     @Test

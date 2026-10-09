@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Контакты')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap narrow info">
+    <h1>Контакты</h1>
+    <p class="lead">Поможем выбрать комплектующие, проверить сборку и разобраться с заказом.</p>
+
+    <div class="info-cards">
+        <div class="info-card">
+            <b>Телефон</b>
+            <a href="tel:+78000000000">8 800 000-00-00</a>
+            <span class="muted">ежедневно 9:00–21:00, звонок бесплатный</span>
+        </div>
+        <div class="info-card">
+            <b>Email</b>
+            <a href="mailto:hello@pc-shop.local">hello@pc-shop.local</a>
+            <span class="muted">отвечаем в течение дня</span>
+        </div>
+        <div class="info-card" th:if="${botLink}">
+            <b>Telegram</b>
+            <a th:href="${botLink}" target="_blank" rel="noopener">Открыть бота</a>
+            <span class="muted">каталог, заказы и сборка ПК в чате</span>
+        </div>
+    </div>
+
+    <h2>Магазины</h2>
+    <div class="info-cards">
+        <div class="info-card" th:each="p : ${pickupPoints}">
+            <b th:text="${p.name}">Магазин</b>
+            <span th:text="${p.address}">Адрес</span>
+            <span class="muted" th:text="${p.hours}">Часы работы</span>
+        </div>
+    </div>
+
+    <p class="info-note">Это демо-магазин: телефон, почта и адреса ненастоящие.</p>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

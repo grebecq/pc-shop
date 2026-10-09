@@ -6,6 +6,7 @@ import dev.pcshop.dto.request.OrderLineRequest;
 import dev.pcshop.entity.Order;
 import dev.pcshop.entity.Product;
 import dev.pcshop.enums.Channel;
+import dev.pcshop.enums.DeliveryMethod;
 import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.event.OrderEvents;
 import dev.pcshop.exception.OrderException;
@@ -47,22 +48,27 @@ public class OrderService {
     private final ProductRepository products;
     private final ApplicationEventPublisher events;
     private final DemoPaymentGateway paymentGateway;
+    private final DeliveryService delivery;
 
-    /**
-     * Создаёт заказ и резервирует товар. Если чего-то не хватает, откатывается весь заказ целиком.
-     */
+    /** Заказ из бота: доставка курьером по адресу из чата. */
     @Transactional
     public Order create(@NotNull(message = "Не указан канал заказа") Channel channel,
                         @NotNull(message = "Укажите данные покупателя") @Valid CustomerRequest customer,
                         @NotEmpty(message = "Корзина пуста") List<@NotNull @Valid OrderLineRequest> lines,
                         Long telegramChatId) {
-        return create(channel, customer, lines, telegramChatId, null);
+        return create(channel, customer, DeliveryMethod.COURIER, lines, telegramChatId, null);
     }
 
-    /** То же, но заказ привязывается к аккаунту покупателя на сайте. */
+    /**
+     * Создаёт заказ и резервирует товар. Если чего-то не хватает, откатывается весь заказ целиком.
+     * Цена доставки считается здесь же, от суммы товаров, и входит в итог.
+     *
+     * @param accountId аккаунт покупателя на сайте или null для гостя и бота
+     */
     @Transactional
     public Order create(@NotNull(message = "Не указан канал заказа") Channel channel,
                         @NotNull(message = "Укажите данные покупателя") @Valid CustomerRequest customer,
+                        @NotNull(message = "Выберите способ получения") DeliveryMethod deliveryMethod,
                         @NotEmpty(message = "Корзина пуста") List<@NotNull @Valid OrderLineRequest> lines,
                         Long telegramChatId, Long accountId) {
         // Одинаковые товары в запросе складываем в одну позицию
@@ -78,7 +84,7 @@ public class OrderService {
         Map<Long, Product> byId = products.findAllById(quantities.keySet()).stream()
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
 
-        Order order = new Order(channel, customer, telegramChatId, accountId);
+        Order order = new Order(channel, customer, deliveryMethod, telegramChatId, accountId);
         quantities.forEach((productId, qty) -> {
             Product product = byId.get(productId);
             if (product == null || !product.isActive()) {
@@ -89,6 +95,7 @@ public class OrderService {
             }
             order.addItem(productId, product.getName(), product.getPrice(), qty);
         });
+        order.chargeDelivery(delivery.price(deliveryMethod, order.itemsTotal()));
 
         orders.save(order);
         log.info("Заказ {} создан: {}, {} поз., {} ₽", order.number(), channel, order.getItems().size(), order.getTotal());
@@ -138,6 +145,26 @@ public class OrderService {
         }
         events.publishEvent(new OrderEvents.StatusChanged(order.getId(), status));
         return order;
+    }
+
+    /**
+     * Отмена покупателем со страницы заказа. Заказ из кабинета может отменить только его владелец,
+     * гостевой — тот, у кого есть ссылка на заказ (в ней случайный UUID).
+     */
+    @Transactional
+    public Order cancelByCustomer(UUID publicId, Long accountId) {
+        Order order = byPublicId(publicId);
+        if (order.getAccountId() != null && !order.getAccountId().equals(accountId)) {
+            // Как будто заказа нет: не подсказываем, что ссылка настоящая
+            throw new ResourceNotFoundException("Заказ не найден");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            return order;
+        }
+        if (!order.cancellableByCustomer()) {
+            throw new OrderException("Заказ уже " + order.statusLabel().toLowerCase() + ", отменить его на сайте нельзя. Позвоните нам, поможем");
+        }
+        return changeStatus(order.getId(), OrderStatus.CANCELLED);
     }
 
     /** Отмена неоплаченного заказа по таймауту. Если заказ уже оплачен, ничего не делает. */
