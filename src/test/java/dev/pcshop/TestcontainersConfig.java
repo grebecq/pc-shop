@@ -13,4 +13,10 @@ public class TestcontainersConfig {
     PostgreSQLContainer postgres() {
         return new PostgreSQLContainer("postgres:16-alpine");
     }
+
+    /** Вместо SMTP: письма складываются в список, тесты достают из них ссылки. */
+    @Bean
+    TestMailbox mailSender() {
+        return new TestMailbox();
+    }
 }

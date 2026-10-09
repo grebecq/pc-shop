@@ -56,6 +56,8 @@ public class SecurityConfig {
                 .authenticationManager(manager(accounts, encoder))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/account/**", "/configurator/save").authenticated()
+                        // «Забыли пароль?» и ссылка из письма: покупатель как раз не может войти
+                        .requestMatchers("/password/**").permitAll()
                         .anyRequest().permitAll())
                 .formLogin(form -> form
                         .loginPage("/login")

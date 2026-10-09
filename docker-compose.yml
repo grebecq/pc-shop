@@ -17,6 +17,15 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # Почта для разработки: принимает письма по SMTP и ничего никуда не отправляет.
+  # Письма видно в браузере на http://localhost:8025. Порты только на 127.0.0.1, как у базы
+  mailpit:
+    image: axllent/mailpit:v1.31.4
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    restart: unless-stopped
+
   app:
     build: .
     # Без .env compose тоже запускается: например, когда нужна только база (docker compose up -d db)
@@ -27,11 +36,16 @@ services:
       DB_URL: jdbc:postgresql://db:5432/pcshop
       DB_USER: pcshop
       DB_PASSWORD: ${DB_PASSWORD:-pcshop}
+      # Без своего SMTP в .env письма уходят в Mailpit
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
     ports:
       - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
