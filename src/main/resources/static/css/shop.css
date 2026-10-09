@@ -244,8 +244,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 
 /* Фото товаров */
 .card__media.has-photo, .product__media.has-photo { background: #fff; overflow: hidden; }
-.card__media img { width: 100%; height: 100%; object-fit: contain; padding: 12px; }
-.product__media img { width: 100%; height: 100%; object-fit: contain; padding: 24px; }
+.has-photo .icon { display: none; }
+/* Фото растягиваем на весь блок поверх сетки: иначе высота 100% не считается и картинка обрезается */
+.card__media, .product__media { position: relative; }
+.card__media img, .product__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.card__media img { padding: 12px; }
+.product__media img { padding: 24px; }
 
 /* Вход и кабинет */
 .auth { display: grid; place-items: center; }

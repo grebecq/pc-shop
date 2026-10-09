@@ -32,7 +32,7 @@ class OrderExpiryTest {
 
     @Test
     void unpaidOrderIsCancelledAndStockReturned() {
-        var psu = catalog.product("seasonic-focus-gx-1000-atx-3-1-1000-vt");
+        var psu = catalog.product("corsair-rm1000x-2024-1000-vt");
         int before = psu.getStock();
         Order stale = orders.create(Channel.SITE, CUSTOMER, List.of(new OrderLineRequest(psu.getId(), 1)), null);
         Order fresh = orders.create(Channel.SITE, CUSTOMER, List.of(new OrderLineRequest(psu.getId(), 1)), null);
@@ -46,7 +46,7 @@ class OrderExpiryTest {
         assertThat(orders.byId(stale.getId()).getStatus()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(orders.byId(fresh.getId()).getStatus()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
         assertThat(orders.byId(paid.getId()).getStatus()).isEqualTo(OrderStatus.PAID);
-        assertThat(catalog.product("seasonic-focus-gx-1000-atx-3-1-1000-vt").getStock()).isEqualTo(before - 2);
+        assertThat(catalog.product("corsair-rm1000x-2024-1000-vt").getStock()).isEqualTo(before - 2);
 
         // Опоздавшая оплата отменённый заказ не «оживляет»
         assertThat(orders.markPaid(stale.getPublicId()).getPaidAt()).isNull();

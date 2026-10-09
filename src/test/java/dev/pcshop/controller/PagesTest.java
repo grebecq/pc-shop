@@ -45,7 +45,7 @@ class PagesTest {
         assertThat(get("/", null).body()).contains("Сборка", "Процессоры");
         assertThat(get("/c/cpu?socket=AM5&sort=price_asc", null).body()).contains("AM5", "Сбросить фильтры");
         assertThat(get("/c/ram?page=1", null).statusCode()).isEqualTo(200);
-        assertThat(get("/p/kingston-fury-beast-32-gb-2x16-ddr5-6000-cl36", null).body()).contains("66 990 ₽");
+        assertThat(get("/p/kingston-fury-beast-white-32-gb-2x16-ddr5-6000-cl36", null).body()).contains("67 990 ₽");
         assertThat(get("/cart", null).body()).contains("data-order-form");
         assertThat(get("/c/nope", null).statusCode()).isEqualTo(404);
     }
@@ -82,16 +82,16 @@ class PagesTest {
 
     @Test
     void adminValidatesProductUpdate() throws Exception {
-        var product = catalog.product("msi-mag-a550bn-550-vt");
+        var product = catalog.product("corsair-rm850x-2024-850-vt");
         String token = csrf(get("/admin/products", ADMIN).body());
         String url = "/admin/products/" + product.getId();
 
         var invalid = post(url, "price=-5&stock=1&active=true&_csrf=" + token, ADMIN);
         assertThat(invalid.statusCode()).isEqualTo(302);
-        assertThat(catalog.product("msi-mag-a550bn-550-vt").getPrice()).isEqualTo(product.getPrice());
+        assertThat(catalog.product("corsair-rm850x-2024-850-vt").getPrice()).isEqualTo(product.getPrice());
 
         post(url, "price=4590&stock=7&active=true&_csrf=" + token, ADMIN);
-        var updated = catalog.product("msi-mag-a550bn-550-vt");
+        var updated = catalog.product("corsair-rm850x-2024-850-vt");
         assertThat(updated.getPrice()).isEqualTo(4590);
         assertThat(updated.getStock()).isEqualTo(7);
 

@@ -53,7 +53,7 @@ class ShopFlowTest {
     void unknownFilterKeysAreIgnored() {
         var query = new ProductSearchRequest("gpu", Map.of("'; drop table product; --", List.of("x")), null, null, false,
                 ProductSearchRequest.Sort.POPULAR, 0, 50);
-        assertThat(catalog.search(query).getTotalElements()).isEqualTo(33);
+        assertThat(catalog.search(query).getTotalElements()).isEqualTo(30);
     }
 
     @Test
@@ -97,7 +97,7 @@ class ShopFlowTest {
 
     @Test
     void orderFailsWholeWhenStockIsShort() {
-        var psu = catalog.product("seasonic-focus-gx-1000-atx-3-1-1000-vt");
+        var psu = catalog.product("corsair-rm1000x-2024-1000-vt");
         var case_ = catalog.product("deepcool-cc560-v2-black");
         int caseStock = case_.getStock();
 

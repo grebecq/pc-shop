@@ -3,11 +3,13 @@ package dev.pcshop.service;
 import dev.pcshop.TestcontainersConfig;
 import dev.pcshop.dto.request.RegisterRequest;
 import dev.pcshop.dto.response.CandidateResponse;
+import dev.pcshop.entity.Product;
 import dev.pcshop.enums.Slot;
 import dev.pcshop.exception.BadRequestException;
 import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.model.Build;
 import dev.pcshop.model.Issue;
+import dev.pcshop.repository.ProductRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,10 +37,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class CompatibilityServiceTest {
 
     @Autowired CompatibilityService compatibility;
-    @Autowired CatalogService catalog;
     @Autowired BuildService builds;
     @Autowired AccountService accounts;
     @Autowired JdbcClient jdbc;
+    @Autowired ProductRepository products;
 
     @Test
     void presetsAreCompleteAndCompatible() {
@@ -203,8 +205,14 @@ class CompatibilityServiceTest {
         return b;
     }
 
-    private dev.pcshop.entity.Product product(String slug) {
-        return catalog.product(slug);
+    /**
+     * Правила проверяем и на товарах, снятых с продажи: среди тех, что продаются, нет СЖО,
+     * низкого кулера и маленького корпуса, а проверки для них всё равно нужны.
+     */
+    private Product product(String slug) {
+        return products.findAllByOrderByCategorySortOrderAscNameAsc().stream()
+                .filter(p -> p.getSlug().equals(slug))
+                .findFirst().orElseThrow();
     }
 
     private List<String> errors(Build b) {

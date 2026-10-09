@@ -76,8 +76,10 @@
 <!-- Карточка товара в сетке -->
 <article th:fragment="card(p)" class="card">
     <a class="card__media" th:href="@{/p/{s}(s=${p.slug})}" th:classappend="${p.imageUrl != null} ? 'has-photo'">
-        <img th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" th:alt="${p.name}" loading="lazy">
-        <th:block th:if="${p.imageUrl == null}"><svg th:replace="~{fragments :: icon(${p.category.slug})}"></svg></th:block>
+        <!-- Фото лежат на сайтах производителей. Если картинка не загрузилась, убираем её и показываем значок категории -->
+        <img th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" th:alt="${p.name}" loading="lazy"
+             referrerpolicy="no-referrer" onerror="this.parentElement.classList.remove('has-photo'); this.remove()">
+        <svg th:replace="~{fragments :: icon(${p.category.slug})}"></svg>
     </a>
     <div class="card__body">
         <a class="card__title" th:href="@{/p/{s}(s=${p.slug})}" th:text="${p.name}">Название</a>

@@ -12,7 +12,7 @@
             <tbody>
             <tr th:each="p : ${products}" th:id="'p' + ${p.id}" th:classappend="${!p.active} ? 'is-muted'">
                 <td class="photo-cell">
-                    <img th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" alt="" class="thumb">
+                    <img th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" alt="" class="thumb" referrerpolicy="no-referrer">
                     <form method="post" enctype="multipart/form-data" th:action="@{/admin/products/{id}/photo(id=${p.id})}" class="photo-form">
                         <label class="link-btn"><span th:text="${p.imageUrl == null} ? 'Загрузить' : 'Заменить'">Загрузить</span>
                             <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" hidden onchange="this.form.submit()">

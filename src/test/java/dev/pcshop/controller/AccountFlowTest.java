@@ -180,7 +180,7 @@ class AccountFlowTest {
     void newAddressFromCheckoutIsSaved() throws Exception {
         var user = new Browser();
         user.register("new-" + UUID.randomUUID() + "@example.com");
-        long ram = catalog.product("kingston-fury-beast-32-gb-2x16-ddr5-6000-cl36").getId();
+        long ram = catalog.product("kingston-fury-beast-white-32-gb-2x16-ddr5-6000-cl36").getId();
         var created = user.postJson("/api/orders", """
                 {"customer": {"name": "Иван", "phone": "+7 900 000-00-00", "address": "Самара, ул. Ленина, 1"},
                  "items": [{"productId": %d, "quantity": 1}],
