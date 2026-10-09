@@ -19,7 +19,7 @@
         <dl class="hero__facts">
             <div><dt>Совместимость</dt><dd>Проверяем каждую сборку</dd></div>
             <div><dt>Заказ</dt><dd>На сайте или в Telegram</dd></div>
-            <div><dt>Оплата</dt><dd>Картой и по СБП</dd></div>
+            <div><dt>Оплата</dt><dd>Картой на сайте и в Telegram</dd></div>
             <div><dt>Сборки</dt><dd>Сохраняйте и делитесь ссылкой</dd></div>
         </dl>
     </section>
@@ -46,6 +46,11 @@
                 <span th:text="${c.name}">Категория</span>
             </a>
         </div>
+    </section>
+
+    <section class="section" data-recent hidden>
+        <h2>Вы недавно смотрели</h2>
+        <div class="grid" data-recent-grid></div>
     </section>
 
     <section class="section">

@@ -1,15 +1,18 @@
 package dev.pcshop.controller.web;
 
 import dev.pcshop.dto.request.ProductSearchRequest;
+import dev.pcshop.dto.request.ReviewRequest;
 import dev.pcshop.entity.Category;
 import dev.pcshop.entity.Product;
 import dev.pcshop.enums.Slot;
 import dev.pcshop.exception.OrderException;
 import dev.pcshop.model.Build;
+import dev.pcshop.model.Comparison;
 import dev.pcshop.security.ShopUser;
 import dev.pcshop.service.AccountService;
 import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.DeliveryService;
+import dev.pcshop.service.ReviewService;
 import dev.pcshop.service.OrderService;
 import dev.pcshop.util.Attributes;
 import dev.pcshop.util.CatalogQueries;
@@ -33,10 +36,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ShopController {
 
+    /** Сколько товаров берём в сравнение и «недавно смотрели»: защита от огромных запросов. */
+    private static final int MAX_LISTED = 12;
+
     private final CatalogService catalog;
     private final OrderService orders;
     private final AccountService accounts;
     private final DeliveryService delivery;
+    private final ReviewService reviews;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -61,10 +68,16 @@ public class ShopController {
     }
 
     @GetMapping("/p/{slug}")
-    public String product(@PathVariable String slug, Model model) {
+    public String product(@PathVariable String slug, @AuthenticationPrincipal ShopUser user, Model model) {
         Product product = catalog.product(slug);
         model.addAttribute("product", product);
         model.addAttribute("specs", Attributes.readable(product));
+        model.addAttribute("similar", catalog.similar(product, 4));
+        model.addAttribute("reviews", reviews.forProduct(product.getId()));
+        model.addAttribute("reviewPermission", reviews.permission(user == null ? null : user.getAccountId(), product.getId()));
+        if (!model.containsAttribute("review")) {
+            model.addAttribute("review", new ReviewRequest(null, null, null, null));
+        }
         // «Собрать ПК с этим товаром»: товар уже в сборке, дальше — первый пустой шаг конфигуратора
         model.addAttribute("buildLink", Slot.byCategory(product.getCategory().getSlug()).map(slot -> {
             Build build = Build.empty().with(slot, product);
@@ -84,6 +97,20 @@ public class ShopController {
                     .mapToObj(i -> "/search?q=" + enc(query) + "&page=" + i).toList());
         }
         return "shop/search";
+    }
+
+    /** Сравнение: id товаров приходят из браузера (список хранится в localStorage, как корзина). */
+    @GetMapping("/compare")
+    public String compare(@RequestParam(defaultValue = "") List<Long> ids, Model model) {
+        model.addAttribute("tables", Comparison.of(catalog.productsInOrder(ids.stream().limit(MAX_LISTED).toList())));
+        return "shop/compare";
+    }
+
+    /** Карточки товаров без страницы вокруг — для блока «Вы недавно смотрели», его собирает JS. */
+    @GetMapping("/cards")
+    public String cards(@RequestParam(defaultValue = "") List<Long> ids, Model model) {
+        model.addAttribute("products", catalog.productsInOrder(ids.stream().limit(MAX_LISTED).toList()));
+        return "shop/cards :: cards";
     }
 
     @GetMapping("/cart")

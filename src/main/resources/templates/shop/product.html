@@ -4,7 +4,7 @@
 <body>
 <div th:replace="~{fragments :: header}"></div>
 
-<main class="wrap">
+<main class="wrap" th:attr="data-viewed=${product.id}">
     <nav class="crumbs">
         <a th:href="@{/}">Главная</a> /
         <a th:href="@{/c/{s}(s=${product.category.slug})}" th:text="${product.category.name}">Категория</a> /
@@ -18,6 +18,10 @@
         <div class="product__info">
             <p class="muted" th:text="${product.brand}">Бренд</p>
             <h1 th:text="${product.name}">Название</h1>
+            <a class="product__rating" href="#reviews" th:if="${product.reviewsCount > 0}">
+                <span class="star" aria-hidden="true">★</span> <b th:text="${@fmt.rating(product.rating)}">4,7</b>
+                <span class="muted" th:text="${@fmt.reviews(product.reviewsCount)}">3 отзыва</span></a>
+            <a class="product__rating muted" href="#reviews" th:unless="${product.reviewsCount > 0}">Отзывов пока нет</a>
             <p class="product__price" th:text="${@fmt.rub(product.price)}">0 ₽</p>
             <p th:if="${product.inStock()}" class="stock stock--ok" th:text="'В наличии: ' + ${product.stock} + ' шт.'">В наличии</p>
             <p th:unless="${product.inStock()}" class="stock">Нет в наличии</p>
@@ -29,6 +33,13 @@
                     <button type="button" data-qty="1" aria-label="Больше">+</button>
                 </div>
                 <button class="btn" type="button" th:attr="data-add-to-cart=${product.id}" data-with-qty>Добавить в корзину</button>
+            </div>
+            <div class="product__tools">
+                <button type="button" class="btn btn--ghost btn--small tool-btn" th:attr="data-fav=${product.id}"
+                        th:classappend="${favoriteIds != null and favoriteIds.contains(product.id)} ? 'is-on'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>
+                    <span data-fav-label>В избранное</span></button>
+                <button type="button" class="btn btn--ghost btn--small tool-btn" th:attr="data-compare=${product.id}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V11M12 20V4M18 20v-6"/></svg>
+                    <span data-compare-label>Сравнить</span></button>
             </div>
             <a class="build-with" th:if="${buildLink}" th:href="${buildLink}">
                 <b>Собрать ПК с этим товаром</b>
@@ -43,6 +54,76 @@
             </table>
         </div>
     </div>
+
+    <section class="section" th:unless="${similar.empty}">
+        <h2>Похожие товары</h2>
+        <div class="grid">
+            <th:block th:each="p : ${similar}"><article th:replace="~{fragments :: card(${p})}"></article></th:block>
+        </div>
+    </section>
+
+    <section class="section reviews" id="reviews">
+        <div class="reviews__head">
+            <h2>Отзывы</h2>
+            <p class="reviews__score" th:if="${product.reviewsCount > 0}">
+                <span class="star" aria-hidden="true">★</span> <b th:text="${@fmt.rating(product.rating)}">4,7</b>
+                <span class="muted" th:text="'из 5 · ' + ${@fmt.reviews(product.reviewsCount)}">из 5</span></p>
+        </div>
+        <p class="notice" th:if="${reviewMessage}" th:text="${reviewMessage}">Спасибо</p>
+        <p class="notice notice--error" th:if="${reviewError}" th:text="${reviewError}">Ошибка</p>
+
+        <div class="reviews__body">
+            <div class="reviews__list">
+                <p class="muted" th:if="${reviews.empty}">Отзывов пока нет. Купите товар и расскажите, как он вам.</p>
+                <article class="review" th:each="r : ${reviews}">
+                    <header class="review__head">
+                        <b th:text="${r.authorName}">Имя</b>
+                        <span class="stars" th:attr="aria-label='Оценка ' + ${r.rating} + ' из 5'">
+                            <span th:each="i : ${#numbers.sequence(1, 5)}" th:classappend="${i <= r.rating} ? 'on'">★</span></span>
+                        <span class="muted small" th:text="${@fmt.day(r.createdAt)}">дата</span>
+                        <span class="pill pill--done" th:if="${r.verified()}">Купил в «Сборке»</span>
+                    </header>
+                    <p th:if="${r.pros}"><b>Достоинства.</b> <span th:text="${r.pros}">…</span></p>
+                    <p th:if="${r.cons}"><b>Недостатки.</b> <span th:text="${r.cons}">…</span></p>
+                    <p th:text="${r.text}">Комментарий</p>
+                </article>
+            </div>
+
+            <aside class="reviews__side">
+                <form class="panel review-form" th:if="${reviewPermission.name() == 'CAN_WRITE'}" method="post"
+                      th:action="@{/p/{s}/reviews(s=${product.slug})}">
+                    <h3 class="h3">Ваш отзыв</h3>
+                    <div class="rate" role="radiogroup" aria-label="Оценка">
+                        <th:block th:each="i : ${#numbers.sequence(5, 1, -1)}">
+                            <input type="radio" name="rating" th:id="'rate' + ${i}" th:value="${i}" th:checked="${review.rating == i}">
+                            <label th:for="'rate' + ${i}" th:attr="aria-label=${i} + ' из 5'">★</label>
+                        </th:block>
+                    </div>
+                    <label for="pros">Достоинства</label>
+                    <textarea id="pros" name="pros" rows="2" maxlength="1000" th:text="${review.pros}"></textarea>
+                    <label for="cons">Недостатки</label>
+                    <textarea id="cons" name="cons" rows="2" maxlength="1000" th:text="${review.cons}"></textarea>
+                    <label for="text">Комментарий</label>
+                    <textarea id="text" name="text" rows="4" maxlength="2000" required th:text="${review.text}"></textarea>
+                    <button class="btn" type="submit">Опубликовать</button>
+                </form>
+                <div class="panel muted" th:if="${reviewPermission.name() == 'GUEST'}">
+                    Отзывы пишут покупатели этого товара. <a th:href="@{/login(next='/p/' + ${product.slug})}">Войдите</a>, если вы его купили.
+                </div>
+                <div class="panel muted" th:if="${reviewPermission.name() == 'NOT_BOUGHT'}">
+                    Отзыв можно оставить после покупки этого товара: так все отзывы — от реальных покупателей.
+                </div>
+                <div class="panel muted" th:if="${reviewPermission.name() == 'ALREADY_WROTE'}">
+                    Спасибо, ваш отзыв об этом товаре уже опубликован.
+                </div>
+            </aside>
+        </div>
+    </section>
+
+    <section class="section" data-recent hidden>
+        <h2>Вы недавно смотрели</h2>
+        <div class="grid" data-recent-grid></div>
+    </section>
 </main>
 
 <footer th:replace="~{fragments :: footer}"></footer>

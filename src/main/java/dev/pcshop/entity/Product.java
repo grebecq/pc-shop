@@ -20,6 +20,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -70,6 +71,13 @@ public class Product {
     @Setter
     @Column(name = "image_url")
     private String imageUrl;
+
+    /** Средняя оценка из отзывов или null. Пересчитывает ReviewRepository.refreshRating, JPA её не пишет. */
+    @Column(insertable = false, updatable = false)
+    private BigDecimal rating;
+
+    @Column(name = "reviews_count", insertable = false, updatable = false)
+    private int reviewsCount;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

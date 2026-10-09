@@ -18,7 +18,7 @@ public record ProductSearchRequest(String categorySlug,
                            int size) {
 
     public enum Sort {
-        POPULAR, PRICE_ASC, PRICE_DESC, NAME;
+        POPULAR, PRICE_ASC, PRICE_DESC, NAME, RATING;
 
         public static Sort parse(String value) {
             if (value == null) {
@@ -28,6 +28,7 @@ public record ProductSearchRequest(String categorySlug,
                 case "price_asc" -> PRICE_ASC;
                 case "price_desc" -> PRICE_DESC;
                 case "name" -> NAME;
+                case "rating" -> RATING;
                 default -> POPULAR;
             };
         }

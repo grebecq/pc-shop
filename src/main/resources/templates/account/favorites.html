@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Избранное')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap">
+    <div th:replace="~{account/parts :: head}"></div>
+    <nav th:replace="~{fragments :: account-tabs('favorites')}"></nav>
+
+    <div class="grid" th:unless="${products.empty}">
+        <th:block th:each="p : ${products}"><article th:replace="~{fragments :: card(${p})}"></article></th:block>
+    </div>
+    <div class="empty" th:if="${products.empty}">
+        <p>В избранном пока ничего нет. Нажмите на сердечко у товара, чтобы вернуться к нему позже.</p>
+        <a class="btn btn--ghost" th:href="@{/}" style="margin-top:14px">Перейти в каталог</a>
+    </div>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

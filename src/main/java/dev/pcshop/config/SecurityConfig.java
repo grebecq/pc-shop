@@ -55,7 +55,7 @@ public class SecurityConfig {
         http
                 .authenticationManager(manager(accounts, encoder))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/account/**", "/configurator/save").authenticated()
+                        .requestMatchers("/account/**", "/configurator/save", "/p/*/reviews").authenticated()
                         // «Забыли пароль?» и ссылка из письма: покупатель как раз не может войти
                         .requestMatchers("/password/**").permitAll()
                         .anyRequest().permitAll())

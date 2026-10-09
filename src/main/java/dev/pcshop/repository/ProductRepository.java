@@ -33,6 +33,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @EntityGraph(attributePaths = "category")
     List<Product> findTop8ByActiveTrueAndStockGreaterThanOrderByPriceDesc(int stock);
 
+    /** Похожие товары: та же категория, в наличии, ближе всего по цене. */
+    @Query(value = """
+            SELECT p.id FROM product p
+            WHERE p.category_id = :categoryId AND p.id <> :productId AND p.active AND p.stock > 0
+            ORDER BY abs(p.price - :price), p.id
+            LIMIT :limit""", nativeQuery = true)
+    List<Long> similarIds(@Param("categoryId") long categoryId, @Param("productId") long productId,
+                          @Param("price") int price, @Param("limit") int limit);
+
     /**
      * Атомарно списывает остаток. Возвращает 0, если товара не хватает:
      * так два одновременных заказа не уведут остаток в минус.

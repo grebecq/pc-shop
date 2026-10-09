@@ -18,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -55,6 +58,23 @@ public class CatalogService {
 
     public List<Product> productsByIds(Collection<Long> ids) {
         return products.findAllByIdInAndActiveTrue(ids);
+    }
+
+    /** Товары в том же порядке, что и id (для «недавно смотрели» и сравнения). Снятые с продажи пропускаются. */
+    public List<Product> productsInOrder(List<Long> ids) {
+        Map<Long, Product> byId = products.findAllByIdInAndActiveTrue(ids).stream()
+                .collect(Collectors.toMap(Product::getId, Function.identity()));
+        return ids.stream().distinct().map(byId::get).filter(Objects::nonNull).toList();
+    }
+
+    /** Похожие товары для карточки: та же категория, ближе всего по цене. */
+    public List<Product> similar(Product product, int limit) {
+        return productsInOrder(products.similarIds(product.getCategory().getId(), product.getId(), product.getPrice(), limit));
+    }
+
+    /** Подсказки в строке поиска: первые несколько товаров по тем же правилам, что и поиск. */
+    public List<Product> suggest(String text, int limit) {
+        return search.searchText(text, 0, limit).getContent();
     }
 
     /** Все товары категории в продаже, от дешёвых к дорогим (для конфигуратора). */
