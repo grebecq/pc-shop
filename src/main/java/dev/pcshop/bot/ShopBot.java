@@ -139,11 +139,10 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         if (text.equals("/start") || text.equals(BTN_CANCEL)) {
             checkouts.remove(chatId);
             send(chatId, """
-                    Привет! Это <b>Сборка</b>, демо-магазин комплектующих для ПК.
+                    Привет! Это <b>Сборка</b>, магазин комплектующих для ПК.
 
-                    Здесь можно выбрать товар или собрать целый ПК в «🛠 Собрать ПК» (бот проверит совместимость), \
-                    положить всё в корзину и оформить заказ с <b>тестовой оплатой</b>. \
-                    Те же товары и заказы видны на сайте и в админке: всё работает на одном сервере.""", mainMenu());
+                    Выберите товар в каталоге или соберите целый компьютер в «🛠 Собрать ПК»: бот сам проверит, \
+                    что детали подходят друг к другу. Заказ можно оформить и оплатить прямо здесь.""", mainMenu());
             return;
         }
 
@@ -594,7 +593,7 @@ class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         } else {
             var payButton = new InlineKeyboardMarkup(List.of(new InlineKeyboardRow(
                     button("💳 Оплатить " + Formats.price(order.getTotal()) + " (тест)", "pay:" + order.getPublicId()))));
-            send(chatId, "Это демо-магазин, поэтому оплата тестовая: деньги не списываются.\n"
+            send(chatId, "Оплата пока тестовая: деньги не списываются.\n"
                     + "Товар зарезервирован до " + Formats.timeOfDay(order.payBefore(paymentTimeout)) + " по Москве.", payButton);
         }
     }

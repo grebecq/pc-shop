@@ -42,7 +42,7 @@ class PagesTest {
         assertThat(get("/", null).body()).contains("Сборка", "Процессоры");
         assertThat(get("/c/cpu?socket=AM5&sort=price_asc", null).body()).contains("AM5", "Сбросить фильтры");
         assertThat(get("/c/ram?page=1", null).statusCode()).isEqualTo(200);
-        assertThat(get("/p/kingston-fury-beast-32-gb-2x16-ddr5-6000", null).body()).contains("9 490 ₽");
+        assertThat(get("/p/kingston-fury-beast-32-gb-2x16-ddr5-6000-cl36", null).body()).contains("66 990 ₽");
         assertThat(get("/cart", null).body()).contains("data-order-form");
         assertThat(get("/c/nope", null).statusCode()).isEqualTo(404);
     }
@@ -78,7 +78,7 @@ class PagesTest {
     }
 
     private dev.pcshop.order.Order newOrder(String name) {
-        var ssd = catalog.product("kingston-nv3-1-tb");
+        var ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme");
         return orders.create(Channel.SITE, new Customer(name, "+7 900 000-00-00", "Москва", null),
                 List.of(new OrderLine(ssd.getId(), 1)), null);
     }

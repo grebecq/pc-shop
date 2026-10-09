@@ -76,7 +76,7 @@ docker run -d --name pcshop-db -p 5432:5432 \
 ./gradlew bootRun
 ```
 
-Схему и демо-каталог создаёт Flyway при первом запуске (`src/main/resources/db/migration`).
+Схему и каталог (около 130 актуальных товаров с ценами на октябрь 2026) создаёт Flyway при первом запуске (`src/main/resources/db/migration`).
 
 Переменные окружения те же, что в `.env.example`. Для `bootRun` их можно экспортировать в shell или прописать
 в конфигурации запуска IDE.
@@ -169,7 +169,7 @@ src/main/java/dev/pcshop/
   admin/     админка
   config/    настройки, безопасность, форматирование цен
 src/main/resources/
-  db/migration/  схема и демо-каталог (Flyway)
+  db/migration/  схема и каталог (Flyway)
   templates/     страницы (Thymeleaf)
   static/        CSS и JS корзины
 ```

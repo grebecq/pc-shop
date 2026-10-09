@@ -103,12 +103,16 @@ public final class Compatibility {
                     issues.add(Issue.error("Кулер высотой " + c.num("height_mm") + " мм не влезет: в корпус входит до "
                             + pcCase.get().num("max_cooler_mm") + " мм.", COOLER, CASE));
                 }
-                if (c.num("radiator_mm") > pcCase.get().num("max_radiator_mm")) {
-                    issues.add(Issue.error("Радиатор " + c.num("radiator_mm") + " мм не встанет: корпус вмещает до "
-                            + pcCase.get().num("max_radiator_mm") + " мм.", COOLER, CASE));
+                int maxRadiator = pcCase.get().num("max_radiator_mm");
+                if (c.num("radiator_mm") > maxRadiator) {
+                    issues.add(Issue.error(maxRadiator == 0
+                            ? "В этот корпус СЖО не ставится, нужен башенный или низкопрофильный кулер."
+                            : "Радиатор " + c.num("radiator_mm") + " мм не встанет: корпус вмещает до " + maxRadiator + " мм.",
+                            COOLER, CASE));
                 }
             }
-            if (cpu.isPresent() && c.num("max_tdp") < cpu.get().num("tdp")) {
+            // Не у всех кулеров производитель указывает рассеиваемую мощность — тогда не проверяем
+            if (cpu.isPresent() && c.num("max_tdp") > 0 && c.num("max_tdp") < cpu.get().num("tdp")) {
                 issues.add(Issue.warning("Кулер рассчитан на " + c.num("max_tdp") + " Вт, а процессор выделяет "
                         + cpu.get().num("tdp") + " Вт: под нагрузкой он будет сбрасывать частоты.", COOLER, CPU));
             }

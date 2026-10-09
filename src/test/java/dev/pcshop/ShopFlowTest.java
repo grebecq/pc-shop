@@ -44,19 +44,19 @@ class ShopFlowTest {
     @Test
     void numericFacetsAreSortedAsNumbers() {
         var capacities = catalog.facets("ram").get("capacity_gb");
-        assertThat(capacities).extracting(f -> f.value()).containsExactly("16", "32", "64");
+        assertThat(capacities).extracting(f -> f.value()).containsExactly("16", "32", "64", "96");
     }
 
     @Test
     void unknownFilterKeysAreIgnored() {
         var query = new ProductQuery("gpu", Map.of("'; drop table product; --", List.of("x")), null, null, false,
                 ProductQuery.Sort.POPULAR, 0, 50);
-        assertThat(catalog.search(query).getTotalElements()).isEqualTo(7);
+        assertThat(catalog.search(query).getTotalElements()).isEqualTo(33);
     }
 
     @Test
     void orderReservesStockAndCancelReturnsIt() {
-        var ssd = catalog.product("kingston-nv3-1-tb");
+        var ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme");
         int before = ssd.getStock();
 
         var order = orders.create(Channel.SITE, CUSTOMER, List.of(new OrderLine(ssd.getId(), 2), new OrderLine(ssd.getId(), 1)), null);
@@ -74,8 +74,8 @@ class ShopFlowTest {
 
     @Test
     void orderFailsWholeWhenStockIsShort() {
-        var psu = catalog.product("seasonic-vertex-gx-1000-1000-vt");
-        var case_ = catalog.product("deepcool-cc560");
+        var psu = catalog.product("seasonic-focus-gx-1000-atx-3-1-1000-vt");
+        var case_ = catalog.product("deepcool-cc560-v2-black");
         int caseStock = case_.getStock();
 
         assertThatThrownBy(() -> orders.create(Channel.SITE, CUSTOMER,

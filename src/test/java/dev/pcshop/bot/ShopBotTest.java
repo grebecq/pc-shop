@@ -55,10 +55,10 @@ class ShopBotTest {
 
     @Test
     void fullPurchase() throws Exception {
-        long ram = catalog.product("kingston-fury-beast-32-gb-2x16-ddr5-6000").getId();
+        long ram = catalog.product("kingston-fury-beast-16-gb-2x8-ddr5-5600-cl40").getId();
 
         text("/start");
-        assertThat(lastText()).contains("демо-магазин");
+        assertThat(lastText()).contains("магазин комплектующих");
 
         callback("c:ram:0");
         assertThat(lastText()).contains("Оперативная память");
@@ -70,14 +70,14 @@ class ShopBotTest {
         callback("a:" + ram);
         callback("a:" + ram);
         callback("cart");
-        assertThat(lastText()).contains("2 × 9 490 ₽").contains("Итого: 18 980 ₽");
+        assertThat(lastText()).contains("2 × 32 990 ₽").contains("Итого: 65 980 ₽");
 
         callback("co");
         text("Иван");
         contact("79001234567");
         text("Москва, ул. Тверская, 1");
 
-        assertThat(sentTexts()).anyMatch(t -> t.contains("создан") && t.contains("18 980 ₽"));
+        assertThat(sentTexts()).anyMatch(t -> t.contains("создан") && t.contains("65 980 ₽"));
         assertThat(cart.lines(CHAT)).isEmpty();
 
         String payData = lastButtons().stream().filter(d -> d.startsWith("pay:")).findFirst().orElseThrow();
@@ -94,7 +94,7 @@ class ShopBotTest {
 
     @Test
     void cancelStopsCheckout() throws Exception {
-        callback("a:" + catalog.product("kingston-nv3-1-tb").getId());
+        callback("a:" + catalog.product("kingston-nv3-1-tb-m-2-nvme").getId());
         callback("co");
         text("Отменить оформление");
         text("Иван");
@@ -114,7 +114,7 @@ class ShopBotTest {
 
     @Test
     void payButtonForCancelledOrderDoesNotSayPaid() throws Exception {
-        callback("a:" + catalog.product("deepcool-cc560").getId());
+        callback("a:" + catalog.product("deepcool-cc560-v2-black").getId());
         callback("co");
         text("Иван");
         text("+7 900 000-00-00");
@@ -142,15 +142,15 @@ class ShopBotTest {
 
         // В списке плат — только платы под AM5, выбранная отмечена
         callback("bs:mb:0");
-        long am4Board = catalog.product("msi-b550-a-pro").getId();
-        long am5Board = catalog.product("msi-pro-b650m-a-wifi").getId();
+        long am4Board = catalog.product("msi-mpg-b550-gaming-plus").getId();
+        long am5Board = catalog.product("gigabyte-a620m-gaming-x").getId();
         assertThat(lastButtons()).contains("bp:mb:" + am5Board, "br:mb", "b").doesNotContain("bp:mb:" + am4Board);
 
         callback("bp:mb:" + am5Board);
-        assertThat(lastText()).contains("MSI PRO B650M-A WIFI");
+        assertThat(lastText()).contains("Gigabyte A620M GAMING X");
 
         // Кнопка с товаром не той категории или подделанная — не ломает сборку
-        long ssd = catalog.product("kingston-nv3-1-tb").getId();
+        long ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme").getId();
         callback("bp:mb:" + ssd);
         callback("bs:zzz:0");
         callback("bpre:99");

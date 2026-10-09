@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import java.util.List;
 import java.util.Map;
@@ -25,7 +26,7 @@ import static dev.pcshop.build.Slot.SSD;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Правила совместимости на демо-каталоге и сохранённые сборки. */
+/** Правила совместимости на каталоге из миграций и сохранённые сборки. */
 @SpringBootTest
 @Import(TestcontainersConfig.class)
 class CompatibilityTest {
@@ -33,6 +34,7 @@ class CompatibilityTest {
     @Autowired CatalogService catalog;
     @Autowired BuildService builds;
     @Autowired AccountService accounts;
+    @Autowired JdbcClient jdbc;
 
     @Test
     void presetsAreCompleteAndCompatible() {
@@ -41,77 +43,86 @@ class CompatibilityTest {
             assertThat(issues).as(p.name()).noneMatch(i -> i.isError() || i.isMissing());
             assertThat(Compatibility.complete(issues)).isTrue();
         });
-        // Офисная сборка без видеокарты и кулера: графика и кулер есть у процессора
-        var office = builds.presets().getFirst().build();
-        assertThat(office.has(GPU)).isFalse();
-        assertThat(office.has(COOLER)).isFalse();
+        // Офисная сборка без видеокарты: графика есть у процессора
+        assertThat(builds.presets().getFirst().build().has(GPU)).isFalse();
     }
 
     @Test
     void socketMemoryAndSizeConflictsAreErrors() {
-        var b = build(CPU, "intel-core-i5-14400f", MOTHERBOARD, "msi-pro-b650m-a-wifi",
-                RAM, "kingston-fury-beast-16-gb-2x8-ddr4-3200", CASE, "cooler-master-nr200p",
-                GPU, "powercolor-hellhound-radeon-rx-9070-xt-16-gb");
+        var b = build(CPU, "intel-core-i5-14400f-oem", MOTHERBOARD, "asus-prime-a620m-k",
+                RAM, "g-skill-ripjaws-v-16-gb-2x8-ddr4-3200-cl16", CASE, "deepcool-ch160-black",
+                GPU, "asus-prime-radeon-rx-9070-oc-16-gb");
         assertThat(errors(b)).anyMatch(t -> t.contains("сокет LGA1700") && t.contains("AM5"))
                 .anyMatch(t -> t.contains("DDR5") && t.contains("DDR4"))
                 .anyMatch(t -> t.contains("mATX") && t.contains("Mini-ITX"));
-        // RX 9070 XT 322 мм в NR200P (до 330 мм) влезает
+        // RX 9070 304 мм в CH160 (до 305 мм) влезает, а Nitro+ на 331 мм — уже нет
         assertThat(errors(b)).noneMatch(t -> t.contains("Видеокарта длиной"));
-        assertThat(errors(b.with(GPU, product("asus-prime-geforce-rtx-5070-12-gb"))))
-                .noneMatch(t -> t.contains("Видеокарта длиной"));
-        assertThat(errors(build(GPU, "powercolor-hellhound-radeon-rx-9070-xt-16-gb", CASE, "fractal-design-north")))
+        assertThat(errors(b.with(GPU, product("sapphire-nitro-plus-radeon-rx-9070-xt-16-gb"))))
+                .anyMatch(t -> t.contains("Видеокарта длиной 331 мм"));
+        assertThat(errors(build(GPU, "sapphire-nitro-plus-radeon-rx-9070-xt-16-gb", CASE, "lian-li-lancool-217-black")))
                 .noneMatch(t -> t.contains("Видеокарта длиной"));
     }
 
     @Test
     void memoryWithoutBoardIsCheckedAgainstCpu() {
         // LGA1700 понимает обе памяти, AM5 — только DDR5
-        assertThat(errors(build(CPU, "intel-core-i5-14400f", RAM, "kingston-fury-beast-16-gb-2x8-ddr4-3200"))).isEmpty();
-        assertThat(errors(build(CPU, "amd-ryzen-5-7600", RAM, "kingston-fury-beast-16-gb-2x8-ddr4-3200")))
+        assertThat(errors(build(CPU, "intel-core-i5-14400f-oem", RAM, "g-skill-ripjaws-v-16-gb-2x8-ddr4-3200-cl16"))).isEmpty();
+        assertThat(errors(build(CPU, "amd-ryzen-5-7600-oem", RAM, "g-skill-ripjaws-v-16-gb-2x8-ddr4-3200-cl16")))
                 .containsExactly("Процессор не поддерживает DDR4.");
     }
 
     @Test
     void coolerFitsSocketAndCase() {
-        assertThat(errors(build(CPU, "intel-core-i5-14400f", COOLER, "noctua-nh-l9a-am5")))
+        // Все кулеры в каталоге универсальные, поэтому сокет и высоту проверяем на изменённой копии
+        var amdOnly = product("deepcool-ak620");
+        amdOnly.getAttributes().put("sockets", "AM4, AM5");
+        amdOnly.getAttributes().put("height_mm", 180);
+        assertThat(errors(build(CPU, "intel-core-i5-14400f-oem").with(COOLER, amdOnly)))
                 .anyMatch(t -> t.contains("не ставится на сокет LGA1700"));
-        assertThat(errors(build(COOLER, "noctua-nh-d15-g2", CASE, "cooler-master-nr200p")))
-                .anyMatch(t -> t.contains("168 мм"));
-        assertThat(errors(build(COOLER, "arctic-liquid-freezer-iii-360", CASE, "cooler-master-nr200p")))
-                .anyMatch(t -> t.contains("Радиатор 360 мм"));
-        assertThat(errors(build(COOLER, "deepcool-le520", CASE, "cooler-master-nr200p"))).isEmpty();
+        assertThat(errors(build(CASE, "deepcool-cc560-v2-black").with(COOLER, amdOnly)))
+                .anyMatch(t -> t.contains("Кулер высотой 180 мм"));
 
-        var weak = Compatibility.check(build(CPU, "amd-ryzen-7-7800x3d", COOLER, "noctua-nh-l9a-am5"));
-        assertThat(weak).anyMatch(i -> i.isWarning() && i.text().contains("рассчитан на 65 Вт"));
+        assertThat(errors(build(COOLER, "deepcool-lm360", CASE, "zalman-p10-namu-white")))
+                .anyMatch(t -> t.contains("Радиатор 360 мм"));
+        assertThat(errors(build(COOLER, "deepcool-lm360", CASE, "deepcool-ch160-black")))
+                .anyMatch(t -> t.contains("СЖО не ставится"));
+        assertThat(errors(build(COOLER, "deepcool-le240-v2", CASE, "zalman-p10-namu-white"))).isEmpty();
+
+        var weak = Compatibility.check(build(CPU, "amd-ryzen-9-9950x-oem", COOLER, "id-cooling-is-55-black"));
+        assertThat(weak).anyMatch(i -> i.isWarning() && i.text().contains("рассчитан на 125 Вт"));
+        // У этой СЖО производитель не указал мощность — предупреждения нет
+        assertThat(Compatibility.check(build(CPU, "amd-ryzen-9-9950x-oem", COOLER, "arctic-liquid-freezer-iii-pro-360-a-rgb-white")))
+                .noneMatch(i -> i.slots().contains(COOLER));
     }
 
     @Test
     void powerSupplyIsChecked() {
-        var top = build(CPU, "amd-ryzen-9-9900x", GPU, "gigabyte-geforce-rtx-5070-ti-eagle-16-gb");
+        var top = build(CPU, "amd-ryzen-9-9900x-oem", GPU, "msi-geforce-rtx-5070-ti-ventus-3x-oc-16-gb");
         assertThat(Compatibility.estimatedDraw(top)).isEqualTo(120 + 300 + Compatibility.BASE_POWER_W);
         assertThat(Compatibility.recommendedPsu(top)).isEqualTo(750);
 
-        assertThat(errors(top.with(PSU, product("deepcool-pk550d-550-vt")))).anyMatch(t -> t.contains("советует блок от 750"));
-        assertThat(Compatibility.check(top.with(PSU, product("cougar-gex-650-650-vt"))))
+        assertThat(errors(top.with(PSU, product("deepcool-pf550x-550-vt")))).anyMatch(t -> t.contains("советует блок от 750"));
+        assertThat(Compatibility.check(top.with(PSU, product("deepcool-pn650m-650-vt"))))
                 .anyMatch(i -> i.isWarning() && i.text().contains("впритык"));
-        assertThat(Compatibility.check(top.with(PSU, product("corsair-rm850e-850-vt"))))
+        assertThat(Compatibility.check(top.with(PSU, product("deepcool-pn850m-850-vt"))))
                 .noneMatch(i -> i.slots().contains(PSU));
     }
 
     @Test
     void missingPartsDependOnCpu() {
-        var withF = Compatibility.check(build(CPU, "intel-core-i7-14700kf"));
+        var withF = Compatibility.check(build(CPU, "intel-core-i7-14700kf-oem"));
         assertThat(withF).filteredOn(Issue::isMissing).extracting(Issue::text)
                 .anyMatch(t -> t.contains("нет встроенной графики"))
                 .anyMatch(t -> t.contains("без кулера"));
-        var withBox = Compatibility.check(build(CPU, "amd-ryzen-5-7600"));
-        assertThat(withBox).filteredOn(Issue::isMissing).extracting(Issue::text)
-                .noneMatch(t -> t.contains("графики") || t.contains("кулера"));
+        var withGraphics = Compatibility.check(build(CPU, "amd-ryzen-5-7600-oem"));
+        assertThat(withGraphics).filteredOn(Issue::isMissing).extracting(Issue::text)
+                .noneMatch(t -> t.contains("графики"))
+                .anyMatch(t -> t.contains("без кулера"));
     }
 
     @Test
     void fastSsdOnOldBoardIsWarning() {
-        var b = build(MOTHERBOARD, "msi-pro-b650m-a-wifi", SSD, "crucial-t705-2-tb");
+        var b = build(MOTHERBOARD, "msi-pro-b650-p-wifi", SSD, "samsung-9100-pro-2-tb-m-2-nvme");
         assertThat(Compatibility.check(b)).anyMatch(i -> i.isWarning() && i.text().contains("PCIe 4.0"));
         assertThat(Compatibility.check(b.with(MOTHERBOARD, product("gigabyte-x870-aorus-elite-wifi7"))))
                 .noneMatch(i -> i.text().contains("PCIe"));
@@ -119,12 +130,12 @@ class CompatibilityTest {
 
     @Test
     void candidatesPutCompatibleFirst() {
-        var am5 = build(CPU, "amd-ryzen-5-7600");
+        var am5 = build(CPU, "amd-ryzen-5-7600-oem");
         List<Candidate> boards = builds.candidates(am5, MOTHERBOARD);
-        assertThat(boards).hasSize(8);
+        assertThat(boards).hasSize(24);
         var fit = boards.stream().filter(Candidate::fits).toList();
-        assertThat(fit).hasSize(4).allMatch(c -> c.product().str("socket").equals("AM5"));
-        assertThat(boards.subList(0, 4)).containsExactlyElementsOf(fit);
+        assertThat(fit).hasSize(12).allMatch(c -> c.product().str("socket").equals("AM5"));
+        assertThat(boards.subList(0, 12)).containsExactlyElementsOf(fit);
         assertThat(boards.getLast().note()).contains("сокет");
         // Ссылка выбора сохраняет остальную сборку
         assertThat(fit.getFirst().link()).contains("cpu=" + am5.part(CPU).getId()).contains("mb=");
@@ -132,13 +143,16 @@ class CompatibilityTest {
 
     @Test
     void brokenLinksAreIgnored() {
-        long cpu = product("amd-ryzen-5-7600").getId();
-        long ram = product("adata-xpg-lancer-16-gb-2x8-ddr5-5600").getId();
+        long cpu = product("amd-ryzen-5-7600-oem").getId();
+        long ram = product("kingston-fury-beast-16-gb-2x8-ddr5-5600-cl40").getId();
+        long retired = jdbc.sql("SELECT id FROM product WHERE slug = 'amd-ryzen-5-7600'").query(Long.class).single();
         // Процессор в слоте видеокарты, мусор, несуществующий id, лишний параметр
         var b = builds.fromParams(Map.of("cpu", String.valueOf(cpu), "gpu", String.valueOf(cpu),
                 "ram", "abc", "ssd", "999999", "x", "1", "psu", "-5"));
         assertThat(b.parts()).containsOnlyKeys(CPU);
         assertThat(builds.fromParams(Map.of("ram", ram)).has(RAM)).isTrue();
+        // Снятый с продажи товар из старой ссылки пропускается
+        assertThat(builds.fromParams(Map.of("cpu", retired)).isEmpty()).isTrue();
     }
 
     @Test

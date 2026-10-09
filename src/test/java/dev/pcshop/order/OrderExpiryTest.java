@@ -27,7 +27,7 @@ class OrderExpiryTest {
 
     @Test
     void unpaidOrderIsCancelledAndStockReturned() {
-        var psu = catalog.product("seasonic-vertex-gx-1000-1000-vt");
+        var psu = catalog.product("seasonic-focus-gx-1000-atx-3-1-1000-vt");
         int before = psu.getStock();
         Order stale = orders.create(Channel.SITE, CUSTOMER, List.of(new OrderLine(psu.getId(), 1)), null);
         Order fresh = orders.create(Channel.SITE, CUSTOMER, List.of(new OrderLine(psu.getId(), 1)), null);
@@ -41,7 +41,7 @@ class OrderExpiryTest {
         assertThat(orders.byId(stale.getId()).getStatus()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(orders.byId(fresh.getId()).getStatus()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
         assertThat(orders.byId(paid.getId()).getStatus()).isEqualTo(OrderStatus.PAID);
-        assertThat(catalog.product("seasonic-vertex-gx-1000-1000-vt").getStock()).isEqualTo(before - 2);
+        assertThat(catalog.product("seasonic-focus-gx-1000-atx-3-1-1000-vt").getStock()).isEqualTo(before - 2);
 
         // Опоздавшая оплата отменённый заказ не «оживляет»
         assertThat(orders.markPaid(stale.getPublicId()).getPaidAt()).isNull();
@@ -49,7 +49,7 @@ class OrderExpiryTest {
 
     @Test
     void paidOrderCannotGoBackToAwaitingPayment() {
-        var ssd = catalog.product("kingston-nv3-1-tb");
+        var ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme");
         Order order = orders.create(Channel.SITE, CUSTOMER, List.of(new OrderLine(ssd.getId(), 1)), null);
         orders.markPaid(order.getPublicId());
         assertThatThrownBy(() -> orders.changeStatus(order.getId(), OrderStatus.AWAITING_PAYMENT))

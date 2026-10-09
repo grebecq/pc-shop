@@ -19,7 +19,6 @@
 </head>
 
 <div th:fragment="header">
-    <div class="demo-bar">Демо-магазин для портфолио: товары не продаются, оплата тестовая.</div>
     <header class="header">
         <div class="wrap header__inner">
             <a class="logo" th:href="@{/}"><span class="logo__mark"></span>Сборка</a>
@@ -41,8 +40,8 @@
 
 <footer th:fragment="footer" class="footer">
     <div class="wrap footer__inner">
-        <span>«Сборка» — демо-проект: сайт, Telegram-бот и админка работают на одном бэкенде.</span>
-        <span>Spring Boot · PostgreSQL · Telegram Bot API</span>
+        <span>© 2026 «Сборка» — комплектующие и сборка ПК с проверкой совместимости</span>
+        <nav class="footer__links"><a th:href="@{/configurator}">Собрать ПК</a> <a th:href="@{/cart}">Корзина</a> <a th:href="@{/account}">Личный кабинет</a></nav>
     </div>
     <script th:src="@{/js/cart.js}"></script>
 </footer>

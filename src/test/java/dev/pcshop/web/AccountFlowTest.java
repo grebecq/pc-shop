@@ -80,7 +80,7 @@ class AccountFlowTest {
 
         // Корзина подставляет адрес, заказ через API с сохранённым адресом
         assertThat(anna.get("/cart").body()).contains("ул. Баумана, 10");
-        long ssd = catalog.product("kingston-nv3-1-tb").getId();
+        long ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme").getId();
         String order = """
                 {"customer": {"name": "Анна", "phone": "+7 900 111-22-33", "address": "подменённый адрес"},
                  "items": [{"productId": %d, "quantity": 1}], "addressId": %d}""".formatted(ssd, addressId);
@@ -105,7 +105,7 @@ class AccountFlowTest {
     void newAddressFromCheckoutIsSaved() throws Exception {
         var user = new Browser();
         user.register("new-" + UUID.randomUUID() + "@example.com");
-        long ram = catalog.product("kingston-fury-beast-32-gb-2x16-ddr5-6000").getId();
+        long ram = catalog.product("kingston-fury-beast-32-gb-2x16-ddr5-6000-cl36").getId();
         var created = user.postJson("/api/orders", """
                 {"customer": {"name": "Иван", "phone": "+7 900 000-00-00", "address": "Самара, ул. Ленина, 1"},
                  "items": [{"productId": %d, "quantity": 1}],
@@ -164,7 +164,7 @@ class AccountFlowTest {
     @Test
     void searchFindsByEveryWord() throws Exception {
         var b = new Browser();
-        assertThat(b.get("/search?q=" + enc("rtx 5070 asus")).body()).contains("ASUS PRIME GeForce RTX 5070").doesNotContain("EAGLE");
+        assertThat(b.get("/search?q=" + enc("rtx 5070 asus")).body()).contains("ASUS Dual GeForce RTX 5070").doesNotContain("Palit");
         assertThat(b.get("/search?q=" + enc("100%")).body()).contains("Ничего не нашлось");
     }
 
@@ -174,7 +174,7 @@ class AccountFlowTest {
         var http = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
         var page = http.send(HttpRequest.newBuilder(uri("/admin/products")).header("Authorization", auth).build(),
                 HttpResponse.BodyHandlers.ofString()).body();
-        long id = catalog.product("deepcool-cc560").getId();
+        long id = catalog.product("deepcool-cc560-v2-black").getId();
 
         byte[] png = Base64.getDecoder().decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
@@ -188,7 +188,7 @@ class AccountFlowTest {
         var photo = http.send(HttpRequest.newBuilder(uri("/media/products/" + id)).build(), HttpResponse.BodyHandlers.ofByteArray());
         assertThat(photo.statusCode()).isEqualTo(200);
         assertThat(photo.headers().firstValue("Content-Type").orElseThrow()).isEqualTo("image/png");
-        assertThat(new Browser().get("/p/deepcool-cc560").body()).contains("/media/products/" + id + "?v=");
+        assertThat(new Browser().get("/p/deepcool-cc560-v2-black").body()).contains("/media/products/" + id + "?v=");
 
         // Не картинка (HTML под видом PNG) не принимается
         var fake = multipart(boundary, formCsrf(page), "x.png", "<script>alert(1)</script>".getBytes());

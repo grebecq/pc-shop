@@ -34,23 +34,23 @@ public class BuildService {
     /** Готовые сборки задаём по slug товаров: id в разных базах могут отличаться. */
     private static final List<PresetDef> PRESETS = List.of(
             new PresetDef("Для офиса и учёбы", "Документы, браузер, видеозвонки. Графика встроена в процессор.", Map.of(
-                    CPU, "amd-ryzen-5-7600", MOTHERBOARD, "msi-pro-b650m-a-wifi",
-                    RAM, "adata-xpg-lancer-16-gb-2x8-ddr5-5600", SSD, "kingston-nv3-1-tb",
-                    PSU, "deepcool-pk550d-550-vt", CASE, "zalman-p30")),
+                    CPU, "amd-ryzen-5-7600-oem", MOTHERBOARD, "asus-prime-a620m-k", COOLER, "id-cooling-se-224-xts-black",
+                    RAM, "kingston-fury-beast-16-gb-2x8-ddr5-5600-cl40", SSD, "kingston-nv3-1-tb-m-2-nvme",
+                    PSU, "deepcool-pf550x-550-vt", CASE, "zalman-m5-black")),
             new PresetDef("Игровой Full HD", "Современные игры в 1080p на высоких настройках.", Map.of(
-                    CPU, "intel-core-i5-14400f", MOTHERBOARD, "asus-prime-b760m-a-d4", COOLER, "id-cooling-se-224-xts",
-                    RAM, "patriot-viper-steel-32-gb-2x16-ddr4-3600", GPU, "palit-geforce-rtx-5060-dual-8-gb",
-                    SSD, "kingston-nv3-1-tb", PSU, "cougar-gex-650-650-vt", CASE, "deepcool-cc560")),
-            new PresetDef("Игровой 2K", "Лучший игровой процессор и RTX 5070 для 1440p.", Map.of(
-                    CPU, "amd-ryzen-7-7800x3d", MOTHERBOARD, "asus-tuf-gaming-b650-plus-wifi",
-                    COOLER, "thermalright-peerless-assassin-120-se", RAM, "kingston-fury-beast-32-gb-2x16-ddr5-6000",
-                    GPU, "asus-prime-geforce-rtx-5070-12-gb", SSD, "samsung-990-pro-1-tb",
-                    PSU, "be-quiet-pure-power-12-m-750-vt", CASE, "lian-li-lancool-216")),
+                    CPU, "intel-core-i5-14400f-oem", MOTHERBOARD, "gigabyte-b760m-ds3h-ddr4", COOLER, "deepcool-ak400",
+                    RAM, "g-skill-trident-z-rgb-32-gb-2x16-ddr4-3600-cl18", GPU, "asus-dual-geforce-rtx-5060-oc-8-gb",
+                    SSD, "kingston-nv3-1-tb-m-2-nvme", PSU, "deepcool-pn650m-650-vt", CASE, "deepcool-cc560-v2-black")),
+            new PresetDef("Игровой 2K", "Лучший по цене игровой процессор и RTX 5070 для 1440p.", Map.of(
+                    CPU, "amd-ryzen-7-7800x3d-oem", MOTHERBOARD, "msi-pro-b650-p-wifi",
+                    COOLER, "thermalright-peerless-assassin-120-se", RAM, "kingston-fury-beast-32-gb-2x16-ddr5-6000-cl36",
+                    GPU, "palit-geforce-rtx-5070-infinity-3-12-gb", SSD, "samsung-990-pro-1-tb-m-2-nvme",
+                    PSU, "deepcool-pn750d-750-vt", CASE, "lian-li-lancool-216x-black")),
             new PresetDef("Монтаж и 4K", "12 ядер, 64 ГБ памяти и быстрый SSD для работы с видео.", Map.of(
-                    CPU, "amd-ryzen-9-9900x", MOTHERBOARD, "gigabyte-x870-aorus-elite-wifi7",
-                    COOLER, "arctic-liquid-freezer-iii-360", RAM, "corsair-vengeance-64-gb-2x32-ddr5-6000",
-                    GPU, "gigabyte-geforce-rtx-5070-ti-eagle-16-gb", SSD, "crucial-t705-2-tb",
-                    PSU, "corsair-rm850e-850-vt", CASE, "fractal-design-north")));
+                    CPU, "amd-ryzen-9-9900x-oem", MOTHERBOARD, "gigabyte-x870-aorus-elite-wifi7",
+                    COOLER, "deepcool-lm360", RAM, "g-skill-ripjaws-s5-64-gb-2x32-ddr5-6000-cl30",
+                    GPU, "msi-geforce-rtx-5070-ti-ventus-3x-oc-16-gb", SSD, "samsung-9100-pro-2-tb-m-2-nvme",
+                    PSU, "deepcool-pn850m-850-vt", CASE, "lian-li-lancool-217-black")));
 
     private final CatalogService catalog;
     private final SavedBuildRepository saved;
