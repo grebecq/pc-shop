@@ -44,7 +44,10 @@
 <footer th:fragment="footer" class="footer">
     <div class="wrap footer__inner">
         <span>© 2026 «Сборка» — комплектующие и сборка ПК с проверкой совместимости</span>
-        <nav class="footer__links"><a th:href="@{/configurator}">Собрать ПК</a> <a th:href="@{/cart}">Корзина</a> <a th:href="@{/account}">Личный кабинет</a></nav>
+        <nav class="footer__links">
+            <a th:href="@{/delivery}">Доставка и оплата</a> <a th:href="@{/warranty}">Гарантия и возврат</a>
+            <a th:href="@{/contacts}">Контакты</a> <a th:href="@{/configurator}">Собрать ПК</a> <a th:href="@{/account}">Личный кабинет</a>
+        </nav>
     </div>
     <script th:src="@{/js/cart.js}"></script>
 </footer>

@@ -585,7 +585,8 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
 
         StringBuilder text = new StringBuilder("<b>Заказ ").append(order.number()).append(" создан</b>\n\n");
         order.getItems().forEach(i -> text.append("• ").append(htmlEscape(i.getName())).append(" × ").append(i.getQuantity()).append('\n'));
-        text.append("\nИтого: <b>").append(Formats.price(order.getTotal())).append("</b>\nДоставка: ")
+        text.append("\nДоставка: ").append(order.getDeliveryPrice() == 0 ? "бесплатно" : Formats.price(order.getDeliveryPrice()))
+                .append("\nИтого: <b>").append(Formats.price(order.getTotal())).append("</b>\nАдрес: ")
                 .append(htmlEscape(order.getAddress()));
         send(chatId, text.toString(), mainMenu());
 
@@ -611,8 +612,18 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                 .providerToken(props.telegram().paymentToken())
                 .currency("RUB")
                 // Telegram ждёт сумму в копейках
-                .prices(List.of(new LabeledPrice("Товары", order.getTotal() * 100)))
+                .prices(invoicePrices(order))
                 .build());
+    }
+
+    /** Строки счёта в Telegram: товары и, если платная, доставка. Сумма строк равна total заказа. */
+    private static List<LabeledPrice> invoicePrices(Order order) {
+        var prices = new ArrayList<LabeledPrice>();
+        prices.add(new LabeledPrice("Товары", order.itemsTotal() * 100));
+        if (order.getDeliveryPrice() > 0) {
+            prices.add(new LabeledPrice("Доставка", order.getDeliveryPrice() * 100));
+        }
+        return prices;
     }
 
     // ---------- Мои заказы ----------

@@ -6,9 +6,10 @@
 
 <main class="wrap narrow">
     <p class="notice" th:if="${param.paid != null and order.paidAt != null}">Оплата прошла. Спасибо за заказ!</p>
+    <div th:replace="~{fragments :: flash}"></div>
     <div class="catalog-head">
         <h1 th:text="'Заказ ' + ${order.number()}">Заказ №1001</h1>
-        <span class="pill" th:classappend="'pill--' + ${#strings.toLowerCase(order.status)}" th:text="${order.status.label()}">Статус</span>
+        <span class="pill" th:classappend="'pill--' + ${#strings.toLowerCase(order.status)}" th:text="${order.statusLabel()}">Статус</span>
     </div>
     <p class="muted order-meta" th:text="'Оформлен ' + ${@fmt.date(order.createdAt)} + ' · ' + ${order.channel.label()}">Дата</p>
 
@@ -23,17 +24,32 @@
         </tr>
         </tbody>
     </table>
-    <p class="cart-total">Итого: <b th:text="${@fmt.rub(order.total)}">0 ₽</b></p>
+    <dl class="cart-sum cart-sum--order">
+        <div><dt>Товары</dt><dd th:text="${@fmt.rub(order.itemsTotal())}">0 ₽</dd></div>
+        <div><dt>Доставка</dt><dd th:text="${order.deliveryPrice == 0} ? 'бесплатно' : ${@fmt.rub(order.deliveryPrice)}">0 ₽</dd></div>
+        <div class="cart-sum__total"><dt>Итого</dt><dd th:text="${@fmt.rub(order.total)}">0 ₽</dd></div>
+    </dl>
     <p class="muted paid-card" th:if="${order.paymentCard}" th:text="'Оплачено картой ' + ${order.paymentCard}">Оплачено картой Visa •• 4242</p>
 
     <dl class="details">
         <div><dt>Получатель</dt><dd th:text="${order.customerName} + ', ' + ${order.phone}">Имя</dd></div>
-        <div><dt>Адрес</dt><dd th:text="${order.address}">Адрес</dd></div>
+        <div><dt>Получение</dt><dd th:text="${order.deliveryMethod.label()}">Курьер</dd></div>
+        <div><dt th:text="${order.deliveryMethod.name() == 'PICKUP'} ? 'Магазин' : 'Адрес'">Адрес</dt><dd th:text="${order.address}">Адрес</dd></div>
+        <div th:if="${order.email}"><dt>Письма</dt><dd th:text="${order.email}">email</dd></div>
     </dl>
 
-    <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn" th:href="@{/pay/{id}(id=${order.publicId})}">Перейти к оплате</a>
-    <p class="muted" th:if="${order.status.name() == 'CANCELLED' and order.paidAt == null}">
-        Заказ отменён: оплата не поступила вовремя, товар вернулся на склад. Его можно оформить заново.</p>
+    <p class="muted" th:if="${order.status.name() == 'CANCELLED'}">
+        Заказ отменён, товар вернулся на склад.<th:block th:if="${order.paidAt != null}"> Деньги вернутся на карту в течение нескольких дней.</th:block>
+        Его можно оформить заново.</p>
+    <div class="order-actions">
+        <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn" th:href="@{/pay/{id}(id=${order.publicId})}">Перейти к оплате</a>
+        <button class="btn btn--ghost" type="button"
+                th:attr="data-repeat=${#strings.listJoin(order.items.![productId + ':' + quantity], ',')}">Повторить заказ</button>
+        <form th:if="${canCancel}" method="post" th:action="@{/order/{id}/cancel(id=${order.publicId})}"
+              onsubmit="return confirm('Отменить заказ? Товар вернётся на склад.')">
+            <button class="btn btn--ghost btn--danger" type="submit">Отменить заказ</button>
+        </form>
+    </div>
     <p class="muted small" th:if="${user != null and order.accountId == user.accountId}">
         Заказ сохранён в <a th:href="@{/account}">личном кабинете</a>.</p>
     <p class="muted small" th:unless="${user != null and order.accountId == user.accountId}">

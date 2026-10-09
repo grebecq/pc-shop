@@ -4,10 +4,12 @@ import dev.pcshop.dto.request.ProductSearchRequest;
 import dev.pcshop.entity.Category;
 import dev.pcshop.entity.Product;
 import dev.pcshop.enums.Slot;
+import dev.pcshop.exception.OrderException;
 import dev.pcshop.model.Build;
 import dev.pcshop.security.ShopUser;
 import dev.pcshop.service.AccountService;
 import dev.pcshop.service.CatalogService;
+import dev.pcshop.service.DeliveryService;
 import dev.pcshop.service.OrderService;
 import dev.pcshop.util.Attributes;
 import dev.pcshop.util.CatalogQueries;
@@ -18,7 +20,9 @@ import org.springframework.ui.Model;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,6 +36,7 @@ public class ShopController {
     private final CatalogService catalog;
     private final OrderService orders;
     private final AccountService accounts;
+    private final DeliveryService delivery;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -88,13 +93,31 @@ public class ShopController {
             model.addAttribute("account", accounts.get(user.getAccountId()));
             model.addAttribute("addresses", accounts.addresses(user.getAccountId()));
         }
+        model.addAttribute("pickupPoints", delivery.pickupPoints());
+        model.addAttribute("courierPrice", delivery.courierPrice());
+        model.addAttribute("freeFrom", delivery.freeFrom());
         return "shop/cart";
     }
 
     @GetMapping("/order/{publicId}")
-    public String order(@PathVariable UUID publicId, Model model) {
-        model.addAttribute("order", orders.byPublicId(publicId));
+    public String order(@PathVariable UUID publicId, @AuthenticationPrincipal ShopUser user, Model model) {
+        var order = orders.byPublicId(publicId);
+        model.addAttribute("order", order);
+        // Кнопку отмены показываем тому, кто может отменить: см. OrderService.cancelByCustomer
+        model.addAttribute("canCancel", order.cancellableByCustomer()
+                && (order.getAccountId() == null || user != null && order.getAccountId().equals(user.getAccountId())));
         return "shop/order";
+    }
+
+    @PostMapping("/order/{publicId}/cancel")
+    public String cancelOrder(@PathVariable UUID publicId, @AuthenticationPrincipal ShopUser user, RedirectAttributes flash) {
+        try {
+            orders.cancelByCustomer(publicId, user == null ? null : user.getAccountId());
+            flash.addFlashAttribute("message", "Заказ отменён");
+        } catch (OrderException e) {
+            flash.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/order/" + publicId;
     }
 
     /** Ссылки на страницы с сохранением фильтров. */

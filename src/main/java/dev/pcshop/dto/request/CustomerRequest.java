@@ -1,6 +1,7 @@
 package dev.pcshop.dto.request;
 
 import dev.pcshop.util.Strings;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -21,12 +22,27 @@ public record CustomerRequest(
         String address,
 
         @Size(max = 1000, message = "Комментарий — не длиннее 1000 символов")
-        String comment) {
+        String comment,
+
+        // Необязательный: туда придут письма о заказе. В боте его не спрашиваем
+        @Email(message = "Проверьте email")
+        @Size(max = 254, message = "Email — не длиннее 254 символов")
+        String email) {
 
     public CustomerRequest {
         name = Strings.strip(name);
         phone = Strings.strip(phone);
         address = Strings.strip(address);
         comment = Strings.blankToNull(comment);
+        email = Strings.blankToNull(email);
+    }
+
+    /** Без email — так заказывают в боте. */
+    public CustomerRequest(String name, String phone, String address, String comment) {
+        this(name, phone, address, comment, null);
+    }
+
+    public CustomerRequest withAddressAndEmail(String newAddress, String newEmail) {
+        return new CustomerRequest(name, phone, newAddress, comment, newEmail);
     }
 }

@@ -57,6 +57,19 @@
     location.href = "/cart";
   });
 
+  // «Повторить заказ»: товары заказа в корзину. Формат data-repeat: "id:количество,id:количество"
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-repeat]");
+    if (!btn) return;
+    var cart = read();
+    btn.getAttribute("data-repeat").split(",").forEach(function (pair) {
+      var parts = pair.split(":"), id = parts[0], qty = parseInt(parts[1], 10) || 1;
+      if (id) cart[id] = Math.min((cart[id] || 0) + qty, MAX_QTY);
+    });
+    write(cart);
+    location.href = "/cart";
+  });
+
   // Копирование ссылки на сборку
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-copy]");
@@ -106,12 +119,47 @@
     });
     var orderForm = document.querySelector("[data-order-form]");
     orderForm.addEventListener("submit", submitOrder);
-    // Выбор «Другой адрес» открывает поля нового адреса
     orderForm.addEventListener("change", function (e) {
+      // Выбор «Другой адрес» открывает поля нового адреса
       if (e.target.name === "addressId") {
         orderForm.querySelector("[data-new-address]").hidden = e.target.value !== "";
       }
+      if (e.target.name === "delivery") {
+        showDeliveryPane();
+        updateSummary();
+      }
     });
+    // Браузер может восстановить выбор «Самовывоз» при возврате на страницу
+    showDeliveryPane();
+  }
+
+  // Самовывоз или курьер: показываем только блок выбранного способа
+  function showDeliveryPane() {
+    var method = deliveryMethod();
+    document.querySelectorAll("[data-delivery-pane]").forEach(function (pane) {
+      pane.hidden = pane.dataset.deliveryPane !== method;
+    });
+  }
+
+  var itemsTotal = 0;
+
+  function deliveryMethod() {
+    var picked = document.querySelector("input[name=delivery]:checked");
+    return picked ? picked.value : "COURIER";
+  }
+
+  // Та же формула, что в DeliveryService. Окончательную цену всё равно считает сервер
+  function updateSummary() {
+    var form = document.querySelector("[data-order-form]");
+    var courierPrice = Number(form.dataset.courierPrice), freeFrom = Number(form.dataset.freeFrom);
+    var courier = deliveryMethod() === "COURIER";
+    var price = courier && itemsTotal < freeFrom ? courierPrice : 0;
+    document.querySelector("[data-cart-items]").textContent = rub(itemsTotal);
+    document.querySelector("[data-cart-delivery]").textContent = price ? rub(price) : "бесплатно";
+    document.querySelector("[data-cart-total]").textContent = rub(itemsTotal + price);
+    var hint = document.querySelector("[data-free-hint]");
+    hint.hidden = !price;
+    hint.textContent = price ? "До бесплатной доставки осталось " + rub(freeFrom - itemsTotal) : "";
   }
 
   function csrfHeaders() {
@@ -168,7 +216,8 @@
       if (warn) warn.textContent = "На складе только " + qty + " шт.";
       rows.appendChild(tr);
     });
-    document.querySelector("[data-cart-total]").textContent = rub(total);
+    itemsTotal = total;
+    updateSummary();
   }
 
   function submitOrder(e) {
@@ -177,12 +226,25 @@
     var error = form.querySelector("[data-order-error]");
     var button = form.querySelector("button[type=submit]");
     var cart = read();
+    var delivery = deliveryMethod();
     var picked = form.querySelector("input[name=addressId]:checked");
     var addressId = picked && picked.value ? Number(picked.value) : null;
+    var pickupPointId = null;
     var newAddress = null;
     var address = "";
 
-    if (addressId) {
+    if (delivery === "PICKUP") {
+      // Магазин сервер тоже возьмёт из базы по id
+      var point = form.querySelector("input[name=pickupPointId]:checked");
+      if (!point) {
+        error.textContent = "Выберите магазин для самовывоза.";
+        return;
+      }
+      pickupPointId = Number(point.value);
+      addressId = null;
+      var label = point.closest("label");
+      address = label.querySelector("[data-point-name]").textContent + ", " + label.querySelector("[data-point-address]").textContent;
+    } else if (addressId) {
       // Сохранённый адрес: сервер возьмёт его из базы, здесь только текст для проверки формы
       address = picked.closest("label").querySelector(".muted").textContent;
     } else {
@@ -200,15 +262,24 @@
         name: form.name.value.trim(),
         phone: form.phone.value.trim(),
         address: address,
-        comment: form.comment.value.trim() || null
+        comment: form.comment.value.trim() || null,
+        email: form.email.value.trim() || null
       },
       items: Object.keys(cart).map(function (id) { return { productId: Number(id), quantity: cart[id] }; }),
+      delivery: delivery,
+      pickupPointId: pickupPointId,
       addressId: addressId,
       newAddress: newAddress,
-      saveAddress: !!(form.saveAddress && form.saveAddress.checked && newAddress)
+      saveAddress: !!(form.saveAddress && form.saveAddress.checked && newAddress),
+      // Галочка есть только у гостя: вошедший дал согласие при регистрации
+      consent: form.consent ? form.consent.checked : false
     };
     if (!body.customer.name || !body.customer.phone) {
       error.textContent = "Укажите имя и телефон.";
+      return;
+    }
+    if (form.consent && !form.consent.checked) {
+      error.textContent = "Отметьте согласие на обработку персональных данных.";
       return;
     }
     error.textContent = "";

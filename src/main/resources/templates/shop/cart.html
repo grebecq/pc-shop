@@ -15,11 +15,16 @@
                 <thead><tr><th>Товар</th><th>Цена</th><th>Количество</th><th>Сумма</th><th></th></tr></thead>
                 <tbody data-cart-rows></tbody>
             </table>
-            <p class="cart-total">Итого: <b data-cart-total>0 ₽</b></p>
+            <dl class="cart-sum">
+                <div><dt>Товары</dt><dd data-cart-items>0 ₽</dd></div>
+                <div><dt>Доставка</dt><dd data-cart-delivery>бесплатно</dd></div>
+                <div class="cart-sum__total"><dt>Итого</dt><dd data-cart-total>0 ₽</dd></div>
+            </dl>
+            <p class="cart-hint" data-free-hint hidden></p>
         </section>
 
         <form class="panel order-form" data-order-form novalidate
-              th:attr="data-logged-in=${user != null}">
+              th:attr="data-logged-in=${user != null},data-courier-price=${courierPrice},data-free-from=${freeFrom}">
             <h2 class="h3">Оформление</h2>
             <p class="muted small-top" th:if="${user == null}">
                 <a th:href="@{/login(next='/cart')}">Войдите</a>, чтобы подставить сохранённые адреса, или оформите без регистрации.
@@ -31,33 +36,62 @@
                 <input id="name" name="name" autocomplete="name" required maxlength="128" th:value="${account?.name}">
                 <label for="phone">Телефон</label>
                 <input id="phone" name="phone" type="tel" autocomplete="tel" required placeholder="+7 900 000-00-00" th:value="${account?.phone}">
+                <label for="email">Email <span class="muted" th:if="${user == null}">— необязательно</span></label>
+                <input id="email" name="email" type="email" autocomplete="email" maxlength="254" placeholder="name@example.com" th:value="${account?.email}">
+                <p class="hint">Пришлём письмо о заказе и о смене статуса.</p>
             </fieldset>
 
             <fieldset class="group">
-                <legend>Доставка</legend>
-                <th:block th:if="${addresses != null and !addresses.empty}">
-                    <label class="choice" th:each="a, it : ${addresses}">
-                        <input type="radio" name="addressId" th:value="${a.id}" th:checked="${it.first}">
-                        <span><b th:text="${a.label}">Дом</b><br><span class="muted" th:text="${a.oneLine()}">адрес</span></span>
+                <legend>Получение</legend>
+                <div class="delivery-choice">
+                    <label class="choice">
+                        <input type="radio" name="delivery" value="COURIER" checked>
+                        <span><b>Курьером</b><br><span class="muted" th:text="${@fmt.rub(courierPrice)} + ', 1–2 дня'">490 ₽</span></span>
                     </label>
                     <label class="choice">
-                        <input type="radio" name="addressId" value="">
-                        <span><b>Другой адрес</b></span>
+                        <input type="radio" name="delivery" value="PICKUP">
+                        <span><b>Самовывоз</b><br><span class="muted">Бесплатно, на следующий день</span></span>
                     </label>
-                </th:block>
-                <div class="new-address" data-new-address th:hidden="${addresses != null and !addresses.empty}">
-                    <label for="city">Город</label>
-                    <input id="city" name="city" autocomplete="address-level2" maxlength="128" placeholder="Москва">
-                    <label for="street">Улица и дом</label>
-                    <input id="street" name="street" autocomplete="address-line1" maxlength="256" placeholder="Тверская ул., 7">
-                    <label for="apartment">Квартира, офис</label>
-                    <input id="apartment" name="apartment" autocomplete="address-line2" maxlength="32">
-                    <label class="check" th:if="${user != null}"><input type="checkbox" name="saveAddress" checked> Сохранить адрес в кабинете</label>
+                </div>
+
+                <div data-delivery-pane="PICKUP" hidden>
+                    <label class="choice" th:each="p, it : ${pickupPoints}">
+                        <input type="radio" name="pickupPointId" th:value="${p.id}" th:checked="${it.first}">
+                        <span><b data-point-name th:text="${p.name}">Магазин</b><br>
+                            <span class="muted" data-point-address th:text="${p.address}">адрес</span><br>
+                            <span class="muted small" th:text="${p.hours}">часы</span></span>
+                    </label>
+                    <p class="hint">Заказ можно забрать на следующий день после оплаты, он ждёт в магазине 7 дней.</p>
+                </div>
+
+                <div data-delivery-pane="COURIER">
+                    <th:block th:if="${addresses != null and !addresses.empty}">
+                        <label class="choice" th:each="a, it : ${addresses}">
+                            <input type="radio" name="addressId" th:value="${a.id}" th:checked="${it.first}">
+                            <span><b th:text="${a.label}">Дом</b><br><span class="muted" th:text="${a.oneLine()}">адрес</span></span>
+                        </label>
+                        <label class="choice">
+                            <input type="radio" name="addressId" value="">
+                            <span><b>Другой адрес</b></span>
+                        </label>
+                    </th:block>
+                    <div class="new-address" data-new-address th:hidden="${addresses != null and !addresses.empty}">
+                        <label for="city">Город</label>
+                        <input id="city" name="city" autocomplete="address-level2" maxlength="128" placeholder="Москва">
+                        <label for="street">Улица и дом</label>
+                        <input id="street" name="street" autocomplete="address-line1" maxlength="256" placeholder="Тверская ул., 7">
+                        <label for="apartment">Квартира, офис</label>
+                        <input id="apartment" name="apartment" autocomplete="address-line2" maxlength="32">
+                        <label class="check" th:if="${user != null}"><input type="checkbox" name="saveAddress" checked> Сохранить адрес в кабинете</label>
+                    </div>
+                    <p class="hint">Привезём за 1–2 дня после оплаты, курьер позвонит перед приездом.</p>
                 </div>
             </fieldset>
 
             <label for="comment">Комментарий к заказу</label>
             <textarea id="comment" name="comment" rows="2" maxlength="1000" placeholder="Например, позвонить за час"></textarea>
+            <label class="check consent" th:if="${user == null}"><input type="checkbox" name="consent">
+                <span>Согласен на <a th:href="@{/privacy}" target="_blank">обработку персональных данных</a></span></label>
             <button class="btn btn--wide" type="submit">Перейти к оплате</button>
             <p class="form-error" data-order-error role="alert"></p>
         </form>

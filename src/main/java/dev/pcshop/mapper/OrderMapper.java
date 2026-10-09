@@ -14,7 +14,7 @@ import org.mapstruct.ReportingPolicy;
 public interface OrderMapper {
 
     @Mapping(target = "number", expression = "java(order.number())")
-    @Mapping(target = "statusLabel", expression = "java(order.getStatus().label())")
+    @Mapping(target = "statusLabel", expression = "java(order.statusLabel())")
     OrderResponse toResponse(Order order);
 
     OrderItemResponse toResponse(OrderItem item);

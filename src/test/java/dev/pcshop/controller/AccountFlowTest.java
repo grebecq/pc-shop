@@ -63,7 +63,7 @@ class AccountFlowTest {
         }
 
         String register(String email) throws Exception {
-            var r = postForm("/register", "/register", "name", "Анна", "email", email, "password", "secret-123");
+            var r = postForm("/register", "/register", "name", "Анна", "email", email, "password", "secret-123", "consent", "true");
             assertThat(r.statusCode()).isEqualTo(302);
             return r.headers().firstValue("Location").orElseThrow();
         }
@@ -146,7 +146,7 @@ class AccountFlowTest {
         new Browser().register("  " + email.toUpperCase() + " ");
 
         var again = new Browser();
-        var r = again.postForm("/register", "/register", "name", "Анна", "email", email, "password", "secret-123");
+        var r = again.postForm("/register", "/register", "name", "Анна", "email", email, "password", "secret-123", "consent", "true");
         assertThat(r.statusCode()).as("форма с ошибкой, а не вход").isEqualTo(200);
         assertThat(r.body()).contains("Аккаунт с таким email уже есть");
     }
@@ -213,7 +213,7 @@ class AccountFlowTest {
         var reused = b.postForm("/password/reset", "/login", "token", token, "password", "evil-secret-1", "confirm", "evil-secret-1");
         assertThat(reused.body()).contains("Ссылка устарела, запросите новую");
 
-        var oldPassword = b.postForm("/login", "/login", "email", email, "password", "secret-123");
+        var oldPassword = b.postForm("/login", "/login", "email", email, "password", "secret-123", "consent", "true");
         assertThat(oldPassword.headers().firstValue("Location").orElseThrow()).endsWith("/login?error");
         var newPassword = b.postForm("/login", "/login", "email", email, "password", "new-secret-1");
         assertThat(newPassword.headers().firstValue("Location").orElseThrow()).endsWith("/account");
@@ -238,7 +238,7 @@ class AccountFlowTest {
         assertThat(b.get("/password/reset?token=" + "A".repeat(43)).body()).contains("Ссылка устарела");
         assertThat(b.get("/password/reset").body()).contains("Ссылка устарела");
 
-        var login = b.postForm("/login", "/login", "email", email, "password", "secret-123");
+        var login = b.postForm("/login", "/login", "email", email, "password", "secret-123", "consent", "true");
         assertThat(login.headers().firstValue("Location").orElseThrow()).as("пароль прежний").endsWith("/account");
     }
 
@@ -343,7 +343,7 @@ class AccountFlowTest {
         for (int i = 0; i < 10; i++) {
             b.postForm("/login", "/login", "email", email, "password", "wrong-" + i);
         }
-        var correct = b.postForm("/login", "/login", "email", email, "password", "secret-123");
+        var correct = b.postForm("/login", "/login", "email", email, "password", "secret-123", "consent", "true");
         assertThat(correct.headers().firstValue("Location").orElseThrow()).endsWith("/login?locked");
     }
 

@@ -3,6 +3,7 @@ package dev.pcshop.config;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -21,7 +22,11 @@ public record ShopProperties(
 
         @NotNull
         @Valid
-        Telegram telegram) {
+        Telegram telegram,
+
+        @NotNull
+        @Valid
+        Delivery delivery) {
 
     public record Admin(
 
@@ -32,6 +37,18 @@ public record ShopProperties(
             @NotBlank(message = "Задайте ADMIN_PASSWORD — пароль админки")
             @Size(min = 8, message = "ADMIN_PASSWORD — не короче 8 символов")
             String password) {
+    }
+
+    /** Цена доставки курьером в рублях и сумма заказа, от которой она бесплатная. Самовывоз всегда бесплатный. */
+    public record Delivery(
+
+            @NotNull(message = "Задайте shop.delivery.courier-price")
+            @PositiveOrZero(message = "shop.delivery.courier-price — не меньше 0")
+            Integer courierPrice,
+
+            @NotNull(message = "Задайте shop.delivery.free-from")
+            @PositiveOrZero(message = "shop.delivery.free-from — не меньше 0")
+            Integer freeFrom) {
     }
 
     public record Telegram(String botToken, String botUsername, Long adminChatId, String paymentToken) {

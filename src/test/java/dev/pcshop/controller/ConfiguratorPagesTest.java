@@ -80,7 +80,7 @@ class ConfiguratorPagesTest {
 
         // Регистрация со ссылкой «вернуться к сборке»
         var reg = post("/register", "/register", "name=Анна&email=" + enc("b-" + UUID.randomUUID() + "@example.com")
-                + "&password=secret-123&next=" + enc(preset));
+                + "&password=secret-123&consent=true&next=" + enc(preset));
         assertThat(reg.headers().firstValue("Location").orElseThrow()).endsWith(preset);
 
         var saved = post("/configurator/save", preset, query + "&name=" + enc("Для брата"));

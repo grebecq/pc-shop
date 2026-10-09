@@ -1,10 +1,12 @@
 package dev.pcshop.dto.response;
 
+import dev.pcshop.enums.DeliveryMethod;
 import dev.pcshop.enums.OrderStatus;
 
 import java.util.List;
 import java.util.UUID;
 
-public record OrderResponse(UUID publicId, String number, OrderStatus status, String statusLabel, int total,
+public record OrderResponse(UUID publicId, String number, OrderStatus status, String statusLabel,
+                            DeliveryMethod deliveryMethod, int deliveryPrice, int total,
                             List<OrderItemResponse> items) {
 }

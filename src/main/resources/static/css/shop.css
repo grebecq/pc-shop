@@ -458,3 +458,39 @@ input.is-invalid:focus { box-shadow: 0 0 0 3px rgba(180, 35, 24, .12); }
   .pay-layout { grid-template-columns: 1fr; gap: 16px; }
   .pay-layout .pay-test, .card-form { grid-column: auto; grid-row: auto; }
 }
+
+/* ---------- Доставка в корзине и на странице заказа ---------- */
+.cart-sum { margin: 14px 0 0 auto; max-width: 340px; display: grid; gap: 6px; font-size: 15px; }
+.cart-sum div { display: flex; justify-content: space-between; gap: 16px; }
+.cart-sum dt { color: var(--muted); }
+.cart-sum dd { margin: 0; font-variant-numeric: tabular-nums; }
+.cart-sum__total { padding-top: 8px; border-top: 1px solid var(--line); font-size: 18px; }
+.cart-sum__total dt { color: var(--ink); }
+.cart-sum__total dd { font-weight: 600; }
+.cart-sum--order { margin-top: 16px; }
+.cart-hint { text-align: right; font-size: 13px; color: var(--accent); margin-top: 8px; }
+.cart-hint[hidden] { display: none; }
+.delivery-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.order-form .choice { color: var(--ink); margin-top: 0; }
+[data-delivery-pane] { display: grid; gap: 8px; margin-top: 4px; }
+[data-delivery-pane][hidden] { display: none; }
+.consent { font-size: 14px; margin-top: 10px; }
+.consent span { color: var(--ink); }
+.consent a { color: var(--accent); }
+.order-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 16px; }
+.order-actions form { margin: 0; }
+.btn--danger:hover { color: var(--err); border-color: var(--err); }
+
+/* ---------- Страницы «Доставка», «Гарантия», «Контакты», «Политика» ---------- */
+.info h1 { margin-bottom: 8px; }
+.info .lead { color: var(--muted); margin-bottom: 24px; }
+.info h2 { font-size: 20px; margin: 32px 0 12px; }
+.info p, .info li { max-width: 68ch; }
+.info p + p { margin-top: 10px; }
+.info ul { padding-left: 20px; margin: 8px 0 0; display: grid; gap: 6px; }
+.info-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.info-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: grid; gap: 4px; font-size: 15px; }
+.info-card b { font-size: 16px; }
+.info-card .price { font-size: 20px; font-weight: 600; }
+.info-note { margin-top: 32px; padding: 12px 14px; border-radius: 8px; background: #f2f5fe; font-size: 14px; color: var(--muted); }
+.info .after-list { margin-top: 12px; }

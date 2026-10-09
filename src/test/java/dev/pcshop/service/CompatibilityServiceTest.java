@@ -193,7 +193,7 @@ class CompatibilityServiceTest {
     }
 
     private long account() {
-        return accounts.register(new RegisterRequest("Тест", "t-" + UUID.randomUUID() + "@example.com", "secret-123"))
+        return accounts.register(new RegisterRequest("Тест", "t-" + UUID.randomUUID() + "@example.com", "secret-123", true))
                 .getAccountId();
     }
 
