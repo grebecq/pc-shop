@@ -67,20 +67,17 @@ docker compose up -d --build
 
 ## Запуск для разработки
 
-Нужны JDK 21 и PostgreSQL.
+Нужны JDK 21 и Docker (для базы).
 
-```bash
-# база (или своя локальная: БД pcshop, пользователь pcshop / pcshop)
-docker run -d --name pcshop-db -p 5432:5432 \
-  -e POSTGRES_DB=pcshop -e POSTGRES_USER=pcshop -e POSTGRES_PASSWORD=pcshop postgres:16-alpine
-
-./gradlew bootRun
-```
+1. Поднимите только базу: `docker compose up -d db`. Она будет на `localhost:5433`, чтобы не мешать
+   PostgreSQL, если он установлен на компьютер (он обычно занимает 5432).
+2. В IDEA: Run → Edit Configurations → `PcShopApplication` → Environment variables:
+   `ADMIN_PASSWORD=любой-пароль-от-8-символов`. Остальное приложение возьмёт по умолчанию.
+3. Запустите `PcShopApplication` (или `./gradlew bootRun` с той же переменной).
 
 Схему и каталог (около 130 актуальных товаров с ценами на октябрь 2026) создаёт Flyway при первом запуске (`src/main/resources/db/migration`).
 
-Переменные окружения те же, что в `.env.example`. Для `bootRun` их можно экспортировать в shell или прописать
-в конфигурации запуска IDE.
+Остальные переменные те же, что в `.env.example`: токен бота и т.п. добавляются туда же, через `;`.
 
 Тесты (нужен запущенный Docker):
 
@@ -92,7 +89,7 @@ docker run -d --name pcshop-db -p 5432:5432 \
 
 | Переменная | Зачем | По умолчанию |
 |---|---|---|
-| `DB_URL`, `DB_USER`, `DB_PASSWORD` | подключение к PostgreSQL | `localhost:5432/pcshop`, `pcshop` / `pcshop` |
+| `DB_URL`, `DB_USER`, `DB_PASSWORD` | подключение к PostgreSQL | `localhost:5433/pcshop`, `pcshop` / `pcshop` |
 | `DB_SCHEMA` | своя схема, если база общая с другим проектом | `public` |
 | `PORT` | порт сайта | `8080` |
 | `SHOP_BASE_URL` | публичный адрес сайта для ссылок из бота | `http://localhost:8080` |

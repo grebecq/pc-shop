@@ -5,6 +5,10 @@ services:
       POSTGRES_DB: pcshop
       POSTGRES_USER: pcshop
       POSTGRES_PASSWORD: ${DB_PASSWORD:-pcshop}
+    # Для запуска приложения из IDEA. Порт 5433, чтобы не мешать PostgreSQL, установленному на компьютер.
+    # Только 127.0.0.1: на сервере база не должна быть видна из интернета
+    ports:
+      - "127.0.0.1:5433:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
@@ -15,7 +19,10 @@ services:
 
   app:
     build: .
-    env_file: .env
+    # Без .env compose тоже запускается: например, когда нужна только база (docker compose up -d db)
+    env_file:
+      - path: .env
+        required: false
     environment:
       DB_URL: jdbc:postgresql://db:5432/pcshop
       DB_USER: pcshop

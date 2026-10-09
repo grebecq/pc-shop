@@ -2,9 +2,10 @@ spring:
   application:
     name: pc-shop
   datasource:
-    # Либо целиком DB_URL, либо по частям (так их отдают хостинги вроде Render)
+    # Либо целиком DB_URL, либо по частям (так их отдают хостинги вроде Render).
+    # По умолчанию — база из docker-compose (порт 5433), чтобы приложение можно было запускать из IDEA
     # DB_SCHEMA — отдельная схема, если база общая с другим проектом (Flyway создаст её сам)
-    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:pcshop}?currentSchema=${DB_SCHEMA:public}}
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:pcshop}?currentSchema=${DB_SCHEMA:public}}
     username: ${DB_USER:pcshop}
     password: ${DB_PASSWORD:pcshop}
   flyway:
