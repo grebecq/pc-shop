@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Скидки')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap">
+    <nav class="crumbs"><a th:href="@{/}">Главная</a> / <span>Скидки</span></nav>
+    <div class="catalog-head">
+        <h1>Скидки</h1>
+        <span class="muted" th:text="${products.size()} + ' ' + ${@fmt.goods(products.size())}">11 товаров</span>
+    </div>
+    <p class="lead sale-lead">Цена уже снижена, зачёркнута цена до скидки. Самые большие скидки — первыми.</p>
+
+    <div class="grid" th:unless="${products.empty}">
+        <th:block th:each="p : ${products}"><article th:replace="~{fragments :: card(${p})}"></article></th:block>
+    </div>
+    <div class="empty" th:if="${products.empty}">
+        <p>Сейчас скидок нет. Загляните позже.</p>
+        <a class="btn btn--ghost" th:href="@{/}" style="margin-top:14px">Перейти в каталог</a>
+    </div>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

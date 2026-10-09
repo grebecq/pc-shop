@@ -81,7 +81,7 @@ class ProductChoiceTest {
 
         // Купила и оплатила — теперь можно
         var order = orders.create(Channel.SITE, new CustomerRequest("Мария", "+7 900 000-00-00", "Москва, ул. Ленина, 1", null),
-                DeliveryMethod.PICKUP, List.of(new OrderLineRequest(product.getId(), 1)), null, accountId);
+                DeliveryMethod.PICKUP, null, List.of(new OrderLineRequest(product.getId(), 1)), null, accountId);
         orders.markPaid(order.getPublicId());
         assertThat(maria.get(page).body()).contains("Ваш отзыв");
 

@@ -40,7 +40,8 @@ public class CheckoutService {
         String email = customer.email() == null && accountId != null ? accountService.get(accountId).getEmail() : customer.email();
         customer = customer.withAddressAndEmail(address, email);
 
-        Order order = orderService.create(Channel.SITE, customer, request.delivery(), request.items(), null, accountId);
+        Order order = orderService.create(Channel.SITE, customer, request.delivery(), request.promoCode(),
+                request.items(), null, accountId);
 
         if (accountId != null) {
             accountService.rememberPhone(accountId, customer.phone());

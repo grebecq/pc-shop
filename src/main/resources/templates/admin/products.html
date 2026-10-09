@@ -8,7 +8,7 @@
     <div th:replace="~{admin/layout :: flash}"></div>
     <div class="table-scroll">
         <table class="cart-table admin-table">
-            <thead><tr><th>Фото</th><th>Товар</th><th>Категория</th><th>Цена, ₽</th><th>Остаток</th><th>Продаётся</th><th></th></tr></thead>
+            <thead><tr><th>Фото</th><th>Товар</th><th>Категория</th><th>Цена, ₽</th><th title="Пусто — скидки нет">До скидки, ₽</th><th>Остаток</th><th>Продаётся</th><th></th></tr></thead>
             <tbody>
             <tr th:each="p : ${products}" th:id="'p' + ${p.id}" th:classappend="${!p.active} ? 'is-muted'">
                 <td class="photo-cell">
@@ -25,6 +25,8 @@
                 <td><a th:href="@{/p/{s}(s=${p.slug})}" target="_blank" th:text="${p.name}">Товар</a></td>
                 <td th:text="${p.category.name}">Категория</td>
                 <td><input class="cell-input" type="number" min="1" name="price" th:value="${p.price}" th:form="'f' + ${p.id}" aria-label="Цена"></td>
+                <td><input class="cell-input" type="number" min="1" name="oldPrice" th:value="${p.oldPrice}" th:form="'f' + ${p.id}"
+                           placeholder="—" aria-label="Цена до скидки"></td>
                 <td><input class="cell-input cell-input--short" type="number" min="0" name="stock" th:value="${p.stock}" th:form="'f' + ${p.id}" aria-label="Остаток"></td>
                 <td><input type="checkbox" name="active" value="true" th:checked="${p.active}" th:form="'f' + ${p.id}" aria-label="Продаётся"></td>
                 <td>

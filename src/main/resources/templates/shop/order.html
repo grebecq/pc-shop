@@ -26,6 +26,8 @@
     </table>
     <dl class="cart-sum cart-sum--order">
         <div><dt>Товары</dt><dd th:text="${@fmt.rub(order.itemsTotal())}">0 ₽</dd></div>
+        <div class="cart-sum__discount" th:if="${order.discount > 0}"><dt th:text="'Промокод ' + ${order.promoCode}">Промокод</dt>
+            <dd th:text="'−' + ${@fmt.rub(order.discount)}">−0 ₽</dd></div>
         <div><dt>Доставка</dt><dd th:text="${order.deliveryPrice == 0} ? 'бесплатно' : ${@fmt.rub(order.deliveryPrice)}">0 ₽</dd></div>
         <div class="cart-sum__total"><dt>Итого</dt><dd th:text="${@fmt.rub(order.total)}">0 ₽</dd></div>
     </dl>

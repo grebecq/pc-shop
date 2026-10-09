@@ -5,10 +5,12 @@ import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.dto.request.OrderLineRequest;
 import dev.pcshop.entity.Order;
 import dev.pcshop.entity.Product;
+import dev.pcshop.entity.PromoCode;
 import dev.pcshop.enums.Channel;
 import dev.pcshop.enums.DeliveryMethod;
 import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.event.OrderEvents;
+import dev.pcshop.event.ProductEvents;
 import dev.pcshop.exception.OrderException;
 import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.repository.OrderRepository;
@@ -49,6 +51,7 @@ public class OrderService {
     private final ApplicationEventPublisher events;
     private final DemoPaymentGateway paymentGateway;
     private final DeliveryService delivery;
+    private final PromoService promos;
 
     /** Заказ из бота: доставка курьером по адресу из чата. */
     @Transactional
@@ -56,19 +59,21 @@ public class OrderService {
                         @NotNull(message = "Укажите данные покупателя") @Valid CustomerRequest customer,
                         @NotEmpty(message = "Корзина пуста") List<@NotNull @Valid OrderLineRequest> lines,
                         Long telegramChatId) {
-        return create(channel, customer, DeliveryMethod.COURIER, lines, telegramChatId, null);
+        return create(channel, customer, DeliveryMethod.COURIER, null, lines, telegramChatId, null);
     }
 
     /**
      * Создаёт заказ и резервирует товар. Если чего-то не хватает, откатывается весь заказ целиком.
-     * Цена доставки считается здесь же, от суммы товаров, и входит в итог.
+     * Скидка по промокоду и цена доставки считаются здесь же, от суммы товаров по их ценам, и входят в итог.
      *
+     * @param promoCode промокод из корзины или null
      * @param accountId аккаунт покупателя на сайте или null для гостя и бота
      */
     @Transactional
     public Order create(@NotNull(message = "Не указан канал заказа") Channel channel,
                         @NotNull(message = "Укажите данные покупателя") @Valid CustomerRequest customer,
                         @NotNull(message = "Выберите способ получения") DeliveryMethod deliveryMethod,
+                        String promoCode,
                         @NotEmpty(message = "Корзина пуста") List<@NotNull @Valid OrderLineRequest> lines,
                         Long telegramChatId, Long accountId) {
         // Одинаковые товары в запросе складываем в одну позицию
@@ -80,6 +85,9 @@ public class OrderService {
         if (quantities.size() > MAX_POSITIONS) {
             throw new OrderException("Слишком много позиций в заказе");
         }
+
+        // Промокод проверяем до резерва: неизвестный или истёкший код — сразу понятная ошибка
+        PromoCode promo = promoCode == null ? null : promos.find(promoCode);
 
         Map<Long, Product> byId = products.findAllById(quantities.keySet()).stream()
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
@@ -95,6 +103,10 @@ public class OrderService {
             }
             order.addItem(productId, product.getName(), product.getPrice(), qty);
         });
+        if (promo != null) {
+            order.applyPromo(promo.getCode(), promos.discount(promo, order.itemsTotal()));
+        }
+        // Бесплатная доставка — от суммы товаров без скидки: как и обещано в корзине
         order.chargeDelivery(delivery.price(deliveryMethod, order.itemsTotal()));
 
         orders.save(order);
@@ -140,8 +152,11 @@ public class OrderService {
         order.changeStatus(status);
         log.info("Заказ {}: статус {}", order.number(), status);
         if (status == OrderStatus.CANCELLED) {
-            // Отменённый заказ возвращает товар на склад
-            order.getItems().forEach(i -> products.release(i.getProductId(), i.getQuantity()));
+            // Отменённый заказ возвращает товар на склад. Если товара не было, подписчики узнают, что он появился
+            order.getItems().forEach(i -> {
+                products.release(i.getProductId(), i.getQuantity());
+                events.publishEvent(new ProductEvents.Restocked(i.getProductId()));
+            });
         }
         events.publishEvent(new OrderEvents.StatusChanged(order.getId(), status));
         return order;

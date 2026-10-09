@@ -5,17 +5,20 @@ import dev.pcshop.dto.request.ProductUpdateRequest;
 import dev.pcshop.dto.response.FacetValueResponse;
 import dev.pcshop.entity.Category;
 import dev.pcshop.entity.Product;
+import dev.pcshop.event.ProductEvents;
 import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.repository.CategoryRepository;
 import dev.pcshop.repository.ProductRepository;
 import dev.pcshop.repository.ProductSearchRepository;
 import dev.pcshop.util.CatalogQueries;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -30,6 +33,7 @@ public class CatalogService {
     private final CategoryRepository categories;
     private final ProductRepository products;
     private final ProductSearchRepository search;
+    private final ApplicationEventPublisher events;
 
     public List<Category> categories() {
         return categories.findAllByOrderBySortOrder();
@@ -91,13 +95,25 @@ public class CatalogService {
         return products.findAllByOrderByCategorySortOrderAscNameAsc();
     }
 
+    /** Правка из админки. Если товар снова появился в наличии, подписчики получат письмо (см. StockAlertService). */
     @Transactional
     public Product updateProduct(long id, ProductUpdateRequest request) {
         Product product = products.findById(id).orElseThrow(() -> new ResourceNotFoundException("Товар не найден"));
-        product.setPrice(request.price());
+        boolean wasOut = !product.inStock();
+        product.reprice(request.price(), request.oldPrice());
         product.setStock(request.stock());
         product.setActive(request.isActive());
+        if (wasOut && product.inStock()) {
+            events.publishEvent(new ProductEvents.Restocked(id));
+        }
         return product;
+    }
+
+    /** Товары со скидкой, самые большие скидки первыми. */
+    public List<Product> onSale() {
+        return products.findAllByActiveTrueAndOldPriceNotNull().stream()
+                .sorted(Comparator.comparingInt(Product::discountPercent).reversed().thenComparing(Product::getPrice))
+                .toList();
     }
 
     public List<Product> featured() {

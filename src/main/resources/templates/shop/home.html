@@ -53,6 +53,16 @@
         <div class="grid" data-recent-grid></div>
     </section>
 
+    <section class="section" th:unless="${sale.empty}">
+        <div class="section__head">
+            <h2>Скидки</h2>
+            <a th:href="@{/sale}">Все скидки</a>
+        </div>
+        <div class="grid">
+            <th:block th:each="p : ${sale}"><article th:replace="~{fragments :: card(${p})}"></article></th:block>
+        </div>
+    </section>
+
     <section class="section">
         <h2>Для мощной сборки</h2>
         <div class="grid">

@@ -131,6 +131,65 @@
     });
     // Браузер может восстановить выбор «Самовывоз» при возврате на страницу
     showDeliveryPane();
+
+    var promoInput = document.querySelector("[data-promo-input]");
+    document.querySelector("[data-promo-apply]").addEventListener("click", togglePromo);
+    promoInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); togglePromo(); }
+    });
+  }
+
+  // ---------- Промокод ----------
+  // Условия кода берём с сервера, скидку считаем по той же формуле, что PromoCode.discountFor.
+  // При оформлении сервер всё равно пересчитает её сам
+  var promo = null;
+
+  function promoDiscount() {
+    if (!promo || itemsTotal < promo.minTotal) return 0;
+    return promo.percent != null ? Math.floor(itemsTotal * promo.percent / 100) : Math.min(promo.amount, itemsTotal);
+  }
+
+  function togglePromo() {
+    var input = document.querySelector("[data-promo-input]");
+    var button = document.querySelector("[data-promo-apply]");
+    if (promo) {
+      // Второе нажатие — убрать промокод
+      promo = null;
+      input.readOnly = false;
+      input.value = "";
+      button.textContent = "Применить";
+      updateSummary();
+      return;
+    }
+    var code = input.value.trim();
+    if (!code) {
+      showPromoNote("Введите промокод", true);
+      return;
+    }
+    button.disabled = true;
+    fetch("/api/promo/" + encodeURIComponent(code))
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (data) {
+          if (!r.ok) throw new Error(data.message || "Не удалось проверить промокод, попробуйте ещё раз");
+          return data;
+        });
+      })
+      .then(function (data) {
+        promo = data;
+        input.value = data.code;
+        input.readOnly = true;
+        button.textContent = "Убрать";
+        updateSummary();
+      })
+      .catch(function (err) { showPromoNote(err.message, true); })
+      .then(function () { button.disabled = false; });
+  }
+
+  function showPromoNote(text, isError) {
+    var note = document.querySelector("[data-promo-note]");
+    note.hidden = !text;
+    note.textContent = text || "";
+    note.classList.toggle("is-error", !!isError);
   }
 
   // Самовывоз или курьер: показываем только блок выбранного способа
@@ -153,10 +212,21 @@
     var form = document.querySelector("[data-order-form]");
     var courierPrice = Number(form.dataset.courierPrice), freeFrom = Number(form.dataset.freeFrom);
     var courier = deliveryMethod() === "COURIER";
+    // Бесплатная доставка — от суммы товаров без скидки по промокоду, как на сервере
     var price = courier && itemsTotal < freeFrom ? courierPrice : 0;
+    var discount = promoDiscount();
     document.querySelector("[data-cart-items]").textContent = rub(itemsTotal);
+    document.querySelector("[data-discount-row]").hidden = !discount;
+    if (discount) {
+      document.querySelector("[data-discount-label]").textContent = "Промокод " + promo.code;
+      document.querySelector("[data-cart-discount]").textContent = "−" + rub(discount);
+    }
+    if (!promo) showPromoNote("");
+    else if (discount) showPromoNote("Промокод " + promo.code + ": " + promo.title);
+    else showPromoNote("Промокод " + promo.code + " действует на заказ от " + rub(promo.minTotal)
+        + ". Добавьте товаров ещё на " + rub(promo.minTotal - itemsTotal), true);
     document.querySelector("[data-cart-delivery]").textContent = price ? rub(price) : "бесплатно";
-    document.querySelector("[data-cart-total]").textContent = rub(itemsTotal + price);
+    document.querySelector("[data-cart-total]").textContent = rub(itemsTotal - discount + price);
     var hint = document.querySelector("[data-free-hint]");
     hint.hidden = !price;
     hint.textContent = price ? "До бесплатной доставки осталось " + rub(freeFrom - itemsTotal) : "";
@@ -202,7 +272,7 @@
       var tr = document.createElement("tr");
       tr.innerHTML =
         '<td><a></a>' + (p.stock < cart[id] ? '<br><small class="form-error"></small>' : "") + "</td>" +
-        '<td class="num">' + rub(p.price) + "</td>" +
+        '<td class="num">' + rub(p.price) + (p.oldPrice ? '<br><s class="price-old">' + rub(p.oldPrice) + "</s>" : "") + "</td>" +
         '<td><div class="qty"><button type="button" data-action="dec" aria-label="Меньше">−</button>' +
         '<input type="text" readonly aria-label="Количество"><button type="button" data-action="inc" aria-label="Больше">+</button></div></td>' +
         '<td class="num">' + rub(sum) + "</td>" +
@@ -272,7 +342,9 @@
       newAddress: newAddress,
       saveAddress: !!(form.saveAddress && form.saveAddress.checked && newAddress),
       // Галочка есть только у гостя: вошедший дал согласие при регистрации
-      consent: form.consent ? form.consent.checked : false
+      consent: form.consent ? form.consent.checked : false,
+      // Код, который не дотягивает до минимальной суммы, не отправляем: иначе сервер откажет во всём заказе
+      promoCode: promoDiscount() > 0 ? promo.code : null
     };
     if (!body.customer.name || !body.customer.phone) {
       error.textContent = "Укажите имя и телефон.";

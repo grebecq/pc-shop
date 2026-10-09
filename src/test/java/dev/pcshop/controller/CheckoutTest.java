@@ -144,7 +144,7 @@ class CheckoutTest {
         long owner = accounts.register(new RegisterRequest("Анна", "o-" + UUID.randomUUID() + "@example.com", "secret-123", true)).getAccountId();
         long ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme").getId();
         var order = orders.create(Channel.SITE, new CustomerRequest("Анна", "+7 900 000-00-00", "Москва, ул. Ленина, 1", null),
-                DeliveryMethod.COURIER, List.of(new OrderLineRequest(ssd, 1)), null, owner);
+                DeliveryMethod.COURIER, null, List.of(new OrderLineRequest(ssd, 1)), null, owner);
 
         // По одной ссылке чужой заказ из кабинета не отменить: ни гостю, ни другому аккаунту
         assertThatThrownBy(() -> orders.cancelByCustomer(order.getPublicId(), null)).isInstanceOf(ResourceNotFoundException.class);

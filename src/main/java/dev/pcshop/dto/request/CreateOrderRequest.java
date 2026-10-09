@@ -1,6 +1,7 @@
 package dev.pcshop.dto.request;
 
 import dev.pcshop.enums.DeliveryMethod;
+import dev.pcshop.util.Strings;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -17,6 +18,7 @@ import java.util.List;
  * @param addressId     сохранённый адрес вошедшего покупателя (тогда customer.address игнорируется)
  * @param newAddress    новый адрес по полям — сохраняется в кабинет, если saveAddress
  * @param consent       согласие на обработку персональных данных. Нужно от гостя: вошедший дал его при регистрации
+ * @param promoCode     промокод из корзины; скидку сервер пересчитает сам
  */
 public record CreateOrderRequest(
 
@@ -41,12 +43,16 @@ public record CreateOrderRequest(
 
         Boolean saveAddress,
 
-        Boolean consent) {
+        Boolean consent,
+
+        @Size(max = 32, message = "Такого промокода нет")
+        String promoCode) {
 
     public CreateOrderRequest {
         if (delivery == null) {
             delivery = DeliveryMethod.COURIER;
         }
+        promoCode = Strings.blankToNull(promoCode);
     }
 
     public boolean hasConsent() {

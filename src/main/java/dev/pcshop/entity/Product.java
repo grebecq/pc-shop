@@ -53,6 +53,10 @@ public class Product {
     @Column(nullable = false)
     private int price;
 
+    /** Цена до скидки или null, если скидки нет. Всегда больше price (проверяет и база). */
+    @Column(name = "old_price")
+    private Integer oldPrice;
+
     @Column(nullable = false)
     private int stock;
 
@@ -106,11 +110,25 @@ public class Product {
         return stock > 0;
     }
 
-    public void setPrice(int price) {
+    public boolean onSale() {
+        return oldPrice != null;
+    }
+
+    /** Скидка в процентах для значка «−12%», округлённая до целого. */
+    public int discountPercent() {
+        return oldPrice == null ? 0 : Math.round(100f * (oldPrice - price) / oldPrice);
+    }
+
+    /** Новая цена и цена до скидки меняются вместе: иначе по дороге старая цена могла бы оказаться меньше новой. */
+    public void reprice(int price, Integer oldPrice) {
         if (price <= 0) {
             throw new IllegalArgumentException("Цена должна быть больше нуля");
         }
+        if (oldPrice != null && oldPrice <= price) {
+            throw new IllegalArgumentException("Цена до скидки должна быть больше новой цены");
+        }
         this.price = price;
+        this.oldPrice = oldPrice;
     }
 
     public void setStock(int stock) {

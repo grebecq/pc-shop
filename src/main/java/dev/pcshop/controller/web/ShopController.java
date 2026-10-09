@@ -14,6 +14,7 @@ import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.DeliveryService;
 import dev.pcshop.service.ReviewService;
 import dev.pcshop.service.OrderService;
+import dev.pcshop.service.StockAlertService;
 import dev.pcshop.util.Attributes;
 import dev.pcshop.util.CatalogQueries;
 import lombok.RequiredArgsConstructor;
@@ -44,11 +45,20 @@ public class ShopController {
     private final AccountService accounts;
     private final DeliveryService delivery;
     private final ReviewService reviews;
+    private final StockAlertService stockAlerts;
 
     @GetMapping("/")
     public String home(Model model) {
         model.addAttribute("featured", catalog.featured());
+        model.addAttribute("sale", catalog.onSale().stream().limit(4).toList());
         return "shop/home";
+    }
+
+    @GetMapping("/sale")
+    public String sale(Model model) {
+        model.addAttribute("products", catalog.onSale());
+        model.addAttribute("salePage", true);
+        return "shop/sale";
     }
 
     @GetMapping("/c/{slug}")
@@ -75,6 +85,9 @@ public class ShopController {
         model.addAttribute("similar", catalog.similar(product, 4));
         model.addAttribute("reviews", reviews.forProduct(product.getId()));
         model.addAttribute("reviewPermission", reviews.permission(user == null ? null : user.getAccountId(), product.getId()));
+        if (user != null && !product.inStock()) {
+            model.addAttribute("stockAlert", stockAlerts.subscribed(user.getAccountId(), product.getId()));
+        }
         if (!model.containsAttribute("review")) {
             model.addAttribute("review", new ReviewRequest(null, null, null, null));
         }
