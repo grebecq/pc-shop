@@ -10,6 +10,16 @@ spring:
     password: ${DB_PASSWORD:pcshop}
   flyway:
     schemas: ${DB_SCHEMA:public}
+  # Запуск из IDEA или bootRun: Spring сам поднимает базу из docker-compose.yml и подключается к ней.
+  # В собранном jar и в тестах этого модуля нет, там работают DB_URL / DB_HOST
+  docker:
+    compose:
+      file: docker-compose.yml
+      start:
+        # Только база: само приложение уже запущено из IDEA
+        arguments: db
+      # База продолжает работать после остановки приложения, следующий запуск быстрее
+      lifecycle-management: start-only
   jpa:
     open-in-view: false
     hibernate:

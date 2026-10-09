@@ -28,6 +28,8 @@ dependencies {
     implementation("org.telegram:telegrambots-longpolling:$telegrambotsVersion")
     implementation("org.telegram:telegrambots-client:$telegrambotsVersion")
     runtimeOnly("org.postgresql:postgresql")
+    // При запуске из IDEA или bootRun сам поднимает базу из docker-compose.yml. В jar и тесты не попадает
+    developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:$springdocVersion")
