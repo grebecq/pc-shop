@@ -30,6 +30,7 @@
         <div><dt>Телефон</dt><dd th:text="${order.phone}">Телефон</dd></div>
         <div><dt>Адрес</dt><dd th:text="${order.address}">Адрес</dd></div>
         <div th:if="${order.comment}"><dt>Комментарий</dt><dd th:text="${order.comment}">Комментарий</dd></div>
+        <div th:if="${order.paymentCard}"><dt>Оплата</dt><dd th:text="${order.paymentCard} + ' · тестовая оплата на сайте'">Visa •• 4242</dd></div>
     </dl>
 
     <form class="panel inline-form" method="post" th:action="@{/admin/orders/{id}/status(id=${order.id})}" th:unless="${order.status.isFinal()}">

@@ -88,6 +88,10 @@ public class Order {
     @Column(name = "paid_at")
     private Instant paidAt;
 
+    /** Чем оплачен на сайте: платёжная система и последние 4 цифры («Visa •• 4242»). Номер целиком не храним. */
+    @Column(name = "payment_card")
+    private String paymentCard;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id")
     private List<OrderItem> items = new ArrayList<>();
@@ -114,6 +118,15 @@ public class Order {
         }
         status = OrderStatus.PAID;
         paidAt = Instant.now();
+        return true;
+    }
+
+    /** Оплата картой на сайте: то же, что markPaid, плюс запоминаем карту для страницы заказа. */
+    public boolean markPaidByCard(String cardBrand, String cardLast4) {
+        if (!markPaid()) {
+            return false;
+        }
+        paymentCard = cardBrand + " •• " + cardLast4;
         return true;
     }
 

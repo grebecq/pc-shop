@@ -1,5 +1,6 @@
 package dev.pcshop.service;
 
+import dev.pcshop.dto.request.CardPaymentRequest;
 import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.dto.request.OrderLineRequest;
 import dev.pcshop.entity.Order;
@@ -45,6 +46,7 @@ public class OrderService {
     private final OrderRepository orders;
     private final ProductRepository products;
     private final ApplicationEventPublisher events;
+    private final DemoPaymentGateway paymentGateway;
 
     /**
      * Создаёт заказ и резервирует товар. Если чего-то не хватает, откатывается весь заказ целиком.
@@ -99,6 +101,24 @@ public class OrderService {
         Order order = byPublicId(publicId);
         if (order.markPaid()) {
             log.info("Заказ {} оплачен", order.number());
+            events.publishEvent(new OrderEvents.Paid(order.getId()));
+        }
+        return order;
+    }
+
+    /**
+     * Тестовая оплата картой на сайте. Отменённый или уже оплаченный заказ не трогаем и деньги за него не списываем.
+     * Если банк отказал, летит BadRequestException и заказ остаётся неоплаченным.
+     */
+    @Transactional
+    public Order payByCard(UUID publicId, @NotNull(message = "Укажите данные карты") @Valid CardPaymentRequest card) {
+        Order order = byPublicId(publicId);
+        if (order.getStatus() != OrderStatus.AWAITING_PAYMENT) {
+            return order;
+        }
+        var paid = paymentGateway.charge(card, order.getTotal());
+        if (order.markPaidByCard(paid.brand(), paid.last4())) {
+            log.info("Заказ {} оплачен картой {}", order.number(), order.getPaymentCard());
             events.publishEvent(new OrderEvents.Paid(order.getId()));
         }
         return order;
