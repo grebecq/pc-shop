@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Вход')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap auth">
+    <form class="panel auth__form" method="post" th:action="@{/login}">
+        <h1>Вход</h1>
+        <p class="muted">Заказы, адреса доставки и данные для оформления в одном месте.</p>
+        <p class="notice notice--error" th:if="${param.error}">Неверный email или пароль.</p>
+        <p class="notice notice--error" th:if="${param.locked}">Слишком много неудачных попыток. Попробуйте через 15 минут.</p>
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" required autofocus>
+        <label for="password">Пароль</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <input type="hidden" name="next" th:if="${param.next}" th:value="${param.next}">
+        <button class="btn btn--wide" type="submit">Войти</button>
+        <p class="auth__alt">Нет аккаунта? <a th:href="@{/register(next=${param.next})}">Зарегистрироваться</a></p>
+    </form>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

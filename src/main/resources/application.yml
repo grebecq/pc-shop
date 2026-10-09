@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: pc-shop
+  datasource:
+    # Либо целиком DB_URL, либо по частям (так их отдают хостинги вроде Render)
+    # DB_SCHEMA — отдельная схема, если база общая с другим проектом (Flyway создаст её сам)
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:pcshop}?currentSchema=${DB_SCHEMA:public}}
+    username: ${DB_USER:pcshop}
+    password: ${DB_PASSWORD:pcshop}
+  flyway:
+    schemas: ${DB_SCHEMA:public}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  thymeleaf:
+    cache: ${THYMELEAF_CACHE:true}
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      # Покупатель остаётся в аккаунте две недели (сессии живут в памяти приложения)
+      timeout: 14d
+      cookie:
+        http-only: true
+        same-site: lax
+
+shop:
+  orders:
+    # Сколько ждём оплату. Потом заказ отменяется, а товар возвращается на склад
+    payment-timeout: ${PAYMENT_TIMEOUT:30m}
+  # Публичный адрес сайта: нужен для ссылок в сообщениях бота
+  base-url: ${SHOP_BASE_URL:${RENDER_EXTERNAL_URL:http://localhost:8080}}
+  admin:
+    username: ${ADMIN_USER:admin}
+    password: ${ADMIN_PASSWORD:admin}
+  telegram:
+    # Пустой токен = бот выключен, сайт и API работают без него
+    bot-token: ${BOT_TOKEN:}
+    # Имя бота без @ — для кнопки «Открыть бота» на сайте
+    bot-username: ${BOT_USERNAME:}
+    admin-chat-id: ${ADMIN_CHAT_ID:}
+    # Токен платёжного провайдера из @BotFather (Payments). Пусто = демо-оплата кнопкой
+    payment-token: ${TELEGRAM_PAYMENT_TOKEN:}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Профиль')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap narrow">
+    <div th:replace="~{account/parts :: head}"></div>
+    <nav th:replace="~{fragments :: account-tabs('profile')}"></nav>
+    <div th:replace="~{fragments :: flash}"></div>
+
+    <div class="profile-grid">
+        <form class="panel form-grid" method="post" th:action="@{/account/profile}" th:object="${form}" novalidate>
+            <h2 class="h3">Контакты</h2>
+            <p class="muted small-top">Подставляются при оформлении заказа.</p>
+            <div class="field">
+                <label for="name">Имя</label>
+                <input id="name" th:field="*{name}" autocomplete="name" maxlength="128">
+                <p class="form-error" th:errors="*{name}"></p>
+            </div>
+            <div class="field">
+                <label for="phone">Телефон</label>
+                <input id="phone" th:field="*{phone}" type="tel" autocomplete="tel" placeholder="+7 900 000-00-00">
+                <p class="form-error" th:errors="*{phone}"></p>
+            </div>
+            <div><button class="btn" type="submit">Сохранить</button></div>
+        </form>
+
+        <form class="panel form-grid" method="post" th:action="@{/account/password}">
+            <h2 class="h3">Пароль</h2>
+            <div class="field">
+                <label for="current">Текущий пароль</label>
+                <input id="current" name="current" type="password" autocomplete="current-password" required>
+            </div>
+            <div class="field">
+                <label for="password">Новый пароль</label>
+                <input id="password" name="password" type="password" autocomplete="new-password" required minlength="8">
+            </div>
+            <div><button class="btn btn--ghost" type="submit">Сменить пароль</button></div>
+        </form>
+    </div>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

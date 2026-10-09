@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head(${q.isEmpty()} ? 'Поиск' : 'Поиск: ' + ${q})}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap">
+    <div class="catalog-head">
+        <h1 th:text="${q.isEmpty()} ? 'Поиск' : '«' + ${q} + '»'">Поиск</h1>
+        <span class="muted" th:if="${page != null}" th:text="${page.totalElements} + ' найдено'">0</span>
+    </div>
+    <p class="empty" th:if="${q.isEmpty()}">Введите название, бренд или модель в строке поиска.</p>
+
+    <th:block th:if="${page != null}">
+        <div class="grid" th:unless="${page.empty}">
+            <th:block th:each="p : ${page.content}"><article th:replace="~{fragments :: card(${p})}"></article></th:block>
+        </div>
+        <div class="empty" th:if="${page.empty}">
+            <p>Ничего не нашлось. Проверьте написание или загляните в каталог:</p>
+            <p class="chips">
+                <a th:each="c : ${categories}" th:href="@{/c/{s}(s=${c.slug})}" th:text="${c.name}">Категория</a>
+            </p>
+        </div>
+        <nav class="pages" th:if="${page.totalPages > 1}" aria-label="Страницы">
+            <a th:each="link, it : ${pageLinks}" th:href="${link}" th:text="${it.count}"
+               th:classappend="${it.index == page.number} ? 'is-current'">1</a>
+        </nav>
+    </th:block>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Ошибка')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+<main class="wrap narrow">
+    <h1>Что-то пошло не так</h1>
+    <p class="lead">Попробуйте обновить страницу через минуту.</p>
+    <p style="margin-top:24px"><a class="btn" th:href="@{/}">На главную</a></p>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

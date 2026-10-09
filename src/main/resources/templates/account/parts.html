@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Заголовок кабинета с кнопкой выхода -->
+<div th:fragment="head" class="account-head">
+    <div>
+        <h1>Личный кабинет</h1>
+        <p class="muted" th:text="${user.username}">email</p>
+    </div>
+    <form method="post" th:action="@{/logout}">
+        <button class="btn btn--ghost btn--small" type="submit">Выйти</button>
+    </form>
+</div>
+
+<!-- Поля адреса: используются при добавлении и редактировании -->
+<th:block th:fragment="address-fields">
+    <div class="field-row">
+        <div class="field">
+            <label for="label">Название</label>
+            <input id="label" th:field="*{label}" maxlength="64" placeholder="Дом, Работа" list="address-labels">
+            <datalist id="address-labels"><option value="Дом"><option value="Работа"><option value="Дача"></datalist>
+            <p class="form-error" th:errors="*{label}"></p>
+        </div>
+        <div class="field">
+            <label for="city">Город</label>
+            <input id="city" th:field="*{city}" maxlength="128" autocomplete="address-level2" placeholder="Москва">
+            <p class="form-error" th:errors="*{city}"></p>
+        </div>
+    </div>
+    <div class="field">
+        <label for="street">Улица и дом</label>
+        <input id="street" th:field="*{street}" maxlength="256" autocomplete="address-line1" placeholder="Тверская ул., 7">
+        <p class="form-error" th:errors="*{street}"></p>
+    </div>
+    <div class="field-row">
+        <div class="field">
+            <label for="apartment">Квартира, офис</label>
+            <input id="apartment" th:field="*{apartment}" maxlength="32" autocomplete="address-line2">
+        </div>
+        <div class="field">
+            <label for="postalCode">Индекс</label>
+            <input id="postalCode" th:field="*{postalCode}" inputmode="numeric" maxlength="6" autocomplete="postal-code">
+            <p class="form-error" th:errors="*{postalCode}"></p>
+        </div>
+    </div>
+    <label class="check"><input type="checkbox" th:field="*{makeDefault}"> Сделать основным</label>
+</th:block>
+</body>
+</html>

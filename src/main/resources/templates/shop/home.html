@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Комплектующие для ПК')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap">
+    <section class="hero">
+        <div>
+            <h1>Комплектующие для ПК</h1>
+            <p class="lead">Процессоры, видеокарты, память и всё остальное для сборки. Заказ можно оформить здесь
+                или в Telegram-боте: корзина, оплата и статусы работают одинаково.</p>
+            <div class="hero__actions">
+                <a class="btn" href="#catalog">Перейти в каталог</a>
+                <a class="btn btn--ghost" th:if="${botLink}" th:href="${botLink}" target="_blank" rel="noopener">Открыть бота</a>
+            </div>
+        </div>
+        <dl class="hero__facts">
+            <div><dt>Каналы продаж</dt><dd>Сайт и Telegram</dd></div>
+            <div><dt>Оплата</dt><dd>Карта, СБП, Telegram</dd></div>
+            <div><dt>Админка</dt><dd>Заказы и остатки</dd></div>
+        </dl>
+    </section>
+
+    <section id="catalog" class="section">
+        <h2>Каталог</h2>
+        <div class="cats">
+            <a class="cat" th:each="c : ${categories}" th:href="@{/c/{s}(s=${c.slug})}">
+                <svg th:replace="~{fragments :: icon(${c.slug})}"></svg>
+                <span th:text="${c.name}">Категория</span>
+            </a>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>Для мощной сборки</h2>
+        <div class="grid">
+            <th:block th:each="p : ${featured}"><article th:replace="~{fragments :: card(${p})}"></article></th:block>
+        </div>
+    </section>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Оплата заказа')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap narrow">
+    <h1 th:text="'Оплата заказа ' + ${order.number()}">Оплата</h1>
+    <p class="muted">Это тестовая оплата: данные карты не нужны и деньги не списываются.
+        В боевом магазине здесь откроется страница платёжной системы.</p>
+    <p class="muted" th:text="'Товар зарезервирован до ' + ${@fmt.time(payBefore)} + ' по Москве. Если не оплатить, заказ отменится.'">Резерв</p>
+
+    <form class="panel pay" method="post" th:action="@{/pay/{id}(id=${order.publicId})}">
+        <div class="pay__card" aria-hidden="true">
+            <span>Тестовая карта</span>
+            <b>4242 4242 4242 4242</b>
+            <span>12/30 · CVC 123</span>
+        </div>
+        <p class="pay__sum">К оплате <b th:text="${@fmt.rub(order.total)}">0 ₽</b></p>
+        <button class="btn btn--wide" type="submit" th:text="'Оплатить ' + ${@fmt.rub(order.total)}">Оплатить</button>
+    </form>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

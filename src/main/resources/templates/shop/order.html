@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Заказ ' + ${order.number()})}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap narrow">
+    <p class="notice" th:if="${param.paid != null and order.paidAt != null}">Оплата прошла. Спасибо за заказ!</p>
+    <div class="catalog-head">
+        <h1 th:text="'Заказ ' + ${order.number()}">Заказ №1001</h1>
+        <span class="pill" th:classappend="'pill--' + ${#strings.toLowerCase(order.status)}" th:text="${order.status.label()}">Статус</span>
+    </div>
+    <p class="muted order-meta" th:text="'Оформлен ' + ${@fmt.date(order.createdAt)} + ' · ' + ${order.channel.label()}">Дата</p>
+
+    <table class="cart-table">
+        <thead><tr><th>Товар</th><th>Цена</th><th>Кол-во</th><th>Сумма</th></tr></thead>
+        <tbody>
+        <tr th:each="i : ${order.items}">
+            <td th:text="${i.name}">Товар</td>
+            <td class="num" th:text="${@fmt.rub(i.price)}">0 ₽</td>
+            <td class="num" th:text="${i.quantity}">1</td>
+            <td class="num" th:text="${@fmt.rub(i.sum())}">0 ₽</td>
+        </tr>
+        </tbody>
+    </table>
+    <p class="cart-total">Итого: <b th:text="${@fmt.rub(order.total)}">0 ₽</b></p>
+
+    <dl class="details">
+        <div><dt>Получатель</dt><dd th:text="${order.customerName} + ', ' + ${order.phone}">Имя</dd></div>
+        <div><dt>Адрес</dt><dd th:text="${order.address}">Адрес</dd></div>
+    </dl>
+
+    <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn" th:href="@{/pay/{id}(id=${order.publicId})}">Перейти к оплате</a>
+    <p class="muted" th:if="${order.status.name() == 'CANCELLED' and order.paidAt == null}">
+        Заказ отменён: оплата не поступила вовремя, товар вернулся на склад. Его можно оформить заново.</p>
+    <p class="muted small" th:if="${user != null and order.accountId == user.accountId}">
+        Заказ сохранён в <a th:href="@{/account}">личном кабинете</a>.</p>
+    <p class="muted small" th:unless="${user != null and order.accountId == user.accountId}">
+        Сохраните ссылку на эту страницу: по ней видно статус заказа.
+        <a th:href="@{/register}">Создайте аккаунт</a>, чтобы следующие заказы были в одном месте.</p>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>
