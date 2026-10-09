@@ -45,10 +45,27 @@ class ConfiguratorPagesTest {
         assertThat(broken).contains("Процессор под сокет AM5").doesNotContain("готова к заказу");
 
         var gpus = get("/configurator/gpu?" + preset.substring(preset.indexOf('?') + 1)).body();
-        assertThat(gpus).contains("Подходят", "выбрано");
+        assertThat(gpus).contains("Подходят", "Выбрано", "Шаг 5 из 8");
 
         assertThat(get("/configurator/nope").statusCode()).isEqualTo(404);
         assertThat(get("/configurator?cpu=abc&gpu=-1").statusCode()).isEqualTo(200);
+    }
+
+    @Test
+    void stepsLeadToNextEmptySlot() throws Exception {
+        // Выбор процессора ведёт сразу к платам, а неподходящие платы спрятаны в свёрнутый список
+        assertThat(get("/configurator").body()).contains("Начать с процессора", "Сборка ПК");
+        String cpuLink = find(get("/configurator/cpu").body(), "href=\"(/configurator/mb\\?cpu=\\d+)\"");
+        var boards = get(cpuLink).body();
+        assertThat(boards).contains("Шаг 2 из 8", "Не подходят к сборке:", "Пропустить шаг");
+        // Пропуск шага ведёт к следующему, на последнем шаге — к итогу сборки
+        String cpu = cpuLink.substring(cpuLink.indexOf("cpu="));
+        assertThat(boards).contains("href=\"/configurator/cooler?" + cpu + "\"");
+        assertThat(get("/configurator/case?" + cpu).body()).contains("href=\"/configurator?" + cpu + "\"");
+
+        // Со страницы товара — сразу в конструктор с этим товаром
+        assertThat(get("/p/amd-ryzen-5-7600-oem").body()).containsPattern("class=\"build-with\" href=\"/configurator/mb\\?cpu=\\d+\"")
+                .contains("Собрать ПК с этим товаром");
     }
 
     @Test

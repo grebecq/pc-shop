@@ -3,6 +3,7 @@ package dev.pcshop.model;
 import dev.pcshop.entity.Product;
 import dev.pcshop.enums.Slot;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
@@ -95,5 +96,30 @@ public final class Build {
 
     public String linkWith(Slot slot, Product product) {
         return with(slot, product).link();
+    }
+
+    /** Сколько слотов уже заполнено. */
+    public int size() {
+        return parts.size();
+    }
+
+    /**
+     * Первый пустой слот после данного. Конфигуратор ведёт по шагам в порядке Slot,
+     * а пропущенные шаги не предлагает снова: к ним можно вернуться со страницы сборки.
+     */
+    public Optional<Slot> nextEmptyAfter(Slot slot) {
+        return Arrays.stream(Slot.values())
+                .filter(s -> s.ordinal() > slot.ordinal() && !has(s))
+                .findFirst();
+    }
+
+    /** Первый пустой слот по порядку: с него сборку удобнее продолжить. */
+    public Optional<Slot> firstEmpty() {
+        return Arrays.stream(Slot.values()).filter(s -> !has(s)).findFirst();
+    }
+
+    /** Куда вести после шага: к выбору следующей пустой детали или, если пустых не осталось, к итогу сборки. */
+    public String nextLink(Slot after) {
+        return nextEmptyAfter(after).map(this::pickLink).orElseGet(this::link);
     }
 }

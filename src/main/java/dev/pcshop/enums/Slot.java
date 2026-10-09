@@ -31,4 +31,9 @@ public enum Slot {
     public static Optional<Slot> byKey(String key) {
         return Arrays.stream(values()).filter(s -> s.key.equals(key)).findFirst();
     }
+
+    /** Слот, в который встаёт товар этой категории. */
+    public static Optional<Slot> byCategory(String categorySlug) {
+        return Arrays.stream(values()).filter(s -> s.category.equals(categorySlug)).findFirst();
+    }
 }

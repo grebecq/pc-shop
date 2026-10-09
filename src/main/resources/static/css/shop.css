@@ -313,7 +313,55 @@ button.link-btn { background: none; border: 0; padding: 0; font: inherit; font-s
 
 /* Конфигуратор */
 .header__link + .header__link { margin-left: 0; }
-.header__build { color: var(--accent); }
+.header__build { margin-left: auto; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); white-space: nowrap; }
+.header__build + .header__link { margin-left: 0; }
+.header__nav-build { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 500; padding-right: 20px; border-right: 1px solid var(--line); }
+.header__nav-build svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.header__nav a.header__nav-build:hover, .header__nav a.header__nav-build.is-current { color: var(--accent); }
+.builder-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 4px; }
+.builder-head .muted { margin-top: 6px; max-width: 62ch; }
+.slot__icon { position: relative; width: 56px; height: 56px; display: grid; place-items: center; border-radius: 8px; }
+.slot__icon.has-photo { background: #fff; border: 1px solid var(--line); }
+.slot__icon img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 4px; }
+.slot__step { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 11px; background: var(--bg); border: 1px solid var(--line); font-size: 12px; font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+.slot.is-next { background: #f5f7fe; box-shadow: inset 3px 0 0 var(--accent); }
+.slot.is-next .slot__step { background: var(--accent); border-color: var(--accent); color: #fff; }
+.progress { display: grid; gap: 6px; font-size: 14px; }
+.progress__bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.progress__bar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.steps { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; margin-bottom: 22px; }
+.step { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px 7px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); text-decoration: none; font-size: 14px; white-space: nowrap; color: var(--muted); }
+.step:hover { border-color: var(--ink); color: var(--ink); }
+.step__num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 11px; background: var(--bg); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.step.is-done { color: var(--ink); }
+.step.is-done .step__num { background: #e9f4ee; color: var(--ok); }
+.step.is-active { border-color: var(--accent); color: var(--accent); font-weight: 500; }
+.step.is-active .step__num { background: var(--accent); color: #fff; }
+.pick-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px 24px; flex-wrap: wrap; margin-bottom: 20px; }
+.pick-head h1 { margin-top: 2px; }
+.pick-head .muted { margin-top: 4px; }
+.pick-reason { margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: #fdf7ee; color: var(--warn); font-size: 14px; display: inline-block; }
+.pick-reason--optional { background: #eeeee9; color: var(--muted); }
+.pick-head__side { display: grid; justify-items: end; gap: 10px; }
+.pick-head__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.pick-card.is-current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.pick-card .pick__note { margin-top: 0; }
+.unfit { margin-top: 28px; }
+.unfit summary { cursor: pointer; font-weight: 500; color: var(--muted); padding: 10px 0; }
+.unfit summary:hover { color: var(--ink); }
+.unfit .picks { margin-top: 6px; }
+.build-with { display: grid; gap: 2px; padding: 12px 14px; border: 1px dashed var(--accent); border-radius: var(--radius); text-decoration: none; font-size: 14px; max-width: 420px; }
+.build-with b { color: var(--accent); font-weight: 500; font-size: 15px; }
+.build-with:hover { background: #f5f7fe; }
+.builder-promo { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "text btn" "steps btn"; gap: 16px 32px; align-items: center; padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); text-decoration: none; box-shadow: inset 4px 0 0 var(--accent); }
+.builder-promo:hover { border-color: var(--accent); }
+.builder-promo h2 { margin: 0; }
+.builder-promo .muted { margin-top: 8px; max-width: 64ch; }
+.builder-promo > div { grid-area: text; }
+.builder-promo .btn { grid-area: btn; }
+.builder-promo__steps { grid-area: steps; list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; counter-reset: step; font-size: 13px; }
+.builder-promo__steps li { counter-increment: step; padding: 5px 10px; border-radius: 999px; background: var(--bg); color: var(--muted); }
+.builder-promo__steps li::before { content: counter(step) ". "; color: var(--accent); font-weight: 500; }
 .builder { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; margin-top: 20px; }
 .slots { list-style: none; margin: 0; padding: 0; display: grid; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
 .slot { display: grid; grid-template-columns: 44px 1fr auto; gap: 16px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); }
@@ -373,6 +421,13 @@ button.link-btn { background: none; border: 0; padding: 0; font: inherit; font-s
 @media (max-width: 720px) {
   .slot { grid-template-columns: 1fr auto; gap: 8px 12px; }
   .slot__icon { display: none; }
+  .header__nav-build { padding-right: 14px; }
+  .pick-head__side { justify-items: start; }
+  .builder-promo { grid-template-columns: 1fr; grid-template-areas: "text" "steps" "btn"; padding: 18px; }
+  .builder-promo .btn { justify-self: start; }
+  /* На телефоне конструктор доступен вкладкой «Сборка ПК» прямо под шапкой */
+  .header__build { display: none; }
+  .header__build + .header__link { margin-left: auto; }
   .pick { flex-direction: column; align-items: stretch; }
   .pick__side { justify-content: space-between; }
   .presets { grid-template-columns: 1fr; }

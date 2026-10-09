@@ -1,6 +1,7 @@
 package dev.pcshop.controller.web;
 
 import dev.pcshop.config.ShopProperties;
+import dev.pcshop.dto.response.CandidateResponse;
 import dev.pcshop.enums.Slot;
 import dev.pcshop.exception.BadRequestException;
 import dev.pcshop.exception.ResourceNotFoundException;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -45,7 +47,11 @@ public class ConfiguratorController {
         model.addAttribute("slots", Slot.values());
         model.addAttribute("errors", issues.stream().filter(Issue::isError).toList());
         model.addAttribute("warnings", issues.stream().filter(Issue::isWarning).toList());
-        model.addAttribute("missing", issues.stream().filter(Issue::isMissing).toList());
+        // Пустые обязательные слоты сводим в одну строку, а особые причины («процессор без кулера») показываем отдельно
+        model.addAttribute("remaining", Arrays.stream(Slot.values()).filter(s -> s.required() && !build.has(s))
+                .map(s -> s.title().toLowerCase()).toList());
+        model.addAttribute("missing", issues.stream()
+                .filter(i -> i.isMissing() && i.slots().stream().noneMatch(Slot::required)).toList());
         model.addAttribute("complete", compatibility.complete(issues));
         model.addAttribute("draw", compatibility.estimatedDraw(build));
         model.addAttribute("recommendedPsu", compatibility.recommendedPsu(build));
@@ -55,6 +61,9 @@ public class ConfiguratorController {
         // Слоты с проблемами подсвечиваем прямо в списке
         model.addAttribute("badSlots", issues.stream().filter(Issue::isError)
                 .flatMap(i -> i.slots().stream()).filter(build::has).collect(Collectors.toSet()));
+        // С какого шага продолжить: его кнопку выделяем
+        model.addAttribute("next", build.firstEmpty().orElse(null));
+        model.addAttribute("builderPage", true);
         return "build/configurator";
     }
 
@@ -66,9 +75,17 @@ public class ConfiguratorController {
 
         model.addAttribute("build", build);
         model.addAttribute("slot", slot);
+        model.addAttribute("slots", Slot.values());
         model.addAttribute("current", build.part(slot));
         model.addAttribute("candidates", candidates);
-        model.addAttribute("fitCount", candidates.stream().filter(c -> c.fits()).count());
+        // Подходящие показываем сразу, остальные — свёрнутым списком с причинами
+        model.addAttribute("fit", candidates.stream().filter(CandidateResponse::fits).toList());
+        model.addAttribute("unfit", candidates.stream().filter(c -> !c.fits()).toList());
+        model.addAttribute("skipLink", build.nextLink(slot));
+        model.addAttribute("builderPage", true);
+        // Почему шаг нужен именно этой сборке: «процессор без кулера», «нет встроенной графики»
+        model.addAttribute("reason", compatibility.check(build).stream()
+                .filter(i -> i.isMissing() && i.slots().contains(slot)).map(Issue::text).findFirst().orElse(null));
         return "build/pick";
     }
 

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Шаги конструктора: выбранные отмечены галочкой, по любому шагу можно перейти -->
+<nav th:fragment="steps(build, active, slots)" class="steps" aria-label="Шаги сборки">
+    <a th:each="s : ${slots}" class="step" th:href="${build.pickLink(s)}"
+       th:classappend="${s == active} ? 'is-active' : (${build.has(s)} ? 'is-done')"
+       th:attr="aria-current=${s == active} ? 'step'">
+        <span class="step__num" th:text="${build.has(s)} ? '✓' : ${s.ordinal() + 1}">1</span>
+        <span class="step__title" th:text="${s.title()}">Процессор</span>
+    </a>
+</nav>
+
+</body>
+</html>
