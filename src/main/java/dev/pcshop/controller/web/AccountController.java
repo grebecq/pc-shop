@@ -1,12 +1,13 @@
 package dev.pcshop.controller.web;
 
 import dev.pcshop.dto.request.AddressRequest;
-import dev.pcshop.dto.request.PasswordChangeRequest;
 import dev.pcshop.dto.request.ProfileRequest;
 import dev.pcshop.exception.BadRequestException;
+import dev.pcshop.exception.MailDeliveryException;
 import dev.pcshop.security.ShopUser;
 import dev.pcshop.service.AccountService;
 import dev.pcshop.service.OrderService;
+import dev.pcshop.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/** Личный кабинет: заказы, профиль, пароль и адреса доставки. Доступен только после входа. */
+/** Личный кабинет: заказы, профиль, смена пароля через письмо и адреса доставки. Доступен только после входа. */
 @PreAuthorize("hasRole('CUSTOMER')")
 @Controller
 @RequestMapping("/account")
@@ -31,6 +32,7 @@ public class AccountController {
 
     private final AccountService accounts;
     private final OrderService orders;
+    private final PasswordResetService passwordResets;
 
     @GetMapping
     public String orders(@AuthenticationPrincipal ShopUser user, @RequestParam(defaultValue = "0") int page, Model model) {
@@ -63,16 +65,11 @@ public class AccountController {
     }
 
     @PostMapping("/password")
-    public String changePassword(@AuthenticationPrincipal ShopUser user, @Valid @ModelAttribute PasswordChangeRequest request,
-                                 BindingResult errors, RedirectAttributes flash) {
-        if (errors.hasErrors()) {
-            flash.addFlashAttribute("error", errors.getAllErrors().getFirst().getDefaultMessage());
-            return "redirect:/account/profile";
-        }
+    public String sendPasswordLink(@AuthenticationPrincipal ShopUser user, RedirectAttributes flash) {
         try {
-            accounts.changePassword(user.getAccountId(), request);
-            flash.addFlashAttribute("message", "Пароль изменён");
-        } catch (BadRequestException e) {
+            passwordResets.sendLinkToAccount(user.getAccountId());
+            flash.addFlashAttribute("message", "Письмо отправлено на " + user.getUsername());
+        } catch (MailDeliveryException e) {
             flash.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/account/profile";

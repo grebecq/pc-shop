@@ -26,12 +26,15 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
                 <input type="search" name="q" th:value="${q}" placeholder="Поиск: RTX 5070, Ryzen 7, DDR5…" aria-label="Поиск по каталогу" maxlength="100">
             </form>
-            <a class="header__link header__build" th:href="@{/configurator}">Собрать ПК</a>
+            <a class="btn btn--small header__build" th:href="@{/configurator}">Собрать ПК</a>
             <a class="header__link" th:if="${user == null}" th:href="@{/login}">Войти</a>
             <a class="header__link" th:if="${user != null}" th:href="@{/account}" th:text="${user.displayName}">Кабинет</a>
             <a class="header__cart" th:href="@{/cart}">Корзина <span class="badge" data-cart-count hidden>0</span></a>
         </div>
         <div class="header__cats"><nav class="wrap header__nav" aria-label="Категории">
+            <a class="header__nav-build" th:href="@{/configurator}" th:classappend="${builderPage} ? 'is-current'">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="11" height="18" rx="1.5"/><path d="M7.5 7h4M7.5 10h4"/><circle cx="9.5" cy="16" r="1.6"/><path d="M18 8v8M15.5 12h5"/></svg>
+                Сборка ПК</a>
             <a th:each="c : ${categories}" th:href="@{/c/{s}(s=${c.slug})}" th:text="${c.name}"
                th:classappend="${category != null and category.slug == c.slug} ? 'is-current'">Категория</a>
         </nav></div>
@@ -73,13 +76,18 @@
     <p class="notice notice--error" th:if="${error}" th:text="${error}">Ошибка</p>
 </div>
 
+<!-- Фото товара или значок категории. Обёртке с фото нужен класс has-photo.
+     Фото лежат на сайтах производителей: если картинка не загрузилась, убираем её и показываем значок -->
+<th:block th:fragment="photo(p)">
+    <img th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" th:alt="${p.name}" loading="lazy"
+         referrerpolicy="no-referrer" onerror="this.parentElement.classList.remove('has-photo'); this.remove()">
+    <svg th:replace="~{fragments :: icon(${p.category.slug})}"></svg>
+</th:block>
+
 <!-- Карточка товара в сетке -->
 <article th:fragment="card(p)" class="card">
     <a class="card__media" th:href="@{/p/{s}(s=${p.slug})}" th:classappend="${p.imageUrl != null} ? 'has-photo'">
-        <!-- Фото лежат на сайтах производителей. Если картинка не загрузилась, убираем её и показываем значок категории -->
-        <img th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" th:alt="${p.name}" loading="lazy"
-             referrerpolicy="no-referrer" onerror="this.parentElement.classList.remove('has-photo'); this.remove()">
-        <svg th:replace="~{fragments :: icon(${p.category.slug})}"></svg>
+        <th:block th:replace="~{fragments :: photo(${p})}"></th:block>
     </a>
     <div class="card__body">
         <a class="card__title" th:href="@{/p/{s}(s=${p.slug})}" th:text="${p.name}">Название</a>

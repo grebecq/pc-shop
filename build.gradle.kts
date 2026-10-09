@@ -24,6 +24,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.telegram:telegrambots-longpolling:$telegrambotsVersion")
     implementation("org.telegram:telegrambots-client:$telegrambotsVersion")

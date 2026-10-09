@@ -3,6 +3,8 @@ package dev.pcshop.controller.web;
 import dev.pcshop.dto.request.ProductSearchRequest;
 import dev.pcshop.entity.Category;
 import dev.pcshop.entity.Product;
+import dev.pcshop.enums.Slot;
+import dev.pcshop.model.Build;
 import dev.pcshop.security.ShopUser;
 import dev.pcshop.service.AccountService;
 import dev.pcshop.service.CatalogService;
@@ -58,6 +60,11 @@ public class ShopController {
         Product product = catalog.product(slug);
         model.addAttribute("product", product);
         model.addAttribute("specs", Attributes.readable(product));
+        // «Собрать ПК с этим товаром»: товар уже в сборке, дальше — первый пустой шаг конфигуратора
+        model.addAttribute("buildLink", Slot.byCategory(product.getCategory().getSlug()).map(slot -> {
+            Build build = Build.empty().with(slot, product);
+            return build.firstEmpty().map(build::pickLink).orElseGet(build::link);
+        }).orElse(null));
         return "shop/product";
     }
 

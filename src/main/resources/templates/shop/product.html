@@ -13,9 +13,7 @@
 
     <div class="product">
         <div class="product__media" th:classappend="${product.imageUrl != null} ? 'has-photo'">
-            <img th:if="${product.imageUrl != null}" th:src="${product.imageUrl}" th:alt="${product.name}"
-                 referrerpolicy="no-referrer" onerror="this.parentElement.classList.remove('has-photo'); this.remove()">
-            <svg th:replace="~{fragments :: icon(${product.category.slug})}"></svg>
+            <th:block th:replace="~{fragments :: photo(${product})}"></th:block>
         </div>
         <div class="product__info">
             <p class="muted" th:text="${product.brand}">Бренд</p>
@@ -32,6 +30,10 @@
                 </div>
                 <button class="btn" type="button" th:attr="data-add-to-cart=${product.id}" data-with-qty>Добавить в корзину</button>
             </div>
+            <a class="build-with" th:if="${buildLink}" th:href="${buildLink}">
+                <b>Собрать ПК с этим товаром</b>
+                <span class="muted">Конструктор подберёт к нему совместимые детали</span>
+            </a>
 
             <p class="product__desc" th:text="${product.description}">Описание</p>
 

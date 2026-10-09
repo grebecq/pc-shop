@@ -20,6 +20,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -55,11 +57,15 @@ class PagesTest {
         var order = newOrder("Покупатель");
 
         var pay = get("/pay/" + order.getPublicId(), null);
-        assertThat(pay.body()).contains("Оплатить");
-        var paid = post("/pay/" + order.getPublicId(), "_csrf=" + csrf(pay.body()), null);
+        assertThat(pay.body()).contains("Оплатить", "Номер карты", "4242 4242 4242 4242", "Товар зарезервирован до");
+        String expiry = YearMonth.now().plusYears(2).format(DateTimeFormatter.ofPattern("MM/yy"));
+        var paid = post("/pay/" + order.getPublicId(), "number=4242+4242+4242+4242&expiry=" + expiry.replace("/", "%2F")
+                + "&cvc=123&holder=&_csrf=" + csrf(pay.body()), null);
         assertThat(paid.statusCode()).isEqualTo(302);
 
-        assertThat(get("/order/" + order.getPublicId(), null).body()).contains("Оплачен", "Kingston NV3");
+        assertThat(get("/order/" + order.getPublicId(), null).body())
+                .contains("Оплачен", "Kingston NV3", "Оплачено картой Visa •• 4242");
+        assertThat(get("/admin/orders/" + order.getId(), ADMIN).body()).contains("Visa •• 4242");
     }
 
     @Test

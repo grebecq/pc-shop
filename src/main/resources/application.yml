@@ -10,16 +10,34 @@ spring:
     password: ${DB_PASSWORD:pcshop}
   flyway:
     schemas: ${DB_SCHEMA:public}
-  # Запуск из IDEA или bootRun: Spring сам поднимает базу из docker-compose.yml и подключается к ней.
-  # В собранном jar и в тестах этого модуля нет, там работают DB_URL / DB_HOST
+  # Запуск из IDEA или bootRun: Spring сам поднимает базу и почту (Mailpit) из docker-compose.yml и подключается к ним.
+  # В собранном jar и в тестах этого модуля нет, там работают DB_URL / DB_HOST и MAIL_HOST
   docker:
     compose:
       file: docker-compose.yml
       start:
-        # Только база: само приложение уже запущено из IDEA
-        arguments: db
+        # База и Mailpit: само приложение уже запущено из IDEA
+        arguments: [db, mailpit]
+        # По умолчанию Spring ничего не запускает, если хоть один сервис уже работает, и тогда при базе,
+        # оставшейся с прошлого раза, Mailpit не поднялся бы. Уже работающие сервисы compose не перезапускает
+        skip: never
       # База продолжает работать после остановки приложения, следующий запуск быстрее
       lifecycle-management: start-only
+  # Письма покупателям (ссылка для смены пароля). По умолчанию — Mailpit из docker-compose:
+  # письма никуда не уходят, их видно на http://localhost:8025
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    # Логин и пароль — только если их требует SMTP-сервер (Mailpit не требует)
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      # STARTTLS, если сервер его предлагает (обычно порт 587)
+      mail.smtp.starttls.enable: true
+      # Без таймаутов недоступный SMTP-сервер подвесил бы запрос покупателя
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
   jpa:
     open-in-view: false
     hibernate:
@@ -54,8 +72,11 @@ shop:
   orders:
     # Сколько ждём оплату. Потом заказ отменяется, а товар возвращается на склад
     payment-timeout: ${PAYMENT_TIMEOUT:30m}
-  # Публичный адрес сайта: нужен для ссылок в сообщениях бота
+  # Публичный адрес сайта: нужен для ссылок в сообщениях бота и в письмах
   base-url: ${SHOP_BASE_URL:${RENDER_EXTERNAL_URL:http://localhost:8080}}
+  mail:
+    # Отправитель писем покупателям
+    from: "${MAIL_FROM:Сборка <noreply@pc-shop.local>}"
   admin:
     username: ${ADMIN_USER:admin}
     password: ${ADMIN_PASSWORD:}

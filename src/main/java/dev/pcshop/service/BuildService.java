@@ -94,10 +94,13 @@ public class BuildService {
         return new Build(parts);
     }
 
-    /** Товары для слота: сначала подходящие и в наличии, потом остальные; внутри — по цене. */
+    /**
+     * Товары для слота: сначала подходящие и в наличии, потом остальные; внутри — по цене.
+     * Ссылка «Выбрать» сразу ведёт к следующему шагу сборки.
+     */
     public List<CandidateResponse> candidates(Build build, Slot slot) {
         return catalog.productsIn(slot.category()).stream()
-                .map(p -> new CandidateResponse(p, compatibility.problems(build, slot, p), build.linkWith(slot, p)))
+                .map(p -> new CandidateResponse(p, compatibility.problems(build, slot, p), build.with(slot, p).nextLink(slot)))
                 .sorted(Comparator.comparing((CandidateResponse c) -> !c.fits())
                         .thenComparing(c -> !c.product().inStock())
                         .thenComparingInt(c -> c.product().getPrice()))
