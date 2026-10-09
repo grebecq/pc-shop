@@ -61,6 +61,7 @@ docker compose up -d --build
 
 - Сайт: http://localhost:8080
 - Админка: http://localhost:8080/admin (логин и пароль из `.env`, по умолчанию `admin` / `change-me`)
+- Swagger (описание REST API): http://localhost:8080/swagger-ui.html. Выключается `SWAGGER_ENABLED=false`
 
 Бот запускается, только если в `.env` указан `BOT_TOKEN`. Без него сайт и админка работают как обычно.
 
@@ -95,7 +96,7 @@ docker run -d --name pcshop-db -p 5432:5432 \
 | `DB_SCHEMA` | своя схема, если база общая с другим проектом | `public` |
 | `PORT` | порт сайта | `8080` |
 | `SHOP_BASE_URL` | публичный адрес сайта для ссылок из бота | `http://localhost:8080` |
-| `ADMIN_USER`, `ADMIN_PASSWORD` | вход в админку | `admin` / `admin` |
+| `ADMIN_USER`, `ADMIN_PASSWORD` | вход в админку; без пароля (от 8 символов) приложение не запустится | `admin` / обязателен |
 | `BOT_TOKEN` | токен бота от BotFather; пусто = бот выключен | — |
 | `BOT_USERNAME` | имя бота без `@`, для ссылки на сайте | — |
 | `ADMIN_CHAT_ID` | куда слать уведомления о заказах | — |
@@ -160,14 +161,17 @@ docker run -d --name pcshop-db -p 5432:5432 \
 
 ```
 src/main/java/dev/pcshop/
-  catalog/   товары, категории, поиск с фильтрами по JSONB, REST /api/products
-  build/     конфигуратор: сборка, правила совместимости, готовые и сохранённые сборки
-  order/     заказы, резерв склада, статусы, события, REST /api/orders
-  bot/       Telegram-бот: каталог, корзина, оформление, оплата
-  notify/    уведомления владельцу и покупателю
-  web/       страницы сайта и тестовая оплата
-  admin/     админка
-  config/    настройки, безопасность, форматирование цен
+  controller/web/  страницы сайта, кабинет, конфигуратор, админка (Thymeleaf)
+  controller/api/  REST: /api/products, /api/categories, /api/orders
+  service/         бизнес-логика: каталог, заказы, сборки, совместимость, уведомления
+  repository/      Spring Data JPA и JDBC-запросы (поиск по JSONB, корзина бота)
+  entity/          JPA-сущности (Lombok)
+  dto/             запросы с валидацией и ответы API
+  mapper/          MapStruct: сущность → ответ API
+  model/, enums/   сборка, замечания совместимости, слоты, статусы
+  exception/       ошибки и общий обработчик для API и страниц
+  bot/             Telegram-бот
+  config/, security/, util/  настройки, вход, форматирование
 src/main/resources/
   db/migration/  схема и каталог (Flyway)
   templates/     страницы (Thymeleaf)

@@ -222,7 +222,7 @@
       .then(function (r) {
         // Ответ может быть не JSON (например, истекла сессия) — тогда общее сообщение
         return r.json().catch(function () { return {}; }).then(function (data) {
-          if (!r.ok) throw new Error(data.detail || "Не удалось оформить заказ. Обновите страницу и попробуйте ещё раз.");
+          if (!r.ok) throw new Error(data.message || "Не удалось оформить заказ. Обновите страницу и попробуйте ещё раз.");
           return data;
         });
       })
