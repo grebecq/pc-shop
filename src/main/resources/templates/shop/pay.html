@@ -8,7 +8,27 @@
     <h1 th:text="'Оплата заказа ' + ${order.number()}">Оплата</h1>
     <p class="muted" th:text="'Товар зарезервирован до ' + ${@fmt.time(payBefore)} + ' по Москве. Если не оплатить, заказ отменится.'">Резерв</p>
 
-    <div class="pay-layout">
+    <!--/* Настоящая оплата: кнопка ведёт на страницу ЮKassa, карту вводят там */-->
+    <div class="pay-layout" th:if="${online}">
+        <aside class="pay-test">
+            <p><b>Безопасная оплата.</b> Данные карты вы вводите на странице ЮKassa, магазин их не видит и не хранит.</p>
+            <p>После оплаты вы вернётесь на страницу заказа.</p>
+        </aside>
+        <form class="panel card-form" method="post" th:action="@{/pay/{id}/online(id=${order.publicId})}">
+            <div class="card-form__head">
+                <h2 class="h3">Оплата онлайн</h2>
+                <span class="card-brands"><span>МИР</span><span>СБП</span><span>SberPay</span></span>
+            </div>
+            <p class="notice notice--error" th:if="${error}" th:text="${error}" role="alert">Ошибка</p>
+            <p>Картой, через СБП или SberPay на странице платёжного сервиса ЮKassa.</p>
+            <p class="pay-total">К оплате <b th:text="${@fmt.rub(order.total)}">0 ₽</b></p>
+            <button class="btn btn--wide" type="submit" th:text="'Оплатить ' + ${@fmt.rub(order.total)}">Оплатить</button>
+        </form>
+    </div>
+
+    <p class="notice" th:if="${!online and form == null}">Оплата на сайте пока не подключена. Мы свяжемся с вами, чтобы договориться об оплате.</p>
+
+    <div class="pay-layout" th:if="${form != null}">
         <aside class="pay-test">
             <p><b>Тестовая оплата:</b> деньги не списываются. Подойдёт любая карта, проходящая проверку,
                 например <span class="card-no">4242 4242 4242 4242</span>, любой будущий срок и любой CVC.</p>
@@ -59,6 +79,6 @@
 </main>
 
 <footer th:replace="~{fragments :: footer}"></footer>
-<script th:src="@{/js/pay.js}" defer></script>
+<script th:if="${form != null}" th:src="@{/js/pay.js}" defer></script>
 </body>
 </html>

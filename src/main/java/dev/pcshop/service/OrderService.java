@@ -143,6 +143,31 @@ public class OrderService {
         return order;
     }
 
+    /** Покупатель ушёл платить на страницу ЮKassa этим платежом. */
+    @Transactional
+    public void attachPayment(long orderId, String paymentId) {
+        byId(orderId).attachPayment(paymentId);
+    }
+
+    /**
+     * Оплата через ЮKassa. Неоплаченный заказ становится оплаченным, остальные не меняются:
+     * PaymentService по возвращённому заказу решает, не вернуть ли деньги.
+     */
+    @Transactional
+    public Order markPaidOnline(long orderId, String paymentId, String method) {
+        Order order = byId(orderId);
+        if (order.markPaidOnline(paymentId, method)) {
+            log.info("Заказ {} оплачен через ЮKassa: {}", order.number(), method);
+            events.publishEvent(new OrderEvents.Paid(order.getId()));
+        }
+        return order;
+    }
+
+    @Transactional
+    public void markRefunded(long orderId) {
+        byId(orderId).markRefunded();
+    }
+
     @Transactional
     public Order changeStatus(long orderId, OrderStatus status) {
         Order order = orders.findWithItemsById(orderId).orElseThrow(() -> new ResourceNotFoundException("Заказ не найден"));

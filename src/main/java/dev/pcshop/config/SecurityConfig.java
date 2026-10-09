@@ -68,8 +68,10 @@ public class SecurityConfig {
                 .logout(logout -> logout.logoutUrl("/logout").logoutSuccessUrl("/"))
                 // CSRF включён везде, в том числе для /api: JS сайта берёт токен и имя заголовка из meta-тегов страницы.
                 // Токен храним в cookie, а не в сессии: иначе каждый анонимный посетитель (и поисковый бот)
-                // получал бы сессию в памяти на 14 дней
-                .csrf(csrf -> csrf.csrfTokenRepository(new CookieCsrfTokenRepository()))
+                // получал бы сессию в памяти на 14 дней.
+                // Кроме уведомлений ЮKassa: их шлёт её сервер, а не браузер покупателя, и им всё равно не верим на слово
+                .csrf(csrf -> csrf.csrfTokenRepository(new CookieCsrfTokenRepository())
+                        .ignoringRequestMatchers("/api/payments/yookassa"))
                 .addFilterBefore(loginLimiter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

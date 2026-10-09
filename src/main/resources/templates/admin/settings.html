@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head('Настройки')}"></head>
+<body>
+<header th:replace="~{admin/layout :: nav}"></header>
+<main class="wrap narrow settings">
+    <h1>Настройки</h1>
+    <p class="muted">Ключи и пароли задаются в файле .env на сервере, после изменения приложение нужно перезапустить.
+        Здесь видно, что подключено, и можно проверить, что всё работает.</p>
+    <div th:replace="~{admin/layout :: flash}"></div>
+
+    <section class="panel settings__block">
+        <h2 class="h3">Оплата</h2>
+        <th:block th:if="${props.yookassa.enabled()}">
+            <dl class="details">
+                <div><dt>ЮKassa</dt><dd th:text="'подключена, shopId ' + ${props.yookassa.shopId}">подключена</dd></div>
+                <div><dt>Уведомления</dt><dd><code th:text="${webhookUrl}">https://…/api/payments/yookassa</code></dd></div>
+            </dl>
+            <p class="muted small-top">Этот адрес укажите в личном кабинете ЮKassa: Интеграция → HTTP-уведомления,
+                события payment.succeeded и payment.canceled. Уведомления приходят только на сайт с https-адресом в интернете.</p>
+            <form method="post" th:action="@{/admin/settings/yookassa}">
+                <button class="btn btn--ghost" type="submit">Проверить ключи</button>
+            </form>
+        </th:block>
+        <th:block th:unless="${props.yookassa.enabled()}">
+            <p>Сейчас оплата <b>тестовая</b>: покупатель вводит любую подходящую карту, деньги не списываются.</p>
+            <p class="muted small-top">Чтобы принимать настоящие платежи, зарегистрируйте магазин в ЮKassa и впишите в .env
+                YOOKASSA_SHOP_ID и YOOKASSA_SECRET_KEY (Интеграция → Ключи API).</p>
+        </th:block>
+    </section>
+
+    <section class="panel settings__block">
+        <h2 class="h3">Почта</h2>
+        <dl class="details">
+            <div><dt>Сервер</dt><dd th:text="${mailServer}">localhost:1025</dd></div>
+            <div><dt>Отправитель</dt><dd th:text="${mailFrom}">noreply@…</dd></div>
+        </dl>
+        <form class="inline-form" method="post" th:action="@{/admin/settings/test-mail}">
+            <input name="email" type="email" required placeholder="you@example.ru" autocomplete="email" aria-label="Почта для проверки">
+            <button class="btn btn--ghost" type="submit">Отправить тестовое письмо</button>
+        </form>
+    </section>
+
+    <section class="panel settings__block">
+        <h2 class="h3">Telegram-бот</h2>
+        <dl class="details">
+            <div><dt>Бот</dt><dd th:text="${props.telegram.enabled()} ? 'включён' : 'выключен: нет BOT_TOKEN'">выключен</dd></div>
+            <div th:if="${props.telegram.enabled()}"><dt>Оплата в боте</dt>
+                <dd th:text="${props.telegram.realPayments()} ? 'платежи Telegram' : (${props.yookassa.enabled()} ? 'кнопка ведёт на оплату на сайте' : 'тестовая')">тестовая</dd></div>
+        </dl>
+    </section>
+</main>
+</body>
+</html>

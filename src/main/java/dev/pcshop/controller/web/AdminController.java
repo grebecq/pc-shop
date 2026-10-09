@@ -6,6 +6,7 @@ import dev.pcshop.exception.BadRequestException;
 import dev.pcshop.exception.OrderException;
 import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.OrderService;
+import dev.pcshop.service.PaymentService;
 import dev.pcshop.service.ProductPhotoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class AdminController {
     private final OrderService orders;
     private final CatalogService catalog;
     private final ProductPhotoService photos;
+    private final PaymentService payments;
 
     @GetMapping
     public String index() {
@@ -61,6 +63,18 @@ public class AdminController {
             orders.changeStatus(id, status);
             flash.addFlashAttribute("message", "Статус изменён: " + status.label());
         } catch (OrderException e) {
+            flash.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/admin/orders/" + id;
+    }
+
+    @PostMapping("/orders/{id}/refund")
+    public String refund(@PathVariable long id, RedirectAttributes flash) {
+        try {
+            payments.retryRefund(id);
+            flash.addFlashAttribute("message", orders.byId(id).getRefundedAt() != null
+                    ? "Деньги возвращены" : "Возврат не понадобился: ЮKassa не видит оплаты по этому заказу");
+        } catch (BadRequestException e) {
             flash.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/admin/orders/" + id;

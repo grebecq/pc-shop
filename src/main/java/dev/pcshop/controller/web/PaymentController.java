@@ -1,10 +1,12 @@
 package dev.pcshop.controller.web;
 
+import dev.pcshop.config.ShopProperties;
 import dev.pcshop.dto.request.CardPaymentRequest;
 import dev.pcshop.entity.Order;
 import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.exception.BadRequestException;
 import dev.pcshop.service.OrderService;
+import dev.pcshop.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,14 +22,16 @@ import java.time.Duration;
 import java.util.UUID;
 
 /**
- * Тестовая оплата картой на сайте: деньги не списываются, «банк» имитирует DemoPaymentGateway.
- * В боевом проекте вместо этой формы будет страница или виджет ЮKassa / CloudPayments, а оплату подтвердит их webhook.
+ * Страница оплаты заказа. С ключами ЮKassa — кнопка, которая ведёт на её страницу (см. PaymentService).
+ * Без ключей — тестовая форма карты: деньги не списываются, «банк» имитирует DemoPaymentGateway.
  */
 @Controller
 @RequiredArgsConstructor
 public class PaymentController {
 
     private final OrderService orders;
+    private final PaymentService payments;
+    private final ShopProperties props;
     @Value("${shop.orders.payment-timeout:30m}")
     private final Duration timeout;
 
@@ -37,14 +41,35 @@ public class PaymentController {
         if (order.getStatus() != OrderStatus.AWAITING_PAYMENT) {
             return "redirect:/order/" + publicId;
         }
-        model.addAttribute("form", CardPaymentRequest.empty());
+        if (props.demoPayments()) {
+            model.addAttribute("form", CardPaymentRequest.empty());
+        }
         return payPage(order, model);
     }
 
+    /** Кнопка «Оплатить»: создаём платёж в ЮKassa и отправляем покупателя на её страницу. */
+    @PostMapping("/pay/{publicId}/online")
+    public String online(@PathVariable UUID publicId, Model model) {
+        if (!payments.online()) {
+            return "redirect:/pay/" + publicId;
+        }
+        try {
+            String url = payments.start(publicId);
+            return url != null ? "redirect:" + url : afterPayment(orders.byPublicId(publicId));
+        } catch (BadRequestException e) {
+            model.addAttribute("error", e.getMessage());
+            return payPage(orders.byPublicId(publicId), model);
+        }
+    }
+
+    /** Тестовая форма карты. Когда подключена настоящая оплата, её нет и запрос не принимается. */
     @PostMapping("/pay/{publicId}")
     public String pay(@PathVariable UUID publicId, @Valid @ModelAttribute("form") CardPaymentRequest form,
                       BindingResult errors, Model model) {
         Order order = orders.byPublicId(publicId);
+        if (!props.demoPayments()) {
+            return "redirect:/pay/" + publicId;
+        }
         if (order.getStatus() != OrderStatus.AWAITING_PAYMENT) {
             // Повторная отправка формы или заказ уже отменён по таймауту: карту не трогаем
             return afterPayment(order);
@@ -62,6 +87,7 @@ public class PaymentController {
 
     private String payPage(Order order, Model model) {
         model.addAttribute("order", order);
+        model.addAttribute("online", payments.online());
         model.addAttribute("payBefore", order.payBefore(timeout));
         return "shop/pay";
     }

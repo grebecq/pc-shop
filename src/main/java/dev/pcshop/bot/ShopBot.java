@@ -214,11 +214,16 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                 }
             }
             case "pay" -> {
-                Order order = orders.markPaid(UUID.fromString(parts[1]));
-                if (order.getPaidAt() != null) {
-                    edit(chatId, messageId, "✅ Заказ " + order.number() + " оплачен (тестовая оплата). Мы начали сборку.", null);
+                if (!props.demoPayments()) {
+                    // Кнопку тестовой оплаты бот уже не показывает, но старая могла остаться в чате
+                    toast = "Тестовая оплата выключена. Оформите заказ заново";
                 } else {
-                    edit(chatId, messageId, "Заказ " + order.number() + " отменён: оплата не поступила вовремя. Оформите его заново.", null);
+                    Order order = orders.markPaid(UUID.fromString(parts[1]));
+                    if (order.getPaidAt() != null) {
+                        edit(chatId, messageId, "✅ Заказ " + order.number() + " оплачен (тестовая оплата). Мы начали сборку.", null);
+                    } else {
+                        edit(chatId, messageId, "Заказ " + order.number() + " отменён: оплата не поступила вовремя. Оформите его заново.", null);
+                    }
                 }
             }
             case "b" -> showBuild(chatId, messageId, builds.botBuild(chatId));
@@ -593,6 +598,18 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
 
         if (props.telegram().realPayments()) {
             sendInvoice(chatId, order);
+        } else if (props.yookassa().enabled()) {
+            // Платёжного токена Telegram нет, но на сайте подключена ЮKassa: платим там
+            String link = props.baseUrl() + "/pay/" + order.getPublicId();
+            String payText = "Оплатите заказ картой, через СБП или SberPay.\n"
+                    + "Товар зарезервирован до " + Formats.timeOfDay(order.payBefore(paymentTimeout)) + " по Москве.";
+            if (props.baseUrl().startsWith("https://")) {
+                send(chatId, payText, new InlineKeyboardMarkup(List.of(new InlineKeyboardRow(InlineKeyboardButton.builder()
+                        .text("💳 Оплатить " + Formats.price(order.getTotal())).url(link).build()))));
+            } else {
+                // Кнопку со ссылкой на localhost Telegram не примет: даём ссылку текстом
+                send(chatId, payText + "\nОплатить: " + link, mainMenu());
+            }
         } else {
             var payButton = new InlineKeyboardMarkup(List.of(new InlineKeyboardRow(
                     button("💳 Оплатить " + Formats.price(order.getTotal()) + " (тест)", "pay:" + order.getPublicId()))));

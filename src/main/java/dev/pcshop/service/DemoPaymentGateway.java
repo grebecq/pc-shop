@@ -1,17 +1,19 @@
 package dev.pcshop.service;
 
+import dev.pcshop.config.ShopProperties;
 import dev.pcshop.dto.request.CardPaymentRequest;
 import dev.pcshop.exception.BadRequestException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
  * Имитация банка для тестовой оплаты картой: деньги не списываются, ни к какому счёту не привязано.
- * В боевом проекте здесь будет ЮKassa / CloudPayments: карту вводят на их странице или в их виджете,
- * а нам приходит только результат, платёжная система и последние 4 цифры.
+ * Работает, только пока не подключена настоящая оплата (ShopProperties.demoPayments), настоящая — PaymentService.
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class DemoPaymentGateway {
 
     /** Тестовая карта, по которой «банк» всегда отказывает. */
@@ -21,12 +23,17 @@ public class DemoPaymentGateway {
     public record PaidCard(String brand, String last4) {
     }
 
+    private final ShopProperties props;
+
     /**
      * Списывает сумму с карты, данные которой уже проверены (формат, контрольная цифра, срок).
      *
      * @throws BadRequestException если банк отклонил платёж — сообщение можно показать покупателю
      */
     public PaidCard charge(CardPaymentRequest card, int amount) {
+        if (!props.demoPayments()) {
+            throw new BadRequestException("Тестовая оплата выключена: магазин принимает настоящие платежи");
+        }
         String brand = brand(card.number());
         if (DECLINED_CARD.equals(card.number())) {
             log.info("Тестовый банк отклонил платёж {} ₽ по карте •• {}", amount, card.last4());

@@ -54,7 +54,7 @@ class ShopBotTest {
     void setUp() {
         telegram = mock(TelegramClient.class);
         var props = new ShopProperties("http://localhost:8080", null, new ShopProperties.Telegram("test", null, null, null),
-                new ShopProperties.Delivery(490, 50000));
+                new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa(null, null, "https://api.yookassa.ru/v3"));
         bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, props, Duration.ofMinutes(30));
         cart.clear(CHAT);
     }
@@ -131,6 +131,28 @@ class ShopBotTest {
         orders.changeStatus(orders.byPublicId(UUID.fromString(payData.substring(4))).getId(), OrderStatus.CANCELLED);
         callback(payData);
         assertThat(lastText()).contains("отменён").doesNotContain("оплачен (");
+    }
+
+    @Test
+    void withYookassaBotSendsBuyerToSiteAndDemoButtonIsOff() throws Exception {
+        var props = new ShopProperties("https://shop.example.ru", null, new ShopProperties.Telegram("test", null, null, null),
+                new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa("123456", "test_key", "https://api.yookassa.ru/v3"));
+        bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, props, Duration.ofMinutes(30));
+        callback("a:" + catalog.product("deepcool-cc560-v2-black").getId());
+        callback("co");
+        text("Иван");
+        text("+7 900 000-00-00");
+        text("Москва, ул. Тверская, 1");
+
+        assertThat(lastText()).contains("СБП", "зарезервирован до");
+        var button = ((InlineKeyboardMarkup) ((SendMessage) sent().getLast()).getReplyMarkup()).getKeyboard().getFirst().getFirst();
+        assertThat(button.getUrl()).startsWith("https://shop.example.ru/pay/");
+        UUID publicId = UUID.fromString(button.getUrl().substring("https://shop.example.ru/pay/".length()));
+
+        // Старая тестовая кнопка из чата больше не оплачивает заказ
+        callback("pay:" + publicId);
+        assertThat(toasts().getLast()).contains("Тестовая оплата выключена");
+        assertThat(orders.byPublicId(publicId).getStatus()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
     }
 
     @Test

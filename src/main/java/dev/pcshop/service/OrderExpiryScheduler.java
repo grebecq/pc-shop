@@ -22,6 +22,7 @@ public class OrderExpiryScheduler {
 
     private final OrderRepository orders;
     private final OrderService service;
+    private final PaymentService payments;
     @Value("${shop.orders.payment-timeout:30m}")
     private final Duration timeout;
 
@@ -29,7 +30,9 @@ public class OrderExpiryScheduler {
     public void cancelExpired() {
         for (Long id : orders.findAwaitingCreatedBefore(Instant.now().minus(timeout))) {
             try {
-                service.cancelUnpaid(id);
+                if (payments.mayExpire(id)) {
+                    service.cancelUnpaid(id);
+                }
             } catch (ObjectOptimisticLockingFailureException e) {
                 // Заказ в этот момент оплатили или изменили в админке — значит, отменять не нужно
                 log.info("Заказ {} изменился во время автоотмены, пропускаем", id);

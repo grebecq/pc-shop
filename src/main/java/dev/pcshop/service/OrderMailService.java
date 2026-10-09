@@ -60,7 +60,7 @@ public class OrderMailService {
             return;
         }
         if (event.status() == OrderStatus.PAID) {
-            // Оплату отметили в админке, а не картой на сайте
+            // Оплату отметили в админке, а не на сайте
             sendPaid(order);
             return;
         }
@@ -86,7 +86,7 @@ public class OrderMailService {
             return;
         }
         StringBuilder text = greeting(order).append("Спасибо! Заказ ").append(order.number()).append(" оплачен")
-                .append(order.getPaymentCard() != null ? " картой " + order.getPaymentCard() : "").append(".\n")
+                .append(order.getPaymentCard() != null ? " (" + order.getPaymentCard() + ")" : "").append(".\n")
                 .append(order.getDeliveryMethod() == DeliveryMethod.PICKUP
                         ? "Напишем, когда заказ будет ждать вас в магазине.\n\n"
                         : "Напишем, когда передадим его курьеру.\n\n");
