@@ -43,15 +43,16 @@ public class DeliveryAddress {
         this.postalCode = AddressForm.blankToNull(form.postalCode());
     }
 
-    /** Адрес одной строкой, как он попадает в заказ: «Москва, Тверская 1, кв. 5». */
+    /** Адрес одной строкой, как он попадает в заказ: «Москва, Тверская 1, кв. 5, индекс 125009». */
     public String oneLine() {
         var sb = new StringBuilder();
-        if (postalCode != null) {
-            sb.append(postalCode).append(", ");
-        }
         sb.append(city).append(", ").append(street);
         if (apartment != null) {
             sb.append(", кв. ").append(apartment);
+        }
+        // Индекс в конце и с подписью: в начале строки его путают с частью адреса
+        if (postalCode != null) {
+            sb.append(", индекс ").append(postalCode);
         }
         return sb.toString();
     }

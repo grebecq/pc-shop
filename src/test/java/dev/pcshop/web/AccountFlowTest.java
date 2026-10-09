@@ -75,7 +75,7 @@ class AccountFlowTest {
                 "label", "Дом", "city", "Казань", "street", "ул. Баумана, 10", "apartment", "5", "postalCode", "420111");
         assertThat(added.statusCode()).isEqualTo(302);
         var addresses = anna.get("/account/addresses").body();
-        assertThat(addresses).contains("420111, Казань, ул. Баумана, 10, кв. 5", "Основной");
+        assertThat(addresses).contains("Казань, ул. Баумана, 10, кв. 5, индекс 420111", "Подставляется в заказ");
         long addressId = Long.parseLong(find(addresses, "/account/addresses/(\\d+)\""));
 
         // Корзина подставляет адрес, заказ через API с сохранённым адресом
@@ -112,7 +112,7 @@ class AccountFlowTest {
                  "newAddress": {"label": "ул. Ленина, 1", "city": "Самара", "street": "ул. Ленина, 1", "postalCode": "", "makeDefault": false},
                  "saveAddress": true}""".formatted(ram), true);
         assertThat(created.statusCode()).isEqualTo(201);
-        assertThat(user.get("/account/addresses").body()).contains("Самара, ул. Ленина, 1", "Основной");
+        assertThat(user.get("/account/addresses").body()).contains("Самара, ул. Ленина, 1", "Подставляется в заказ");
     }
 
     @Test

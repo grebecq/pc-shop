@@ -38,12 +38,12 @@
             <input id="apartment" th:field="*{apartment}" maxlength="32" autocomplete="address-line2">
         </div>
         <div class="field">
-            <label for="postalCode">Индекс</label>
-            <input id="postalCode" th:field="*{postalCode}" inputmode="numeric" maxlength="6" autocomplete="postal-code">
+            <label for="postalCode">Почтовый индекс</label>
+            <input id="postalCode" th:field="*{postalCode}" inputmode="numeric" maxlength="6" autocomplete="postal-code" placeholder="Необязательно">
             <p class="form-error" th:errors="*{postalCode}"></p>
         </div>
     </div>
-    <label class="check"><input type="checkbox" th:field="*{makeDefault}"> Сделать основным</label>
+    <label class="check"><input type="checkbox" th:field="*{makeDefault}"> Подставлять этот адрес при оформлении заказа</label>
 </th:block>
 </body>
 </html>
