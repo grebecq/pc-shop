@@ -6,21 +6,59 @@
 
 <main class="wrap narrow">
     <h1 th:text="'Оплата заказа ' + ${order.number()}">Оплата</h1>
-    <p class="muted">Это тестовая оплата: данные карты не нужны и деньги не списываются.
-        В боевом магазине здесь откроется страница платёжной системы.</p>
     <p class="muted" th:text="'Товар зарезервирован до ' + ${@fmt.time(payBefore)} + ' по Москве. Если не оплатить, заказ отменится.'">Резерв</p>
 
-    <form class="panel pay" method="post" th:action="@{/pay/{id}(id=${order.publicId})}">
-        <div class="pay__card" aria-hidden="true">
-            <span>Тестовая карта</span>
-            <b>4242 4242 4242 4242</b>
-            <span>12/30 · CVC 123</span>
-        </div>
-        <p class="pay__sum">К оплате <b th:text="${@fmt.rub(order.total)}">0 ₽</b></p>
-        <button class="btn btn--wide" type="submit" th:text="'Оплатить ' + ${@fmt.rub(order.total)}">Оплатить</button>
-    </form>
+    <div class="pay-layout">
+        <aside class="pay-test">
+            <p><b>Тестовая оплата:</b> деньги не списываются. Подойдёт любая карта, проходящая проверку,
+                например <span class="card-no">4242 4242 4242 4242</span>, любой будущий срок и любой CVC.</p>
+            <p>Карта <span class="card-no">4000 0000 0000 0002</span> — отказ банка.</p>
+        </aside>
+
+        <form class="panel card-form" method="post" th:action="@{/pay/{id}(id=${order.publicId})}" th:object="${form}"
+              novalidate data-card-form>
+            <div class="card-form__head">
+                <h2 class="h3">Банковская карта</h2>
+                <span class="card-brands"><span>VISA</span><span>Mastercard</span><span>МИР</span></span>
+            </div>
+            <p class="notice notice--error" th:if="${error}" th:text="${error}" role="alert">Ошибка</p>
+
+            <div class="field">
+                <label for="number">Номер карты</label>
+                <input id="number" th:field="*{number}" th:errorclass="is-invalid" inputmode="numeric" autocomplete="cc-number"
+                       placeholder="0000 0000 0000 0000" maxlength="23" spellcheck="false">
+                <p class="form-error" th:errors="*{number}"></p>
+            </div>
+            <div class="field-row">
+                <div class="field">
+                    <label for="expiry">Срок действия</label>
+                    <input id="expiry" th:field="*{expiry}" th:errorclass="is-invalid" inputmode="numeric" autocomplete="cc-exp"
+                           placeholder="ММ/ГГ" maxlength="5">
+                    <p class="form-error" th:errors="*{expiry}"></p>
+                </div>
+                <div class="field">
+                    <label for="cvc">CVC</label>
+                    <!--/* Без th:field: CVC никогда не возвращается в форму, даже после ошибки */-->
+                    <input id="cvc" name="cvc" th:classappend="${#fields.hasErrors('cvc')} ? 'is-invalid'" inputmode="numeric"
+                           autocomplete="cc-csc" placeholder="123" maxlength="3">
+                    <p class="form-error" th:errors="*{cvc}"></p>
+                </div>
+            </div>
+            <div class="field">
+                <label for="holder">Имя владельца</label>
+                <input id="holder" th:field="*{holder}" th:errorclass="is-invalid" autocomplete="cc-name" maxlength="64"
+                       placeholder="Необязательно" spellcheck="false">
+                <p class="form-error" th:errors="*{holder}"></p>
+            </div>
+
+            <p class="pay-total">К оплате <b th:text="${@fmt.rub(order.total)}">0 ₽</b></p>
+            <button class="btn btn--wide" type="submit" th:text="'Оплатить ' + ${@fmt.rub(order.total)}">Оплатить</button>
+            <p class="pay-safe">Номер карты и CVC не сохраняются: в заказе остаются только последние 4 цифры.</p>
+        </form>
+    </div>
 </main>
 
 <footer th:replace="~{fragments :: footer}"></footer>
+<script th:src="@{/js/pay.js}" defer></script>
 </body>
 </html>

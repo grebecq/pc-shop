@@ -165,10 +165,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .pill--cancelled { background: #f1f1ee; color: var(--muted); text-decoration: line-through; }
 
 /* Оплата */
-.pay { display: grid; gap: 18px; margin-top: 24px; max-width: 420px; }
-.pay__card { display: grid; gap: 6px; padding: 20px; border-radius: 12px; background: var(--ink); color: #c9ccd2; font-size: 13px; }
-.pay__card b { color: #fff; font-size: 20px; font-weight: 500; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
-.pay__sum { display: flex; justify-content: space-between; font-size: 18px; }
 
 /* Админка */
 .header--admin { background: var(--ink); color: var(--bg); border-color: var(--ink); }
@@ -435,3 +431,30 @@ button.link-btn { background: none; border: 0; padding: 0; font: inherit; font-s
 
 /* Смена пароля */
 .auth__forgot { justify-self: end; font-size: 14px; }
+
+/* Оплата картой */
+.pay-layout { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 24px; }
+.pay-layout .pay-test { grid-column: 2; grid-row: 1; }
+.card-form { grid-column: 1; grid-row: 1; display: grid; gap: 14px; }
+.card-form__head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.card-form .h3 { margin: 0; }
+.card-form .notice { margin: 0; }
+.card-form .field-row { grid-template-columns: 1fr 1fr; align-items: start; }
+.card-form input { width: 100%; }
+.card-form input[inputmode="numeric"] { font-variant-numeric: tabular-nums; letter-spacing: .03em; }
+.card-brands { display: flex; gap: 6px; }
+.card-brands span { font-size: 11px; font-weight: 600; letter-spacing: .03em; padding: 3px 7px; border: 1px solid var(--line); border-radius: 5px; color: var(--muted); }
+input.is-invalid { border-color: var(--err); }
+input.is-invalid:focus { box-shadow: 0 0 0 3px rgba(180, 35, 24, .12); }
+.pay-total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-top: 14px; margin-top: 4px; border-top: 1px solid var(--line); }
+.pay-total b { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pay-safe { font-size: 13px; color: var(--muted); text-align: center; }
+.pay-test { display: grid; gap: 8px; padding: 16px 18px; border: 1px solid #dde4fa; border-radius: var(--radius); background: #f5f7fe; font-size: 14px; line-height: 1.5; }
+.pay-test b { color: var(--accent); }
+.card-no { white-space: nowrap; font-weight: 500; font-variant-numeric: tabular-nums; }
+.paid-card { text-align: right; font-size: 14px; margin-top: 4px; }
+
+@media (max-width: 720px) {
+  .pay-layout { grid-template-columns: 1fr; gap: 16px; }
+  .pay-layout .pay-test, .card-form { grid-column: auto; grid-row: auto; }
+}

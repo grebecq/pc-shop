@@ -24,6 +24,7 @@
         </tbody>
     </table>
     <p class="cart-total">Итого: <b th:text="${@fmt.rub(order.total)}">0 ₽</b></p>
+    <p class="muted paid-card" th:if="${order.paymentCard}" th:text="'Оплачено картой ' + ${order.paymentCard}">Оплачено картой Visa •• 4242</p>
 
     <dl class="details">
         <div><dt>Получатель</dt><dd th:text="${order.customerName} + ', ' + ${order.phone}">Имя</dd></div>
