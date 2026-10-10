@@ -8,10 +8,13 @@ import dev.pcshop.dto.response.CandidateResponse;
 import dev.pcshop.dto.response.PresetResponse;
 import dev.pcshop.entity.Category;
 import dev.pcshop.entity.Order;
+import dev.pcshop.entity.PickupPoint;
 import dev.pcshop.entity.Product;
 import dev.pcshop.enums.Channel;
+import dev.pcshop.enums.DeliveryMethod;
 import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.enums.Slot;
+import dev.pcshop.exception.BadRequestException;
 import dev.pcshop.exception.OrderException;
 import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.model.Build;
@@ -21,7 +24,9 @@ import dev.pcshop.service.BotCartService;
 import dev.pcshop.service.BuildService;
 import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.CompatibilityService;
+import dev.pcshop.service.DeliveryService;
 import dev.pcshop.service.OrderService;
+import dev.pcshop.service.PromoService;
 import dev.pcshop.util.Attributes;
 import dev.pcshop.util.Formats;
 import jakarta.validation.ConstraintViolation;
@@ -30,15 +35,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.AnswerPreCheckoutQuery;
+import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.invoices.SendInvoice;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.api.objects.payments.LabeledPrice;
 import org.telegram.telegrambots.meta.api.objects.payments.PreCheckoutQuery;
@@ -59,16 +69,18 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
-import static org.springframework.web.util.HtmlUtils.htmlEscape;
+import static dev.pcshop.util.Formats.telegramHtml;
 
 /**
  * Telegram-бот магазина: каталог, корзина, оформление и оплата заказа.
  *
  * Навигация по каталогу редактирует одно и то же сообщение, чтобы не засорять чат.
  * Формат callback_data (лимит Telegram — 64 байта):
- * cats · c:{slug}:{page} · p:{id} · a:{id} · cart · i:{id} · d:{id} · clr · co · pay:{uuid}
+ * cats · c:{slug}:{page} · s:{page} · p:{id} · a:{id} · cart · i:{id} · d:{id} · clr · co · pay:{uuid}
+ * Мои заказы: ol · o:{id} · oc:{id} (спросить) · ox:{id} (отменить) · inv:{id} (счёт Telegram ещё раз)
  * Конфигуратор: b · bs:{слот}:{page} · bp:{слот}:{id} · br:{слот} · bpl · bpre:{n} · bcart · bclr
  */
 @Component
@@ -85,6 +97,9 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
     public static final String BTN_SITE = "🌐 Сайт магазина";
     public static final String BTN_BUILD = "🛠 Собрать ПК";
     public static final String BTN_CANCEL = "Отменить оформление";
+    public static final String BTN_PICKUP = "🏬 Самовывоз";
+    public static final String BTN_COURIER = "🚚 Курьер";
+    public static final String BTN_NO_PROMO = "Без промокода";
 
     private final TelegramClient telegram;
     private final CatalogService catalog;
@@ -92,12 +107,32 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
     private final BotCartService cart;
     private final BuildService builds;
     private final CompatibilityService compatibility;
+    private final DeliveryService delivery;
+    private final PromoService promos;
     private final ShopProperties props;
     @Value("${shop.orders.payment-timeout:30m}")
     private final Duration paymentTimeout;
 
     /** Незаконченные оформления заказа. В памяти: при перезапуске покупатель просто начнёт заново. */
     private final Map<Long, Checkout> checkouts = new ConcurrentHashMap<>();
+
+    /** Последний поисковый запрос в чате — для листания результатов. Тоже в памяти. */
+    private final Map<Long, String> searches = new ConcurrentHashMap<>();
+
+    /** Меню команд у кнопки «/» в Telegram. Не получилось (нет сети) — бот работает и без него. */
+    @EventListener(ApplicationReadyEvent.class)
+    public void registerCommands() {
+        try {
+            telegram.execute(SetMyCommands.builder().commands(List.of(
+                    new BotCommand("catalog", "Каталог товаров"),
+                    new BotCommand("cart", "Корзина"),
+                    new BotCommand("orders", "Мои заказы"),
+                    new BotCommand("build", "Собрать ПК"),
+                    new BotCommand("help", "Как искать и заказывать"))).build());
+        } catch (TelegramApiException e) {
+            log.warn("Не удалось задать меню команд бота: {}", e.getMessage());
+        }
+    }
 
     @Override
     public void consume(Update update) {
@@ -138,7 +173,9 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                     Привет! Это <b>Сборка</b>, магазин комплектующих для ПК.
 
                     Выберите товар в каталоге или соберите целый компьютер в «🛠 Собрать ПК»: бот сам проверит, \
-                    что детали подходят друг к другу. Заказ можно оформить и оплатить прямо здесь.""", mainMenu());
+                    что детали подходят друг к другу. Заказ можно оформить и оплатить прямо здесь.
+
+                    Или просто напишите, что ищете, например «RTX 5070».""", mainMenu());
             return;
         }
 
@@ -151,13 +188,27 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         switch (text) {
             case BTN_CATALOG, "/catalog" -> send(chatId, "Выберите категорию:", categoriesKeyboard());
             case BTN_CART, "/cart" -> send(chatId, cartText(chatId), cartKeyboard(chatId));
-            case BTN_ORDERS, "/orders" -> send(chatId, ordersText(chatId), mainMenu());
+            case BTN_ORDERS, "/orders" -> send(chatId, ordersText(chatId),
+                    orders.recentForChat(chatId).isEmpty() ? mainMenu() : ordersKeyboard(chatId));
+            case "/help" -> send(chatId, """
+                    <b>Как пользоваться ботом</b>
+
+                    🔎 Напишите название или бренд, например «RTX 5070» или «Ryzen 7», и бот найдёт товары.
+                    🛒 Каталог — товары по категориям, 🛠 Собрать ПК — компьютер из совместимых деталей.
+                    🧺 Корзина — оформление: самовывоз или курьер, промокод, оплата.
+                    📦 Мои заказы — статус, оплата и отмена заказа.""", mainMenu());
             case BTN_SITE -> send(chatId, "Сайт магазина: " + props.baseUrl(), mainMenu());
             case BTN_BUILD, "/build" -> {
                 Build build = builds.botBuild(chatId);
                 send(chatId, buildText(build), buildKeyboard(build));
             }
-            default -> send(chatId, "Не понял команду. Выберите раздел в меню ниже 👇", mainMenu());
+            default -> {
+                if (text.length() < 2 || text.startsWith("/")) {
+                    send(chatId, "Не понял команду. Выберите раздел в меню ниже или напишите, что ищете, например «RTX 5070» 👇", mainMenu());
+                } else {
+                    search(chatId, text);
+                }
+            }
         }
     }
 
@@ -187,6 +238,15 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         switch (parts[0]) {
             case "cats" -> edit(chatId, messageId, "Выберите категорию:", categoriesKeyboard());
             case "c" -> showCategory(chatId, messageId, parts[1], Integer.parseInt(parts[2]));
+            case "s" -> {
+                String query = searches.get(chatId);
+                if (query == null) {
+                    // Бот перезапускался и забыл запрос
+                    throw new ResourceNotFoundException("Поиск устарел");
+                }
+                var result = catalog.searchText(query, Integer.parseInt(parts[1]), PAGE_SIZE);
+                edit(chatId, messageId, searchText(query, result), searchKeyboard(result));
+            }
             case "p" -> showProduct(chatId, messageId, Long.parseLong(parts[1]));
             case "a" -> toast = addToCart(chatId, Long.parseLong(parts[1])) ? "Добавлено в корзину" : "Товара нет в наличии";
             case "cart" -> edit(chatId, messageId, cartText(chatId), cartKeyboard(chatId));
@@ -210,7 +270,8 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                     toast = "Корзина пуста";
                 } else {
                     checkouts.put(chatId, new Checkout());
-                    send(chatId, "Оформляем заказ. Как вас зовут?", cancelKeyboard());
+                    Order last = lastOrder(chatId);
+                    send(chatId, "Оформляем заказ. Как вас зовут?", suggestKeyboard(last == null ? null : last.getCustomerName()));
                 }
             }
             case "pay" -> {
@@ -224,6 +285,34 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                     } else {
                         edit(chatId, messageId, "Заказ " + order.number() + " отменён: оплата не поступила вовремя. Оформите его заново.", null);
                     }
+                }
+            }
+            case "ol" -> edit(chatId, messageId, ordersText(chatId), ordersKeyboard(chatId));
+            case "o" -> showOrder(chatId, messageId, ownOrder(chatId, parts[1]));
+            case "oc" -> {
+                Order order = ownOrder(chatId, parts[1]);
+                edit(chatId, messageId, "Отменить заказ " + order.number() + "? Товар вернётся на склад."
+                                + (order.getPaidAt() != null ? " Деньги вернутся на карту в течение нескольких дней." : ""),
+                        new InlineKeyboardMarkup(List.of(new InlineKeyboardRow(
+                                button("Да, отменить", "ox:" + order.getId()), button("Нет", "o:" + order.getId())))));
+            }
+            case "ox" -> {
+                Order order = ownOrder(chatId, parts[1]);
+                try {
+                    // accountId не нужен: заказ из бота не привязан к аккаунту, а то, что он из этого чата, проверил ownOrder
+                    order = orders.cancelByCustomer(order.getPublicId(), null);
+                    toast = "Заказ отменён";
+                } catch (OrderException e) {
+                    toast = e.getMessage();
+                }
+                showOrder(chatId, messageId, order);
+            }
+            case "inv" -> {
+                Order order = ownOrder(chatId, parts[1]);
+                if (order.getStatus() == OrderStatus.AWAITING_PAYMENT && props.telegram().realPayments()) {
+                    sendInvoice(chatId, order);
+                } else {
+                    toast = "Заказ уже оплачен или отменён";
                 }
             }
             case "b" -> showBuild(chatId, messageId, builds.botBuild(chatId));
@@ -284,9 +373,9 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         }
         text.append('\n');
         for (Slot slot : Slot.values()) {
-            text.append(htmlEscape(slot.title())).append(": ");
+            text.append(telegramHtml(slot.title())).append(": ");
             build.get(slot).ifPresentOrElse(
-                    p -> text.append(htmlEscape(p.getName())).append(" · ").append(Formats.price(p.getPrice())),
+                    p -> text.append(telegramHtml(p.getName())).append(" · ").append(Formats.price(p.getPrice())),
                     () -> text.append("—"));
             text.append('\n');
         }
@@ -301,7 +390,7 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
             text.append("✅ Сборка совместима и готова к заказу\n");
         }
         for (Issue i : issues) {
-            text.append(i.isError() ? "❌ " : i.isWarning() ? "⚠️ " : "• ").append(htmlEscape(i.text())).append('\n');
+            text.append(i.isError() ? "❌ " : i.isWarning() ? "⚠️ " : "• ").append(telegramHtml(i.text())).append('\n');
         }
         return text.toString();
     }
@@ -366,7 +455,7 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         back.add(button("« К сборке", "b"));
         rows.add(back);
 
-        String text = "<b>" + htmlEscape(slot.title()) + "</b>\n";
+        String text = "<b>" + telegramHtml(slot.title()) + "</b>\n";
         text += fit.isEmpty()
                 ? "С выбранными деталями ничего не подходит. Поменяйте другие детали или уберите их."
                 : "Подходят " + fit.size() + " из " + all.size() + " с учётом уже выбранного. ⚠️ — подходит, но есть нюанс.";
@@ -379,8 +468,8 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         for (int i = 0; i < presets.size(); i++) {
             PresetResponse pr = presets.get(i);
-            text.append("<b>").append(htmlEscape(pr.name())).append("</b> · ").append(Formats.price(pr.build().total()))
-                    .append('\n').append(htmlEscape(pr.purpose())).append("\n\n");
+            text.append("<b>").append(telegramHtml(pr.name())).append("</b> · ").append(Formats.price(pr.build().total()))
+                    .append('\n').append(telegramHtml(pr.purpose())).append("\n\n");
             rows.add(new InlineKeyboardRow(button(pr.name() + " · " + Formats.price(pr.build().total()), "bpre:" + i)));
         }
         rows.add(new InlineKeyboardRow(button("« К сборке", "b")));
@@ -435,27 +524,58 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         var result = catalog.search(new ProductSearchRequest(slug, Map.of(), null, null, false,
                 ProductSearchRequest.Sort.POPULAR, page, PAGE_SIZE));
 
+        List<InlineKeyboardRow> rows = productRows(result, n -> "c:" + slug + ":" + n);
+        rows.add(new InlineKeyboardRow(button("« Категории", "cats"), button(BTN_CART, "cart")));
+
+        String text = "<b>" + telegramHtml(category.getName()) + "</b>\n"
+                + result.getTotalElements() + " товаров. ⌛ — нет в наличии.";
+        edit(chatId, messageId, text, new InlineKeyboardMarkup(rows));
+    }
+
+    /** Кнопки товаров одной страницы и листалка «◀ 2 / 5 ▶». pageData — callback для страницы с этим номером. */
+    private List<InlineKeyboardRow> productRows(Page<Product> result, IntFunction<String> pageData) {
         List<InlineKeyboardRow> rows = new ArrayList<>();
         for (Product p : result.getContent()) {
             String label = (p.inStock() ? "" : "⌛ ") + p.getName() + " · " + Formats.price(p.getPrice());
             rows.add(new InlineKeyboardRow(button(label, "p:" + p.getId())));
         }
         if (result.getTotalPages() > 1) {
+            int page = result.getNumber();
             InlineKeyboardRow nav = new InlineKeyboardRow();
             if (result.hasPrevious()) {
-                nav.add(button("◀", "c:" + slug + ":" + (page - 1)));
+                nav.add(button("◀", pageData.apply(page - 1)));
             }
-            nav.add(button((page + 1) + " / " + result.getTotalPages(), "c:" + slug + ":" + page));
+            nav.add(button((page + 1) + " / " + result.getTotalPages(), pageData.apply(page)));
             if (result.hasNext()) {
-                nav.add(button("▶", "c:" + slug + ":" + (page + 1)));
+                nav.add(button("▶", pageData.apply(page + 1)));
             }
             rows.add(nav);
         }
-        rows.add(new InlineKeyboardRow(button("« Категории", "cats"), button(BTN_CART, "cart")));
+        return rows;
+    }
 
-        String text = "<b>" + htmlEscape(category.getName()) + "</b>\n"
-                + result.getTotalElements() + " товаров. ⌛ — нет в наличии.";
-        edit(chatId, messageId, text, new InlineKeyboardMarkup(rows));
+    // ---------- Поиск: любой текст вне оформления заказа ----------
+
+    private void search(long chatId, String text) throws TelegramApiException {
+        String query = text.length() > 64 ? text.substring(0, 64) : text;
+        var result = catalog.searchText(query, 0, PAGE_SIZE);
+        if (result.isEmpty()) {
+            send(chatId, "По запросу «" + telegramHtml(query) + "» ничего не нашлось. Попробуйте короче, например «RTX 5070» "
+                    + "или «Ryzen 7», или выберите категорию:", categoriesKeyboard());
+            return;
+        }
+        searches.put(chatId, query);
+        send(chatId, searchText(query, result), searchKeyboard(result));
+    }
+
+    private static String searchText(String query, Page<Product> result) {
+        return "🔎 <b>" + telegramHtml(query) + "</b>\nНайдено: " + result.getTotalElements() + ". ⌛ — нет в наличии.";
+    }
+
+    private InlineKeyboardMarkup searchKeyboard(Page<Product> result) {
+        List<InlineKeyboardRow> rows = productRows(result, n -> "s:" + n);
+        rows.add(new InlineKeyboardRow(button("« Категории", "cats"), button(BTN_CART, "cart")));
+        return new InlineKeyboardMarkup(rows);
     }
 
     private void showProduct(long chatId, int messageId, long productId) throws TelegramApiException {
@@ -463,12 +583,12 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                 .orElseThrow(() -> new ResourceNotFoundException("Товар не найден"));
 
         StringBuilder text = new StringBuilder()
-                .append("<b>").append(htmlEscape(p.getName())).append("</b>\n")
+                .append("<b>").append(telegramHtml(p.getName())).append("</b>\n")
                 .append(Formats.price(p.getPrice()))
                 .append(p.onSale() ? " <s>" + Formats.price(p.getOldPrice()) + "</s> −" + p.discountPercent() + "%" : "").append(" · ")
                 .append(p.inStock() ? "в наличии " + p.getStock() + " шт." : "нет в наличии").append("\n\n")
-                .append(htmlEscape(p.getDescription())).append("\n\n");
-        Attributes.readable(p).forEach((k, v) -> text.append(htmlEscape(k)).append(": ").append(htmlEscape(v)).append('\n'));
+                .append(telegramHtml(p.getDescription())).append("\n\n");
+        Attributes.readable(p).forEach((k, v) -> text.append(telegramHtml(k)).append(": ").append(telegramHtml(v)).append('\n'));
 
         List<InlineKeyboardRow> rows = new ArrayList<>();
         if (p.inStock()) {
@@ -502,7 +622,7 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
             }
             long sum = (long) p.getPrice() * line.quantity();
             total += sum;
-            text.append(n++).append(". ").append(htmlEscape(p.getName())).append('\n')
+            text.append(n++).append(". ").append(telegramHtml(p.getName())).append('\n')
                     .append("    ").append(line.quantity()).append(" × ").append(Formats.price(p.getPrice()))
                     .append(" = ").append(Formats.price(sum)).append('\n');
         }
@@ -535,7 +655,7 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
     }
 
-    // ---------- Оформление заказа: имя → телефон → адрес ----------
+    // ---------- Оформление заказа: имя → телефон → самовывоз или курьер → магазин или адрес → промокод ----------
 
     private void continueCheckout(Message msg, Checkout checkout) throws TelegramApiException {
         long chatId = msg.getChatId();
@@ -558,64 +678,189 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                     return;
                 }
                 checkout.phone = phone;
-                checkout.step = Checkout.Step.ADDRESS;
-                send(chatId, "Адрес доставки: город, улица, дом, квартира.", cancelKeyboard());
+                if (delivery.pickupPoints().isEmpty()) {
+                    // Магазинов для самовывоза нет — сразу спрашиваем адрес
+                    askAddress(chatId, checkout);
+                } else {
+                    checkout.step = Checkout.Step.DELIVERY;
+                    askDelivery(chatId);
+                }
+            }
+            case DELIVERY -> {
+                if (text.equals(BTN_COURIER)) {
+                    askAddress(chatId, checkout);
+                } else if (text.equals(BTN_PICKUP)) {
+                    checkout.step = Checkout.Step.PICKUP;
+                    askPickupPoint(chatId);
+                } else {
+                    askDelivery(chatId);
+                }
+            }
+            case PICKUP -> {
+                PickupPoint point = delivery.pickupPoints().stream().filter(p -> p.getName().equals(text)).findFirst().orElse(null);
+                if (point == null) {
+                    askPickupPoint(chatId);
+                    return;
+                }
+                checkout.delivery = DeliveryMethod.PICKUP;
+                checkout.address = point.oneLine();
+                askPromo(chatId, checkout, null);
             }
             case ADDRESS -> {
                 if (text.length() < 5 || text.length() > 512) {
                     send(chatId, "Напишите адрес полностью: город, улица, дом.", cancelKeyboard());
                     return;
                 }
+                checkout.delivery = DeliveryMethod.COURIER;
+                checkout.address = text;
+                askPromo(chatId, checkout, null);
+            }
+            case PROMO -> {
+                if (text.equals(BTN_NO_PROMO)) {
+                    checkouts.remove(chatId);
+                    placeOrder(chatId, checkout, null);
+                    return;
+                }
+                try {
+                    // Проверяем сразу, чтобы покупатель мог исправить код, не начиная оформление заново
+                    promos.discount(promos.find(text), cartTotal(chatId));
+                } catch (BadRequestException e) {
+                    askPromo(chatId, checkout, e.getMessage());
+                    return;
+                }
                 checkouts.remove(chatId);
-                placeOrder(chatId, new CustomerRequest(checkout.name, checkout.phone, text, null));
+                placeOrder(chatId, checkout, text);
             }
         }
     }
 
-    private void placeOrder(long chatId, CustomerRequest customer) throws TelegramApiException {
+    private void askDelivery(long chatId) throws TelegramApiException {
+        int courier = delivery.price(DeliveryMethod.COURIER, cartTotal(chatId));
+        send(chatId, "Как получить заказ?\n"
+                        + BTN_PICKUP + " из магазина — бесплатно\n"
+                        + BTN_COURIER + " — " + (courier == 0 ? "бесплатно" : Formats.price(courier)
+                        + ", бесплатно от " + Formats.price(delivery.freeFrom())),
+                ReplyKeyboardMarkup.builder()
+                        .keyboardRow(new KeyboardRow(BTN_PICKUP, BTN_COURIER))
+                        .keyboardRow(new KeyboardRow(BTN_CANCEL))
+                        .resizeKeyboard(true)
+                        .build());
+    }
+
+    private void askPickupPoint(long chatId) throws TelegramApiException {
+        StringBuilder text = new StringBuilder("Выберите магазин:\n");
+        var keyboard = ReplyKeyboardMarkup.builder().resizeKeyboard(true);
+        for (PickupPoint p : delivery.pickupPoints()) {
+            text.append("\n<b>").append(telegramHtml(p.getName())).append("</b>\n")
+                    .append(telegramHtml(p.getAddress())).append(" · ").append(telegramHtml(p.getHours())).append('\n');
+            keyboard.keyboardRow(new KeyboardRow(p.getName()));
+        }
+        send(chatId, text.toString(), keyboard.keyboardRow(new KeyboardRow(BTN_CANCEL)).build());
+    }
+
+    private void askAddress(long chatId, Checkout checkout) throws TelegramApiException {
+        checkout.step = Checkout.Step.ADDRESS;
+        // Подсказываем адрес из прошлой доставки курьером
+        String lastAddress = orders.recentForChat(chatId).stream()
+                .filter(o -> o.getDeliveryMethod() == DeliveryMethod.COURIER)
+                .map(Order::getAddress).findFirst().orElse(null);
+        send(chatId, "Адрес доставки: город, улица, дом, квартира.", suggestKeyboard(lastAddress));
+    }
+
+    /** error — почему не подошёл предыдущий код, или null при первом вопросе. */
+    private void askPromo(long chatId, Checkout checkout, String error) throws TelegramApiException {
+        checkout.step = Checkout.Step.PROMO;
+        String text = error == null
+                ? "Есть промокод? Напишите его или нажмите «" + BTN_NO_PROMO + "»."
+                : telegramHtml(error) + ". Напишите другой промокод или нажмите «" + BTN_NO_PROMO + "».";
+        send(chatId, text, ReplyKeyboardMarkup.builder()
+                .keyboardRow(new KeyboardRow(BTN_NO_PROMO))
+                .keyboardRow(new KeyboardRow(BTN_CANCEL))
+                .resizeKeyboard(true)
+                .build());
+    }
+
+    /** Сумма товаров в корзине по текущим ценам — для цены доставки и промокода. */
+    private int cartTotal(long chatId) {
+        var lines = cart.lines(chatId);
+        Map<Long, Product> products = productsFor(lines);
+        return lines.stream().filter(l -> products.containsKey(l.productId()))
+                .mapToInt(l -> products.get(l.productId()).getPrice() * l.quantity()).sum();
+    }
+
+    private void placeOrder(long chatId, Checkout checkout, String promoCode) throws TelegramApiException {
         List<OrderLineRequest> lines = cart.lines(chatId).stream()
                 .map(l -> new OrderLineRequest(l.productId(), l.quantity())).toList();
         Order order;
         try {
-            order = orders.create(Channel.TELEGRAM, customer, lines, chatId);
-        } catch (OrderException e) {
-            send(chatId, "Не получилось оформить заказ: " + htmlEscape(e.getMessage()) + "\nПоправьте корзину и попробуйте ещё раз.", mainMenu());
+            order = orders.create(Channel.TELEGRAM, new CustomerRequest(checkout.name, checkout.phone, checkout.address, null),
+                    checkout.delivery, promoCode, lines, chatId, null);
+        } catch (OrderException | BadRequestException e) {
+            send(chatId, "Не получилось оформить заказ: " + telegramHtml(e.getMessage()) + "\nПоправьте корзину и попробуйте ещё раз.", mainMenu());
             return;
         } catch (ConstraintViolationException e) {
             // Сюда попадаем, только если проверки шагов выше разошлись с правилами CustomerRequest
             String reason = e.getConstraintViolations().stream().findFirst().map(ConstraintViolation::getMessage).orElse("проверьте данные");
-            send(chatId, "Не получилось оформить заказ: " + htmlEscape(reason) + "\nНачните оформление заново.", mainMenu());
+            send(chatId, "Не получилось оформить заказ: " + telegramHtml(reason) + "\nНачните оформление заново.", mainMenu());
             return;
         }
         cart.clear(chatId);
+        send(chatId, "<b>Заказ " + order.number() + " создан</b>\n\n" + orderDetails(order), mainMenu());
+        offerPayment(chatId, order);
+    }
 
-        StringBuilder text = new StringBuilder("<b>Заказ ").append(order.number()).append(" создан</b>\n\n");
-        order.getItems().forEach(i -> text.append("• ").append(htmlEscape(i.getName())).append(" × ").append(i.getQuantity()).append('\n'));
-        text.append("\nДоставка: ").append(order.getDeliveryPrice() == 0 ? "бесплатно" : Formats.price(order.getDeliveryPrice()))
-                .append("\nИтого: <b>").append(Formats.price(order.getTotal())).append("</b>\nАдрес: ")
-                .append(htmlEscape(order.getAddress()));
-        send(chatId, text.toString(), mainMenu());
+    /** Состав, скидка, доставка, итог и куда везти — для сообщения о новом заказе и карточки в «Моих заказах». */
+    private static String orderDetails(Order order) {
+        StringBuilder text = new StringBuilder();
+        order.getItems().forEach(i -> text.append("• ").append(telegramHtml(i.getName())).append(" × ").append(i.getQuantity()).append('\n'));
+        if (order.getDiscount() > 0) {
+            text.append("\nПромокод ").append(telegramHtml(order.getPromoCode())).append(": −").append(Formats.price(order.getDiscount()));
+        }
+        if (order.getDeliveryMethod() == DeliveryMethod.COURIER) {
+            text.append("\nДоставка: ").append(order.getDeliveryPrice() == 0 ? "бесплатно" : Formats.price(order.getDeliveryPrice()));
+        }
+        text.append("\nИтого: <b>").append(Formats.price(order.getTotal())).append("</b>\n")
+                .append(order.getDeliveryMethod() == DeliveryMethod.PICKUP ? "Самовывоз: " : "Адрес: ")
+                .append(telegramHtml(order.getAddress()));
+        if (order.getPaymentCard() != null) {
+            text.append("\nОплачено: ").append(telegramHtml(order.getPaymentCard()));
+        }
+        return text.toString();
+    }
 
+    /** Как оплатить: счёт Telegram, страница ЮKassa на сайте или тестовая кнопка, если настоящей оплаты нет. */
+    private void offerPayment(long chatId, Order order) throws TelegramApiException {
         if (props.telegram().realPayments()) {
             sendInvoice(chatId, order);
-        } else if (props.yookassa().enabled()) {
-            // Платёжного токена Telegram нет, но на сайте подключена ЮKassa: платим там
-            String link = props.baseUrl() + "/pay/" + order.getPublicId();
-            String payText = "Оплатите заказ картой, через СБП или SberPay.\n"
-                    + "Товар зарезервирован до " + Formats.timeOfDay(order.payBefore(paymentTimeout)) + " по Москве.";
-            if (props.baseUrl().startsWith("https://")) {
-                send(chatId, payText, new InlineKeyboardMarkup(List.of(new InlineKeyboardRow(InlineKeyboardButton.builder()
-                        .text("💳 Оплатить " + Formats.price(order.getTotal())).url(link).build()))));
-            } else {
-                // Кнопку со ссылкой на localhost Telegram не примет: даём ссылку текстом
-                send(chatId, payText + "\nОплатить: " + link, mainMenu());
-            }
-        } else {
-            var payButton = new InlineKeyboardMarkup(List.of(new InlineKeyboardRow(
-                    button("💳 Оплатить " + Formats.price(order.getTotal()) + " (тест)", "pay:" + order.getPublicId()))));
-            send(chatId, "Оплата пока тестовая: деньги не списываются.\n"
-                    + "Товар зарезервирован до " + Formats.timeOfDay(order.payBefore(paymentTimeout)) + " по Москве.", payButton);
+            return;
         }
+        String text = (props.yookassa().enabled() ? "Оплатите заказ картой, через СБП или SberPay." : "Оплата пока тестовая: деньги не списываются.")
+                + "\nТовар зарезервирован до " + Formats.timeOfDay(order.payBefore(paymentTimeout)) + " по Москве.";
+        InlineKeyboardRow pay = payButtonRow(order);
+        if (pay == null) {
+            send(chatId, text + "\nОплатить: " + payLink(order), mainMenu());
+        } else {
+            send(chatId, text, new InlineKeyboardMarkup(List.of(pay)));
+        }
+    }
+
+    /** Кнопка оплаты или null, если ссылку можно дать только текстом. */
+    private InlineKeyboardRow payButtonRow(Order order) {
+        String label = "💳 Оплатить " + Formats.price(order.getTotal());
+        if (props.telegram().realPayments()) {
+            return new InlineKeyboardRow(button(label, "inv:" + order.getId()));
+        }
+        if (props.yookassa().enabled()) {
+            // Кнопку со ссылкой на localhost Telegram не примет
+            return props.baseUrl().startsWith("https://")
+                    ? new InlineKeyboardRow(InlineKeyboardButton.builder().text(label).url(payLink(order)).build())
+                    : null;
+        }
+        return new InlineKeyboardRow(button(label + " (тест)", "pay:" + order.getPublicId()));
+    }
+
+    private String payLink(Order order) {
+        return props.baseUrl() + "/pay/" + order.getPublicId();
     }
 
     private void sendInvoice(long chatId, Order order) throws TelegramApiException {
@@ -647,17 +892,55 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
 
     // ---------- Мои заказы ----------
 
+    // ---------- Мои заказы ----------
+
     private String ordersText(long chatId) {
+        return orders.recentForChat(chatId).isEmpty()
+                ? "Заказов пока нет."
+                : "<b>Ваши последние заказы</b>\nНажмите на заказ, чтобы посмотреть его, оплатить или отменить.";
+    }
+
+    private InlineKeyboardMarkup ordersKeyboard(long chatId) {
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        for (Order o : orders.recentForChat(chatId)) {
+            rows.add(new InlineKeyboardRow(button(o.number() + " · " + Formats.price(o.getTotal()) + " · " + o.statusLabel(),
+                    "o:" + o.getId())));
+        }
+        return new InlineKeyboardMarkup(rows);
+    }
+
+    private void showOrder(long chatId, int messageId, Order order) throws TelegramApiException {
+        StringBuilder text = new StringBuilder("<b>Заказ ").append(order.number()).append("</b> · ").append(order.statusLabel())
+                .append("\nот ").append(Formats.dateTime(order.getCreatedAt())).append("\n\n").append(orderDetails(order));
+        List<InlineKeyboardRow> rows = new ArrayList<>();
+        if (order.getStatus() == OrderStatus.AWAITING_PAYMENT) {
+            text.append("\n\nОплатить до ").append(Formats.timeOfDay(order.payBefore(paymentTimeout))).append(" по Москве.");
+            InlineKeyboardRow pay = payButtonRow(order);
+            if (pay == null) {
+                text.append("\nОплатить: ").append(payLink(order));
+            } else {
+                rows.add(pay);
+            }
+        }
+        if (order.cancellableByCustomer()) {
+            rows.add(new InlineKeyboardRow(button("Отменить заказ", "oc:" + order.getId())));
+        }
+        rows.add(new InlineKeyboardRow(button("« Мои заказы", "ol")));
+        edit(chatId, messageId, text.toString(), new InlineKeyboardMarkup(rows));
+    }
+
+    /** Заказ из этого чата. Чужой (подделанная кнопка) — как будто его нет. */
+    private Order ownOrder(long chatId, String id) {
+        Order order = orders.byId(Long.parseLong(id));
+        if (order.getTelegramChatId() == null || order.getTelegramChatId() != chatId) {
+            throw new ResourceNotFoundException("Заказ не найден");
+        }
+        return order;
+    }
+
+    private Order lastOrder(long chatId) {
         List<Order> recent = orders.recentForChat(chatId);
-        if (recent.isEmpty()) {
-            return "Заказов пока нет.";
-        }
-        StringBuilder text = new StringBuilder("<b>Ваши последние заказы</b>\n\n");
-        for (Order o : recent) {
-            text.append(o.number()).append(" от ").append(Formats.dateTime(o.getCreatedAt())).append('\n')
-                    .append("    ").append(Formats.price(o.getTotal())).append(" · ").append(o.getStatus().label()).append('\n');
-        }
-        return text.toString();
+        return recent.isEmpty() ? null : recent.getFirst();
     }
 
     // ---------- Клавиатуры и отправка ----------
@@ -667,6 +950,18 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                 .keyboardRow(new KeyboardRow(BTN_CATALOG, BTN_CART))
                 .keyboardRow(new KeyboardRow(BTN_BUILD, BTN_ORDERS))
                 .keyboardRow(new KeyboardRow(BTN_SITE))
+                .resizeKeyboard(true)
+                .build();
+    }
+
+    /** Одна кнопка с ответом из прошлого заказа (имя, адрес) и «Отменить оформление». */
+    private ReplyKeyboardMarkup suggestKeyboard(String suggestion) {
+        if (suggestion == null || suggestion.isBlank()) {
+            return cancelKeyboard();
+        }
+        return ReplyKeyboardMarkup.builder()
+                .keyboardRow(new KeyboardRow(suggestion))
+                .keyboardRow(new KeyboardRow(BTN_CANCEL))
                 .resizeKeyboard(true)
                 .build();
     }
@@ -708,10 +1003,13 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
     }
 
     static final class Checkout {
-        enum Step { NAME, PHONE, ADDRESS }
+        enum Step { NAME, PHONE, DELIVERY, PICKUP, ADDRESS, PROMO }
 
         Step step = Step.NAME;
         String name;
         String phone;
+        DeliveryMethod delivery;
+        /** Адрес доставки или магазин самовывоза одной строкой. */
+        String address;
     }
 }

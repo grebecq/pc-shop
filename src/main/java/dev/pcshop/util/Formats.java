@@ -2,6 +2,7 @@ package dev.pcshop.util;
 
 import dev.pcshop.entity.Product;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.HtmlUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -21,6 +22,14 @@ public class Formats {
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm").withZone(ZONE);
 
     /** 17490 → «17 490 ₽» */
+    /**
+     * Текст для HTML-разметки Telegram. Telegram понимает только &lt; &gt; &amp; &quot; и числовые ссылки,
+     * поэтому «×» и «—» должны остаться символами, а не стать &times; и &mdash;, как у обычного htmlEscape.
+     */
+    public static String telegramHtml(String text) {
+        return HtmlUtils.htmlEscape(text, "UTF-8");
+    }
+
     public static String price(long rubles) {
         // Locale.ROOT: иначе на сервере с русской локалью разделитель будет другим и замена не сработает
         return String.format(java.util.Locale.ROOT, "%,d", rubles).replace(',', ' ') + " ₽";

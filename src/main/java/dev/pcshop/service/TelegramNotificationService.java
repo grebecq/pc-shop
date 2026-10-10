@@ -13,7 +13,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
-import static org.springframework.web.util.HtmlUtils.htmlEscape;
+import static dev.pcshop.util.Formats.telegramHtml;
 
 /**
  * Уведомления в Telegram: владельцу о новых и оплаченных заказах, покупателю о смене статуса.
@@ -54,17 +54,17 @@ public class TelegramNotificationService {
 
     private String describe(Order order) {
         StringBuilder text = new StringBuilder();
-        order.getItems().forEach(i -> text.append("• ").append(htmlEscape(i.getName()))
+        order.getItems().forEach(i -> text.append("• ").append(telegramHtml(i.getName()))
                 .append(" × ").append(i.getQuantity()).append('\n'));
         if (order.getDiscount() > 0) {
-            text.append("Промокод ").append(htmlEscape(order.getPromoCode())).append(": −").append(Formats.price(order.getDiscount())).append('\n');
+            text.append("Промокод ").append(telegramHtml(order.getPromoCode())).append(": −").append(Formats.price(order.getDiscount())).append('\n');
         }
         if (order.getDeliveryPrice() > 0) {
             text.append("Доставка: ").append(Formats.price(order.getDeliveryPrice())).append('\n');
         }
         return text.append("Итого: <b>").append(Formats.price(order.getTotal())).append("</b>\n")
-                .append(htmlEscape(order.getCustomerName())).append(", ").append(htmlEscape(order.getPhone())).append('\n')
-                .append(order.getDeliveryMethod().label()).append(": ").append(htmlEscape(order.getAddress()))
+                .append(telegramHtml(order.getCustomerName())).append(", ").append(telegramHtml(order.getPhone())).append('\n')
+                .append(order.getDeliveryMethod().label()).append(": ").append(telegramHtml(order.getAddress()))
                 .toString();
     }
 
