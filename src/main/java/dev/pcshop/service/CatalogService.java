@@ -1,18 +1,15 @@
 package dev.pcshop.service;
 
 import dev.pcshop.dto.request.ProductSearchRequest;
-import dev.pcshop.dto.request.ProductUpdateRequest;
 import dev.pcshop.dto.response.FacetValueResponse;
 import dev.pcshop.entity.Category;
 import dev.pcshop.entity.Product;
-import dev.pcshop.event.ProductEvents;
 import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.repository.CategoryRepository;
 import dev.pcshop.repository.ProductRepository;
 import dev.pcshop.repository.ProductSearchRepository;
 import dev.pcshop.util.CatalogQueries;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +30,6 @@ public class CatalogService {
     private final CategoryRepository categories;
     private final ProductRepository products;
     private final ProductSearchRepository search;
-    private final ApplicationEventPublisher events;
 
     public List<Category> categories() {
         return categories.findAllByOrderBySortOrder();
@@ -93,25 +89,6 @@ public class CatalogService {
 
     public List<Product> productsBySlugs(Collection<String> slugs) {
         return products.findAllBySlugInAndActiveTrue(slugs);
-    }
-
-    /** Все товары, включая снятые с продажи, — для админки. */
-    public List<Product> allProducts() {
-        return products.findAllByOrderByCategorySortOrderAscNameAsc();
-    }
-
-    /** Правка из админки. Если товар снова появился в наличии, подписчики получат письмо (см. StockAlertService). */
-    @Transactional
-    public Product updateProduct(long id, ProductUpdateRequest request) {
-        Product product = products.findById(id).orElseThrow(() -> new ResourceNotFoundException("Товар не найден"));
-        boolean wasOut = !product.inStock();
-        product.reprice(request.price(), request.oldPrice());
-        product.setStock(request.stock());
-        product.setActive(request.isActive());
-        if (wasOut && product.inStock()) {
-            events.publishEvent(new ProductEvents.Restocked(id));
-        }
-        return product;
     }
 
     /** Товары со скидкой, самые большие скидки первыми. */

@@ -251,6 +251,11 @@ public class Order {
 
     /** Короткий номер для людей: «№1042». */
     public String number() {
+        return number(id);
+    }
+
+    /** Номер заказа для людей по его id: в письмах, в боте, в журнале склада. */
+    public static String number(long id) {
         return "№" + (1000 + id);
     }
 }

@@ -57,7 +57,8 @@ public class Product {
     @Column(name = "old_price")
     private Integer oldPrice;
 
-    @Column(nullable = false)
+    /** Пишут его только запросы ProductRepository из StockService вместе с журналом склада, сам JPA — никогда. */
+    @Column(nullable = false, insertable = false, updatable = false)
     private int stock;
 
     @Column(nullable = false)
@@ -90,6 +91,21 @@ public class Product {
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    /** Новый товар из админки. Остаток у него 0, пока на склад не оформлен приход. */
+    public Product(Category category, String slug) {
+        this.category = category;
+        this.slug = slug;
+    }
+
+    /** Всё, что владелец правит в карточке товара, кроме цены, остатка и фото. slug не меняется: на него ведут ссылки. */
+    public void edit(Category category, String name, String brand, String description, Map<String, Object> attributes) {
+        this.category = category;
+        this.name = name;
+        this.brand = brand;
+        this.description = description;
+        this.attributes = new LinkedHashMap<>(attributes);
+    }
 
     /** Числовая характеристика или 0, если её нет. */
     public int num(String key) {
@@ -129,12 +145,5 @@ public class Product {
         }
         this.price = price;
         this.oldPrice = oldPrice;
-    }
-
-    public void setStock(int stock) {
-        if (stock < 0) {
-            throw new IllegalArgumentException("Остаток не может быть отрицательным");
-        }
-        this.stock = stock;
     }
 }

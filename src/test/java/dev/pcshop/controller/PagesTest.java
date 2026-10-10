@@ -5,7 +5,6 @@ import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.dto.request.OrderLineRequest;
 import dev.pcshop.entity.Order;
 import dev.pcshop.enums.Channel;
-import dev.pcshop.repository.ProductRepository;
 import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.OrderService;
 import org.junit.jupiter.api.Test;
@@ -38,7 +37,6 @@ class PagesTest {
     @LocalServerPort int port;
     @Autowired OrderService orders;
     @Autowired CatalogService catalog;
-    @Autowired ProductRepository products;
 
     private final HttpClient http = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
 
@@ -83,29 +81,9 @@ class PagesTest {
         assertThat(changed.statusCode()).isEqualTo(302);
         assertThat(get("/admin/orders/" + order.getId(), ADMIN).body()).contains("Отменён");
 
-        assertThat(get("/admin/products", ADMIN).body()).contains("Kingston");
-    }
-
-    @Test
-    void adminValidatesProductUpdate() throws Exception {
-        var product = catalog.product("corsair-rm850x-2024-850-vt");
-        String token = csrf(get("/admin/products", ADMIN).body());
-        String url = "/admin/products/" + product.getId();
-
-        var invalid = post(url, "price=-5&stock=1&active=true&_csrf=" + token, ADMIN);
-        assertThat(invalid.statusCode()).isEqualTo(302);
-        assertThat(catalog.product("corsair-rm850x-2024-850-vt").getPrice()).isEqualTo(product.getPrice());
-
-        post(url, "price=4590&stock=7&active=true&_csrf=" + token, ADMIN);
-        var updated = catalog.product("corsair-rm850x-2024-850-vt");
-        assertThat(updated.getPrice()).isEqualTo(4590);
-        assertThat(updated.getStock()).isEqualTo(7);
-
-        // Снятая галочка «Продаётся» не приходит в запросе — товар скрывается
-        post(url, "price=4590&stock=7&_csrf=" + token, ADMIN);
-        assertThat(products.findById(product.getId()).orElseThrow().isActive()).isFalse();
-        post(url, "price=4590&stock=7&active=true&_csrf=" + token, ADMIN);
-        assertThat(products.findById(product.getId()).orElseThrow().isActive()).isTrue();
+        assertThat(get("/admin/products", ADMIN).body()).contains("AMD Ryzen");
+        assertThat(get("/admin/products?q=kingston", ADMIN).body()).contains("Kingston").doesNotContain("AMD Ryzen");
+        assertThat(get("/admin/categories", ADMIN).body()).contains("Процессоры", "Сокет");
     }
 
     private Order newOrder(String name) {

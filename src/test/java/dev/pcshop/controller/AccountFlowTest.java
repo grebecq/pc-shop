@@ -364,9 +364,9 @@ class AccountFlowTest {
     void adminUploadsProductPhoto() throws Exception {
         String auth = "Basic " + Base64.getEncoder().encodeToString("admin:admin-test-pass".getBytes());
         var http = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
-        var page = http.send(HttpRequest.newBuilder(uri("/admin/products")).header("Authorization", auth).build(),
-                HttpResponse.BodyHandlers.ofString()).body();
         long id = catalog.product("deepcool-cc560-v2-black").getId();
+        var page = http.send(HttpRequest.newBuilder(uri("/admin/products/" + id)).header("Authorization", auth).build(),
+                HttpResponse.BodyHandlers.ofString()).body();
 
         byte[] png = Base64.getDecoder().decode(
                 "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
