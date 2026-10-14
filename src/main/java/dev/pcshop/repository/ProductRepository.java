@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +33,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @EntityGraph(attributePaths = "category")
     List<Product> findTop8ByActiveTrueAndStockGreaterThanOrderByPriceDesc(int stock);
+
+    /** Адрес товара и дата последней правки для sitemap.xml. */
+    record SitemapLink(String slug, Instant updatedAt) {
+    }
+
+    /** Все товары на продаже для sitemap.xml: только адрес и дата, без загрузки самих товаров. */
+    List<SitemapLink> findSitemapLinksByActiveTrueOrderById();
 
     /** Товары со скидкой. Их немного, поэтому сортируем по размеру скидки уже в Java. */
     @EntityGraph(attributePaths = "category")

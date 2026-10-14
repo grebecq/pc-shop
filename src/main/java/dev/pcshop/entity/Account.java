@@ -41,6 +41,16 @@ public class Account {
 
     private String phone;
 
+    @Column(name = "email_confirmed_at")
+    private Instant emailConfirmedAt;
+
+    // Ссылка для подтверждения почты: в базе только SHA-256 токена, сам токен есть лишь в письме
+    @Column(name = "email_token_hash", length = 64)
+    private String emailTokenHash;
+
+    @Column(name = "email_token_sent_at")
+    private Instant emailTokenSentAt;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -55,4 +65,20 @@ public class Account {
         this.name = name;
     }
 
+    public boolean isEmailConfirmed() {
+        return emailConfirmedAt != null;
+    }
+
+    /** Новая ссылка для подтверждения почты заменяет прежнюю. */
+    public void newEmailToken(String tokenHash, Instant now) {
+        this.emailTokenHash = tokenHash;
+        this.emailTokenSentAt = now;
+    }
+
+    public void confirmEmail(Instant now) {
+        if (emailConfirmedAt == null) {
+            emailConfirmedAt = now;
+        }
+        emailTokenHash = null;
+    }
 }

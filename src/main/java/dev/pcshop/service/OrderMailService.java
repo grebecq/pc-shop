@@ -112,7 +112,7 @@ public class OrderMailService {
     }
 
     private String link(String path) {
-        return props.baseUrl().replaceAll("/+$", "") + path;
+        return props.siteUrl() + path;
     }
 
     private void send(Order order, String subject, StringBuilder text) {

@@ -271,7 +271,10 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                 } else {
                     checkouts.put(chatId, new Checkout());
                     Order last = lastOrder(chatId);
-                    send(chatId, "Оформляем заказ. Как вас зовут?", suggestKeyboard(last == null ? null : last.getCustomerName()));
+                    // На сайте согласие даётся галочкой в корзине, в боте называем условия до первого вопроса
+                    send(chatId, "Оформляем заказ. Продолжая, вы принимаете условия <a href=\"" + props.siteUrl() + "/offer\">оферты</a> "
+                            + "и соглашаетесь на <a href=\"" + props.siteUrl() + "/privacy\">обработку персональных данных</a>.\n\n"
+                            + "Как вас зовут?", suggestKeyboard(last == null ? null : last.getCustomerName()));
                 }
             }
             case "pay" -> {

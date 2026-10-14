@@ -12,6 +12,15 @@
     </form>
 </div>
 
+<!-- Напоминание о неподтверждённой почте. from — куда вернуться после «Отправить ещё раз» -->
+<form th:fragment="email-reminder(from)" th:if="${account != null and !account.emailConfirmed}"
+      class="notice notice--warn email-reminder" method="post" th:action="@{/account/email}">
+    <span>Подтвердите почту <b th:text="${account.email}">email</b>: мы отправили на неё ссылку. Так письма о заказах
+        и ссылка для смены пароля точно до вас дойдут.</span>
+    <input type="hidden" name="from" th:value="${from}">
+    <button class="btn btn--small btn--ghost" type="submit">Отправить ещё раз</button>
+</form>
+
 <!-- Поля адреса: используются при добавлении и редактировании -->
 <th:block th:fragment="address-fields">
     <div class="field-row">

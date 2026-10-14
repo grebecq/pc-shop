@@ -6,6 +6,7 @@ import dev.pcshop.exception.BadRequestException;
 import dev.pcshop.exception.MailDeliveryException;
 import dev.pcshop.security.ShopUser;
 import dev.pcshop.service.AccountService;
+import dev.pcshop.service.EmailConfirmService;
 import dev.pcshop.service.OrderService;
 import dev.pcshop.service.PasswordResetService;
 import jakarta.validation.Valid;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/** Личный кабинет: заказы, профиль, смена пароля через письмо и адреса доставки. Доступен только после входа. */
+/** Личный кабинет: заказы, профиль, подтверждение почты, смена пароля через письмо и адреса доставки. Только после входа. */
 @PreAuthorize("hasRole('CUSTOMER')")
 @Controller
 @RequestMapping("/account")
@@ -33,6 +34,7 @@ public class AccountController {
     private final AccountService accounts;
     private final OrderService orders;
     private final PasswordResetService passwordResets;
+    private final EmailConfirmService emailConfirm;
 
     @GetMapping
     public String orders(@AuthenticationPrincipal ShopUser user, @RequestParam(defaultValue = "0") int page, Model model) {
@@ -73,6 +75,19 @@ public class AccountController {
             flash.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/account/profile";
+    }
+
+    /** «Отправить ещё раз» в напоминании о неподтверждённой почте. Возвращаемся туда, где нажали кнопку. */
+    @PostMapping("/email")
+    public String sendEmailConfirmation(@AuthenticationPrincipal ShopUser user, @RequestParam(defaultValue = "") String from,
+                                        RedirectAttributes flash) {
+        try {
+            emailConfirm.send(user.getAccountId());
+            flash.addFlashAttribute("message", "Письмо отправлено на " + user.getUsername() + ". Если его нет во входящих, загляните в спам");
+        } catch (MailDeliveryException | BadRequestException e) {
+            flash.addFlashAttribute("error", e.getMessage());
+        }
+        return "profile".equals(from) ? "redirect:/account/profile" : "redirect:/account";
     }
 
     @GetMapping("/addresses")

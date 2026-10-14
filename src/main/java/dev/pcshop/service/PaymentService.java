@@ -71,7 +71,7 @@ public class PaymentService {
                 }
                 // Прошлый платёж отменён (отказ банка или покупатель закрыл страницу) — нужен новый
             }
-            String returnUrl = props.baseUrl().replaceAll("/+$", "") + "/order/" + publicId + "?paid";
+            String returnUrl = props.siteUrl() + "/order/" + publicId + "?paid";
             var request = new YooKassa.CreatePayment(YooKassa.Amount.rub(order.getTotal()), true,
                     YooKassa.Confirmation.redirect(returnUrl), "Заказ " + order.number(), Map.of(ORDER, publicId.toString()));
             // Ключ зависит от заказа и прошлого платежа: двойной клик вернёт тот же платёж, а после отменённого создастся новый

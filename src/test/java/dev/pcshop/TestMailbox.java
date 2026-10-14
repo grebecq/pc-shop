@@ -50,6 +50,11 @@ public class TestMailbox extends JavaMailSenderImpl {
         return letters.stream().filter(l -> l.to().equalsIgnoreCase(email)).toList();
     }
 
+    /** Письма на этот адрес с темой, в которой есть subjectPart, старые первыми. */
+    public List<Letter> to(String email, String subjectPart) {
+        return to(email).stream().filter(l -> l.subject().contains(subjectPart)).toList();
+    }
+
     public void setDown(boolean down) {
         this.down = down;
     }

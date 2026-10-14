@@ -197,8 +197,8 @@ class PricesTest {
 
         // Привезли: письмо подписчику, подписка больше не нужна
         stock.receive(gpu.getId(), 2, "Привезли");
-        await().atMost(Duration.ofSeconds(5)).until(() -> !mailbox.to(email).isEmpty());
-        var letter = mailbox.to(email).getFirst();
+        await().atMost(Duration.ofSeconds(5)).until(() -> !mailbox.to(email, "Снова в наличии").isEmpty());
+        var letter = mailbox.to(email, "Снова в наличии").getFirst();
         assertThat(letter.subject()).isEqualTo("Снова в наличии: " + gpu.getName());
         assertThat(letter.text()).contains("Ирина", Formats.price(gpu.getPrice()), "http://localhost:8080" + page);
         await().atMost(Duration.ofSeconds(5)).until(() -> !stockAlerts.subscribed(accountId, gpu.getId()));
@@ -212,8 +212,8 @@ class PricesTest {
         b.post(lastPage + "/stock-alert", lastPage, null);
         assertThat(stockAlerts.subscribed(accountId, last.getId())).isTrue();
         orders.changeStatus(order.getId(), OrderStatus.CANCELLED);
-        await().atMost(Duration.ofSeconds(5)).until(() -> mailbox.to(email).size() == 2);
-        assertThat(mailbox.to(email).get(1).subject()).isEqualTo("Снова в наличии: " + last.getName());
+        await().atMost(Duration.ofSeconds(5)).until(() -> mailbox.to(email, "Снова в наличии").size() == 2);
+        assertThat(mailbox.to(email, "Снова в наличии").get(1).subject()).isEqualTo("Снова в наличии: " + last.getName());
     }
 
     private URI uri(String path) {

@@ -41,6 +41,11 @@ public record ShopProperties(
         return !yookassa.enabled() && !telegram.realPayments();
     }
 
+    /** Адрес сайта без «/» на конце: к нему дописываются пути ссылок. */
+    public String siteUrl() {
+        return baseUrl.replaceAll("/+$", "");
+    }
+
     public record Admin(
 
             @NotBlank(message = "Задайте ADMIN_USER — логин админки")

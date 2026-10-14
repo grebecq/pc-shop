@@ -29,6 +29,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import(TestcontainersConfig.class)
 class AccountFlowTest {
 
+    private static final String PASSWORD_LETTER = "Смена пароля";
+    private static final String CONFIRM_LETTER = "Подтвердите почту";
+
     @LocalServerPort int port;
     @Autowired CatalogService catalog;
     @Autowired TestMailbox mailbox;
@@ -170,7 +173,7 @@ class AccountFlowTest {
                 .contains("Если такой адрес зарегистрирован, мы отправили на него письмо со ссылкой");
 
         assertThat(mailbox.to(stranger)).isEmpty();
-        var letters = mailbox.to(email);
+        var letters = mailbox.to(email, PASSWORD_LETTER);
         assertThat(letters).hasSize(1);
         var letter = letters.getFirst();
         assertThat(letter.from()).isEqualTo("Сборка <noreply@pc-shop.local>");
@@ -181,7 +184,7 @@ class AccountFlowTest {
         // Повторная просьба в течение минуты: ответ тот же, но второго письма нет
         var again = anna.postForm("/password/forgot", "/password/forgot", "email", email);
         assertThat(again.headers().firstValue("Location")).isEqualTo(known.headers().firstValue("Location"));
-        assertThat(mailbox.to(email)).hasSize(1);
+        assertThat(mailbox.to(email, PASSWORD_LETTER)).hasSize(1);
 
         var invalid = anna.postForm("/password/forgot", "/password/forgot", "email", "not-an-email");
         assertThat(invalid.statusCode()).as("форма с ошибкой").isEqualTo(200);
@@ -217,6 +220,7 @@ class AccountFlowTest {
         assertThat(oldPassword.headers().firstValue("Location").orElseThrow()).endsWith("/login?error");
         var newPassword = b.postForm("/login", "/login", "email", email, "password", "new-secret-1");
         assertThat(newPassword.headers().firstValue("Location").orElseThrow()).endsWith("/account");
+        assertThat(b.get("/account").body()).as("ссылка из письма подтвердила и почту").doesNotContain("Подтвердите почту");
     }
 
     @Test
@@ -254,7 +258,7 @@ class AccountFlowTest {
         var sent = b.postForm("/account/password", "/account/profile");
         assertThat(sent.headers().firstValue("Location").orElseThrow()).endsWith("/account/profile");
         assertThat(b.get("/account/profile").body()).contains("Письмо отправлено на " + email);
-        assertThat(mailbox.to(email)).hasSize(1);
+        assertThat(mailbox.to(email, PASSWORD_LETTER)).hasSize(1);
 
         // Ссылку открыли в том же браузере, где покупатель вошёл: после смены пароля входим заново
         String link = resetLink(email);
@@ -281,7 +285,74 @@ class AccountFlowTest {
         }
         // Неудачная попытка не считается за отправленное письмо: можно сразу попробовать снова
         b.postForm("/account/password", "/account/profile");
-        assertThat(mailbox.to(email)).hasSize(1);
+        assertThat(mailbox.to(email, PASSWORD_LETTER)).hasSize(1);
+    }
+
+    @Test
+    void registrationAsksToConfirmEmail() throws Exception {
+        var b = new Browser();
+        String email = "confirm-" + UUID.randomUUID() + "@example.com";
+        b.register(email);
+        var letters = mailbox.to(email, CONFIRM_LETTER);
+        assertThat(letters).hasSize(1);
+        assertThat(letters.getFirst().text()).contains("Здравствуйте, Анна!", "http://localhost:8080/email/confirm?token=",
+                "действует 3 дня", "Если вы не регистрировались");
+        assertThat(b.get("/account").body()).contains("Подтвердите почту <b>" + email + "</b>", "Отправить ещё раз");
+        assertThat(b.get("/account/profile").body()).contains("Подтвердите почту");
+
+        // Повторно — не раньше чем через минуту
+        b.postForm("/account/email", "/account", "from", "profile");
+        assertThat(b.get("/account/profile").body()).contains("Письмо уже отправлено. Новое можно запросить через минуту");
+        assertThat(mailbox.to(email, CONFIRM_LETTER)).hasSize(1);
+
+        // Ссылку открыли на другом устройстве, без входа
+        String link = confirmLink(email);
+        var other = new Browser().get(link);
+        assertThat(other.body()).contains("Почта подтверждена", "Войти");
+        assertThat(other.headers().firstValue("Referrer-Policy")).hasValue("no-referrer");
+        assertThat(b.get("/account").body()).doesNotContain("Подтвердите почту");
+        assertThat(b.get(link).body()).as("ссылка одноразовая").contains("Ссылка не работает");
+        assertThat(b.get("/email/confirm?token=" + "A".repeat(43)).body()).contains("Ссылка не работает");
+        assertThat(b.get("/email/confirm").body()).contains("Ссылка не работает");
+
+        // Почта уже подтверждена: новых писем нет
+        b.postForm("/account/email", "/account");
+        assertThat(b.get("/account").body()).contains("Почта уже подтверждена");
+        assertThat(mailbox.to(email, CONFIRM_LETTER)).hasSize(1);
+    }
+
+    @Test
+    void oldConfirmLinkExpiresAndNewOneWorks() throws Exception {
+        var b = new Browser();
+        String email = "late-" + UUID.randomUUID() + "@example.com";
+        b.register(email);
+        String oldLink = confirmLink(email);
+        jdbc.sql("update account set email_token_sent_at = now() - interval '3 days 1 minute' where email = ?").param(email).update();
+        assertThat(b.get(oldLink).body()).contains("Ссылка не работает");
+
+        var resent = b.postForm("/account/email", "/account");
+        assertThat(resent.headers().firstValue("Location").orElseThrow()).endsWith("/account");
+        assertThat(b.get("/account").body()).contains("Письмо отправлено на " + email);
+        String newLink = confirmLink(email);
+        assertThat(newLink).isNotEqualTo(oldLink);
+        assertThat(b.get(oldLink).body()).as("старая ссылка заменена новой").contains("Ссылка не работает");
+        assertThat(b.get(newLink).body()).contains("Почта подтверждена", "В личный кабинет");
+    }
+
+    @Test
+    void registrationWorksWhenMailIsDown() throws Exception {
+        var b = new Browser();
+        String email = "nomail-" + UUID.randomUUID() + "@example.com";
+        mailbox.setDown(true);
+        try {
+            assertThat(b.register(email)).endsWith("/account?welcome");
+        } finally {
+            mailbox.setDown(false);
+        }
+        assertThat(mailbox.to(email)).isEmpty();
+        // Письмо не ушло — пауза в минуту не включилась, можно сразу отправить снова
+        b.postForm("/account/email", "/account");
+        assertThat(mailbox.to(email, CONFIRM_LETTER)).hasSize(1);
     }
 
     @Test
@@ -408,11 +479,18 @@ class AccountFlowTest {
         return out.toByteArray();
     }
 
-    /** Ссылка из последнего письма на этот адрес: путь с токеном, без адреса сайта. */
+    /** Ссылка из последнего письма о смене пароля на этот адрес: путь с токеном, без адреса сайта. */
     private String resetLink(String email) {
-        var letters = mailbox.to(email);
+        var letters = mailbox.to(email, PASSWORD_LETTER);
         assertThat(letters).as("письмо на " + email).isNotEmpty();
         return find(letters.getLast().text(), "http://localhost:8080(/password/reset\\?token=[A-Za-z0-9_-]{43})\\s");
+    }
+
+    /** Ссылка из последнего письма о подтверждении почты. */
+    private String confirmLink(String email) {
+        var letters = mailbox.to(email, CONFIRM_LETTER);
+        assertThat(letters).as("письмо на " + email).isNotEmpty();
+        return find(letters.getLast().text(), "http://localhost:8080(/email/confirm\\?token=[A-Za-z0-9_-]{43})\\s");
     }
 
     private URI uri(String path) {

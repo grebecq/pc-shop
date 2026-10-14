@@ -1,5 +1,6 @@
 package dev.pcshop.controller.web;
 
+import dev.pcshop.config.ShopProperties;
 import dev.pcshop.dto.request.ProductSearchRequest;
 import dev.pcshop.dto.request.ReviewRequest;
 import dev.pcshop.entity.Category;
@@ -18,6 +19,7 @@ import dev.pcshop.service.PaymentService;
 import dev.pcshop.service.StockAlertService;
 import dev.pcshop.util.Attributes;
 import dev.pcshop.util.CatalogQueries;
+import dev.pcshop.util.Formats;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -48,6 +50,7 @@ public class ShopController {
     private final ReviewService reviews;
     private final StockAlertService stockAlerts;
     private final PaymentService payments;
+    private final ShopProperties props;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -76,6 +79,8 @@ public class ShopController {
         model.addAttribute("selected", query.filters());
         model.addAttribute("sort", params.getFirst("sort") == null ? "popular" : params.getFirst("sort"));
         model.addAttribute("pageLinks", pageLinks(slug, params, page.getTotalPages()));
+        model.addAttribute("pageDescription", category.getName() + " в магазине «Сборка»: цены, характеристики и наличие, "
+                + "подбор по фильтрам и проверка совместимости. Доставка и самовывоз.");
         return "shop/category";
     }
 
@@ -84,6 +89,12 @@ public class ShopController {
         Product product = catalog.product(slug);
         model.addAttribute("product", product);
         model.addAttribute("specs", Attributes.readable(product));
+        model.addAttribute("pageDescription", pageDescription(product));
+        if (product.getImageUrl() != null) {
+            // Мессенджеру нужен полный адрес картинки, а загруженные в админке фото лежат у нас: /media/products/5
+            String image = product.getImageUrl();
+            model.addAttribute("pageImage", image.startsWith("/") ? props.siteUrl() + image : image);
+        }
         model.addAttribute("similar", catalog.similar(product, 4));
         model.addAttribute("reviews", reviews.forProduct(product.getId()));
         model.addAttribute("reviewPermission", reviews.permission(user == null ? null : user.getAccountId(), product.getId()));
@@ -99,6 +110,13 @@ public class ShopController {
             return build.firstEmpty().map(build::pickLink).orElseGet(build::link);
         }).orElse(null));
         return "shop/product";
+    }
+
+    /** Описание для поисковиков и превью ссылки: «AMD Ryzen 5 7600: AM5 · 6 ядер · 65 Вт. Цена 18 990 ₽, в наличии». */
+    private static String pageDescription(Product product) {
+        String brief = Attributes.brief(product);
+        return product.getName() + (brief.isEmpty() ? "" : ": " + brief) + ". Цена " + Formats.price(product.getPrice())
+                + (product.inStock() ? ", в наличии." : ", сейчас нет в наличии.") + " Доставка и самовывоз.";
     }
 
     @GetMapping("/search")

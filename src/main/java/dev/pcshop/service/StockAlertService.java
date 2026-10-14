@@ -77,7 +77,7 @@ public class StockAlertService {
         if (product == null || !product.isActive() || !product.inStock()) {
             return;
         }
-        String link = props.baseUrl().replaceAll("/+$", "") + "/p/" + product.getSlug();
+        String link = props.siteUrl() + "/p/" + product.getSlug();
         for (Account account : waiting) {
             String text = "Здравствуйте, " + account.getName() + "!\n\n"
                     + "Товар, о котором вы просили сообщить, снова в наличии:\n"

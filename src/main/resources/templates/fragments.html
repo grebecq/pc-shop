@@ -3,11 +3,20 @@
 <body>
 
 <!-- Общий <head>: title передаётся параметром -->
-<head th:fragment="head(title)">
+<head th:fragment="head(title)" th:with="metaDescription=${pageDescription} ?: 'Комплектующие для ПК с проверкой совместимости: процессоры, видеокарты, память, накопители и готовые сборки. Доставка и самовывоз.'">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${title} + ' · Сборка'">Сборка</title>
-    <meta name="description" content="Демо-магазин комплектующих для ПК: сайт, Telegram-бот и админка на Spring Boot.">
+    <meta name="description" th:content="${metaDescription}">
+    <link rel="canonical" th:if="${canonicalUrl}" th:href="${canonicalUrl}">
+    <!-- Превью ссылки в Telegram, ВКонтакте и других мессенджерах -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Сборка">
+    <meta property="og:locale" content="ru_RU">
+    <meta property="og:title" th:content="${title}">
+    <meta property="og:description" th:content="${metaDescription}">
+    <meta property="og:url" th:if="${canonicalUrl}" th:content="${canonicalUrl}">
+    <meta property="og:image" th:if="${pageImage}" th:content="${pageImage}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
@@ -53,14 +62,23 @@
 
 <footer th:fragment="footer" class="footer">
     <div class="wrap footer__inner">
-        <span>© 2026 «Сборка» — комплектующие и сборка ПК с проверкой совместимости</span>
+        <div class="footer__about">
+            <span>© 2026 «Сборка» — комплектующие и сборка ПК с проверкой совместимости</span>
+            <!-- На странице ошибки общих данных сайта нет, поэтому проверяем store -->
+            <span th:if="${store != null}"><a th:href="${store.phoneLink()}" th:text="${store.phone}">8 800 000-00-00</a>
+                · <a th:href="'mailto:' + ${store.email}" th:text="${store.email}">hello@pc-shop.local</a></span>
+            <span th:if="${store != null and store.hasSeller()}" th:text="${store.sellerLine()}">ООО «Сборка», ИНН 7700000000</span>
+        </div>
         <nav class="footer__links">
             <a th:href="@{/delivery}">Доставка и оплата</a> <a th:href="@{/warranty}">Гарантия и возврат</a>
             <a th:href="@{/contacts}">Контакты</a> <a th:href="@{/configurator}">Собрать ПК</a> <a th:href="@{/account}">Личный кабинет</a>
+            <a th:href="@{/offer}">Оферта</a> <a th:href="@{/privacy}">Персональные данные</a>
         </nav>
     </div>
     <script th:src="@{/js/cart.js}"></script>
     <script th:src="@{/js/catalog.js}"></script>
+    <!-- Метрика загружается только после согласия посетителя на cookie -->
+    <script th:if="${metrikaId}" th:src="@{/js/consent.js}" th:attr="data-metrika=${metrikaId}"></script>
 </footer>
 
 <!-- Иконка категории вместо фотографии товара -->

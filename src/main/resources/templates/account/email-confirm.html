@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Подтверждение почты')}"></head>
+<body>
+<div th:replace="~{fragments :: header}"></div>
+
+<main class="wrap auth">
+    <div class="panel auth__form" th:if="${confirmed}">
+        <h1>Почта подтверждена</h1>
+        <p class="notice">Спасибо! Письма о заказах будут приходить на этот адрес.</p>
+        <a class="btn btn--wide" th:href="${user != null} ? @{/account} : @{/login}"
+           th:text="${user != null} ? 'В личный кабинет' : 'Войти'">В личный кабинет</a>
+    </div>
+
+    <!-- Просроченная, уже использованная или выдуманная ссылка -->
+    <div class="panel auth__form" th:unless="${confirmed}">
+        <h1>Ссылка не работает</h1>
+        <p class="notice notice--error">Ссылка устарела или уже использована.</p>
+        <p class="muted">Ссылка из письма действует 3 дня. Если почта ещё не подтверждена, войдите в кабинет и нажмите
+            «Отправить ещё раз».</p>
+        <a class="btn btn--wide" th:href="${user != null} ? @{/account} : @{/login}"
+           th:text="${user != null} ? 'В личный кабинет' : 'Войти'">Войти</a>
+    </div>
+</main>
+
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>
