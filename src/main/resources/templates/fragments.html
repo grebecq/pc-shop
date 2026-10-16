@@ -2,15 +2,15 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<head th:fragment="head(title)" th:with="metaDescription=${pageDescription} ?: 'Комплектующие для ПК с проверкой совместимости: процессоры, видеокарты, память, накопители и готовые сборки. Доставка и самовывоз.'">
+<head th:fragment="head(title)" th:with="shop=${store} ?: ${@storeInfoService.get()}, metaDescription=${pageDescription} ?: 'Комплектующие для ПК с проверкой совместимости: процессоры, видеокарты, память, накопители и готовые сборки. Доставка и самовывоз.'">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${title} + ' · Сборка'">Сборка</title>
+    <title th:text="${title} + ' · ' + ${shop.name}">Сборка</title>
     <meta name="description" th:content="${metaDescription}">
     <link rel="canonical" th:if="${canonicalUrl}" th:href="${canonicalUrl}">
 
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Сборка">
+    <meta property="og:site_name" th:content="${shop.name}">
     <meta property="og:locale" content="ru_RU">
     <meta property="og:title" th:content="${title}">
     <meta property="og:description" th:content="${metaDescription}">
@@ -20,16 +20,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/shop.css}">
-    <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+    <link rel="icon" th:if="${shop.logoUrl() == null}" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+    <link rel="icon" th:if="${shop.logoUrl() != null}" th:href="@{${shop.logoUrl()}}">
+    <style th:inline="css">:root { --accent: [(${shop.accent})]; --accent-ink: [(${shop.accentInk()})]; }</style>
 
     <meta name="csrf-token" th:if="${_csrf}" th:content="${_csrf.token}">
     <meta name="csrf-header" th:if="${_csrf}" th:content="${_csrf.headerName}">
 </head>
 
-<div th:fragment="header">
+<div th:fragment="header" th:with="shop=${store} ?: ${@storeInfoService.get()}">
     <header class="header" th:attr="data-logged-in=${user != null}">
         <div class="wrap header__inner">
-            <a class="logo" th:href="@{/}"><span class="logo__mark"></span>Сборка</a>
+            <a class="logo" th:href="@{/}"><img th:if="${shop.logoUrl() != null}" class="logo__img" th:src="@{${shop.logoUrl()}}" alt=""><span
+                    th:unless="${shop.logoUrl() != null}" class="logo__mark"></span><span th:text="${shop.name}">Сборка</span></a>
             <form class="search" role="search" method="get" th:action="@{/search}">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
                 <input type="search" name="q" th:value="${q}" placeholder="Поиск: RTX 5070, Ryzen 7, DDR5…" aria-label="Поиск по каталогу" maxlength="100">
@@ -59,14 +62,13 @@
     </header>
 </div>
 
-<footer th:fragment="footer" class="footer">
+<footer th:fragment="footer" class="footer" th:with="shop=${store} ?: ${@storeInfoService.get()}">
     <div class="wrap footer__inner">
         <div class="footer__about">
-            <span>© 2026 «Сборка» — комплектующие и сборка ПК с проверкой совместимости</span>
-
-            <span th:if="${store != null}"><a th:href="${store.phoneLink()}" th:text="${store.phone}">8 800 000-00-00</a>
-                · <a th:href="'mailto:' + ${store.email}" th:text="${store.email}">hello@pc-shop.local</a></span>
-            <span th:if="${store != null and store.hasSeller()}" th:text="${store.sellerLine()}">ООО «Сборка», ИНН 7700000000</span>
+            <span th:text="'© ' + ${#dates.year(#dates.createNow())} + ' «' + ${shop.name} + '» — ' + ${shop.tagline}">© 2026 «Сборка» — комплектующие и сборка ПК</span>
+            <span><a th:href="${shop.phoneLink()}" th:text="${shop.phone}">8 800 000-00-00</a>
+                · <a th:href="'mailto:' + ${shop.email}" th:text="${shop.email}">hello@pc-shop.local</a></span>
+            <span th:if="${shop.hasSeller()}" th:text="${shop.sellerLine()}">ООО «Сборка», ИНН 7700000000</span>
         </div>
         <nav class="footer__links">
             <a th:href="@{/delivery}">Доставка и оплата</a> <a th:href="@{/warranty}">Гарантия и возврат</a>

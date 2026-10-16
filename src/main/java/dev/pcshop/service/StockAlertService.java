@@ -31,6 +31,7 @@ public class StockAlertService {
     private final ProductRepository products;
     private final MailService mail;
     private final ShopProperties props;
+    private final StoreInfoService store;
 
     @Transactional(readOnly = true)
     public boolean subscribed(long accountId, long productId) {
@@ -69,11 +70,12 @@ public class StockAlertService {
             return;
         }
         String link = props.siteUrl() + "/p/" + product.getSlug();
+        String shopName = store.get().getName();
         for (Account account : waiting) {
             String text = "Здравствуйте, " + account.getName() + "!\n\n"
                     + "Товар, о котором вы просили сообщить, снова в наличии:\n"
                     + product.getName() + " — " + Formats.price(product.getPrice()) + "\n" + link + "\n\n"
-                    + "Товара может быть немного, поэтому не откладывайте покупку.\n\nМагазин «Сборка»";
+                    + "Товара может быть немного, поэтому не откладывайте покупку.\n\nМагазин «" + shopName + "»";
             try {
                 mail.send(account.getEmail(), "Снова в наличии: " + product.getName(), text);
                 alerts.deleteById(new StockAlert.Key(account.getId(), product.getId()));
