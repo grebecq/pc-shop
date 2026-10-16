@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 // Модели ЮKassa
@@ -17,6 +18,10 @@ public final class YooKassa {
 
         public static Amount rub(int rubles) {
             return new Amount(rubles + ".00", "RUB");
+        }
+
+        public static Amount kopecks(long kopecks) {
+            return new Amount(BigDecimal.valueOf(kopecks, 2).toPlainString(), "RUB");
         }
 
         public BigDecimal decimal() {
@@ -35,8 +40,33 @@ public final class YooKassa {
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record CreatePayment(Amount amount, boolean capture, Confirmation confirmation, String description,
-                                Map<String, String> metadata) {
+                                Map<String, String> metadata, Receipt receipt) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Receipt(Customer customer, List<ReceiptItem> items,
+                          @JsonProperty("tax_system_code") Integer taxSystemCode) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Customer(@JsonProperty("full_name") String fullName, String email, String phone) {
+    }
+
+    public record ReceiptItem(String description, String quantity, Amount amount,
+                              @JsonProperty("vat_code") int vatCode,
+                              @JsonProperty("payment_mode") String paymentMode,
+                              @JsonProperty("payment_subject") String paymentSubject) {
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record FinalReceipt(String type, @JsonProperty("payment_id") String paymentId, Customer customer,
+                               List<ReceiptItem> items, List<Settlement> settlements, boolean send,
+                               @JsonProperty("tax_system_code") Integer taxSystemCode) {
+    }
+
+    public record Settlement(String type, Amount amount) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -95,7 +125,8 @@ public final class YooKassa {
         }
     }
 
-    public record Refund(@JsonProperty("payment_id") String paymentId, Amount amount) {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Refund(@JsonProperty("payment_id") String paymentId, Amount amount, Receipt receipt) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

@@ -5,6 +5,7 @@ import dev.pcshop.entity.Order;
 import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.event.OrderEvents;
 import dev.pcshop.exception.BadRequestException;
+import dev.pcshop.payment.Receipts;
 import dev.pcshop.payment.YooKassa;
 import dev.pcshop.payment.YooKassaClient;
 import dev.pcshop.repository.OrderRepository;
@@ -30,6 +31,7 @@ public class PaymentService {
     private static final String ORDER = "order";
 
     private final YooKassaClient yookassa;
+    private final Receipts receipts;
     private final OrderService orders;
     private final OrderRepository orderRepository;
     private final ShopProperties props;
@@ -58,7 +60,8 @@ public class PaymentService {
             }
             String returnUrl = props.siteUrl() + "/order/" + publicId + "?paid";
             var request = new YooKassa.CreatePayment(YooKassa.Amount.rub(order.getTotal()), true,
-                    YooKassa.Confirmation.redirect(returnUrl), "Заказ " + order.number(), Map.of(ORDER, publicId.toString()));
+                    YooKassa.Confirmation.redirect(returnUrl), "Заказ " + order.number(), Map.of(ORDER, publicId.toString()),
+                    receipts.prepayment(order));
 
             YooKassa.Payment payment = yookassa.createPayment(request, key(publicId + "/" + order.getPaymentId()));
             orders.attachPayment(order.getId(), payment.id());
@@ -125,7 +128,7 @@ public class PaymentService {
         }
 
         if (!payment.refunded()) {
-            yookassa.refund(new YooKassa.Refund(payment.id(), payment.amount()), key("refund/" + payment.id()));
+            yookassa.refund(new YooKassa.Refund(payment.id(), payment.amount(), receipts.prepayment(order)), key("refund/" + payment.id()));
             log.info("Заказ {}: вернули {} ₽ по платежу {}", order.number(), payment.amount().value(), payment.id());
         }
         if (ownPayment) {
@@ -163,6 +166,10 @@ public class PaymentService {
     @Async
     @TransactionalEventListener
     public void onStatusChanged(OrderEvents.StatusChanged event) {
+        if (event.status() == OrderStatus.DONE) {
+            sendSettlementReceipt(orders.byId(event.orderId()));
+            return;
+        }
         if (event.status() != OrderStatus.CANCELLED || !online()) {
             return;
         }
@@ -174,6 +181,18 @@ public class PaymentService {
             sync(order.getPaymentId());
         } catch (RuntimeException e) {
             log.error("Заказ {}: не получилось вернуть деньги автоматически", order.number(), e);
+        }
+    }
+
+    private void sendSettlementReceipt(Order order) {
+        if (!receipts.enabled() || !order.paidOnline()) {
+            return;
+        }
+        try {
+            yookassa.createReceipt(receipts.settlement(order), key("receipt/" + order.getPaymentId()));
+            log.info("Заказ {}: отправлен чек полного расчёта", order.number());
+        } catch (RestClientException e) {
+            log.error("Заказ {}: ЮKassa не приняла чек полного расчёта, выбейте его в личном кабинете: {}", order.number(), e.getMessage());
         }
     }
 

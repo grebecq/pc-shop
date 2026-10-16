@@ -48,6 +48,6 @@ class DemoPaymentGatewayTest {
 
     private static ShopProperties props(String shopId, String secretKey) {
         return new ShopProperties("http://localhost:8080", null, new ShopProperties.Telegram(null, null, null, null),
-                new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa(shopId, secretKey, "https://api.yookassa.ru/v3"));
+                new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa(shopId, secretKey, "https://api.yookassa.ru/v3", false, 1, null));
     }
 }

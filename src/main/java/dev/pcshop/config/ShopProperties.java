@@ -2,6 +2,8 @@ package dev.pcshop.config;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -62,7 +64,22 @@ public record ShopProperties(
     }
 
     public record Yookassa(String shopId, String secretKey,
-                           @NotBlank(message = "Задайте shop.yookassa.api-url") String apiUrl) {
+                           @NotBlank(message = "Задайте shop.yookassa.api-url") String apiUrl,
+                           boolean receipts,
+                           @Min(value = 1, message = "YOOKASSA_VAT_CODE — от 1 до 12")
+                           @Max(value = 12, message = "YOOKASSA_VAT_CODE — от 1 до 12")
+                           Integer vatCode,
+                           @Min(value = 1, message = "YOOKASSA_TAX_SYSTEM — от 1 до 6")
+                           @Max(value = 6, message = "YOOKASSA_TAX_SYSTEM — от 1 до 6")
+                           Integer taxSystemCode) {
+
+        public int vat() {
+            return vatCode == null ? 1 : vatCode;
+        }
+
+        public boolean sendsReceipts() {
+            return enabled() && receipts;
+        }
 
         public boolean enabled() {
             return !blank(shopId) && !blank(secretKey);

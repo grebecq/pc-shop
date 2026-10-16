@@ -98,7 +98,13 @@
             <dl class="details">
                 <div><dt>ЮKassa</dt><dd th:text="'подключена, shopId ' + ${props.yookassa.shopId}">подключена</dd></div>
                 <div><dt>Уведомления</dt><dd><code th:text="${webhookUrl}">https://…/api/payments/yookassa</code></dd></div>
+                <div><dt>Чеки 54-ФЗ</dt><dd th:text="${props.yookassa.receipts()} ? 'отправляет ЮKassa, код НДС ' + ${props.yookassa.vat()} : 'не отправляются'">не отправляются</dd></div>
             </dl>
+            <p class="muted small-top" th:if="${props.yookassa.receipts()}">При оплате покупатель получает чек предоплаты,
+                а когда заказ переходит в статус «Выполнен» — чек полного расчёта. Код НДС (YOOKASSA_VAT_CODE): 1 — без НДС,
+                11 — 22%, 3 — 10%; систему налогообложения задаёт YOOKASSA_TAX_SYSTEM, если в ЮKassa их несколько.</p>
+            <p class="muted small-top" th:unless="${props.yookassa.receipts()}">Магазин обязан выдавать чеки по 54-ФЗ.
+                Подключите в ЮKassa «Чеки от ЮKassa» или свою онлайн-кассу и впишите в .env YOOKASSA_RECEIPTS=true.</p>
             <p class="muted small-top">Этот адрес укажите в личном кабинете ЮKassa: Интеграция → HTTP-уведомления,
                 события payment.succeeded и payment.canceled. Уведомления приходят только на сайт с https-адресом в интернете.</p>
             <form method="post" th:action="@{/admin/settings/yookassa}">

@@ -37,7 +37,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"shop.yookassa.shop-id=" + FakeYooKassa.SHOP_ID, "shop.yookassa.secret-key=" + FakeYooKassa.SECRET_KEY})
+        properties = {"shop.yookassa.shop-id=" + FakeYooKassa.SHOP_ID, "shop.yookassa.secret-key=" + FakeYooKassa.SECRET_KEY,
+                "shop.yookassa.receipts=true", "shop.yookassa.vat-code=11"})
 @Import(TestcontainersConfig.class)
 class OnlinePaymentTest {
 
@@ -74,6 +75,17 @@ class OnlinePaymentTest {
         assertThat(create.getFirst().body()).containsEntry("capture", true)
                 .containsEntry("amount", Map.of("value", order.getTotal() + ".00", "currency", "RUB"))
                 .containsEntry("description", "Заказ " + order.number());
+        @SuppressWarnings("unchecked")
+        var receipt = (Map<String, Object>) create.getFirst().body().get("receipt");
+        assertThat(receipt).containsEntry("customer", Map.of("full_name", "Покупатель", "phone", "79000000000"))
+                .doesNotContainKey("tax_system_code");
+        assertThat(receipt.get("items")).isEqualTo(List.of(
+                Map.of("description", order.getItems().getFirst().getName(), "quantity", "1.00",
+                        "amount", Map.of("value", order.itemsTotal() + ".00", "currency", "RUB"), "vat_code", 12,
+                        "payment_mode", "full_prepayment", "payment_subject", "commodity"),
+                Map.of("description", "Доставка", "quantity", "1.00",
+                        "amount", Map.of("value", order.getDeliveryPrice() + ".00", "currency", "RUB"), "vat_code", 12,
+                        "payment_mode", "full_prepayment", "payment_subject", "service")));
         @SuppressWarnings("unchecked")
         var confirmation = (Map<String, Object>) create.getFirst().body().get("confirmation");
         assertThat(confirmation).containsEntry("type", "redirect")
@@ -151,6 +163,7 @@ class OnlinePaymentTest {
         assertThat(refunds).hasSize(1);
         assertThat(refunds.getFirst().body()).containsEntry("amount", Map.of("value", order.getTotal() + ".00", "currency", "RUB"));
         assertThat(refunds.getFirst().idempotenceKey()).isNotBlank();
+        assertThat(refunds.getFirst().body()).containsKey("receipt");
         Order cancelled = orders.byPublicId(order.getPublicId());
         assertThat(cancelled.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(cancelled.getRefundedAt()).isNotNull();
@@ -172,6 +185,28 @@ class OnlinePaymentTest {
         assertThat(refunds(paymentId)).hasSize(1);
         assertThat(get("/admin/orders/" + order.getId(), ADMIN).body())
                 .contains("ЮKassa, платёж " + paymentId, "Деньги возвращены").doesNotContain("Вернуть деньги");
+    }
+
+    @Test
+    void doneOrderGetsSettlementReceiptOnce() throws Exception {
+        Order order = newOrder();
+        String paymentId = pay(order);
+        YOOKASSA.succeed(paymentId);
+        webhook("payment.succeeded", paymentId);
+        assertThat(receipts(paymentId)).isEmpty();
+
+        orders.changeStatus(order.getId(), OrderStatus.SHIPPED);
+        orders.changeStatus(order.getId(), OrderStatus.DONE);
+        await().atMost(Duration.ofSeconds(5)).until(() -> !receipts(paymentId).isEmpty());
+
+        var receipt = receipts(paymentId);
+        assertThat(receipt).hasSize(1);
+        assertThat(receipt.getFirst().body()).containsEntry("type", "payment").containsEntry("send", true)
+                .containsEntry("settlements", List.of(Map.of("type", "prepayment",
+                        "amount", Map.of("value", order.getTotal() + ".00", "currency", "RUB"))));
+        @SuppressWarnings("unchecked")
+        var item = ((List<Map<String, Object>>) receipt.getFirst().body().get("items")).getFirst();
+        assertThat(item).containsEntry("payment_mode", "full_payment").containsEntry("vat_code", 11);
     }
 
     @Test
@@ -214,7 +249,8 @@ class OnlinePaymentTest {
     @Test
     void settingsPageChecksKeysAndSendsTestMail() throws Exception {
         String page = get("/admin/settings", ADMIN).body();
-        assertThat(page).contains("подключена, shopId " + FakeYooKassa.SHOP_ID, "http://localhost:8080/api/payments/yookassa", "Отправить тестовое письмо");
+        assertThat(page).contains("подключена, shopId " + FakeYooKassa.SHOP_ID, "http://localhost:8080/api/payments/yookassa", "Отправить тестовое письмо",
+                "отправляет ЮKassa, код НДС 11");
 
         post("/admin/settings/yookassa", "/admin/settings", ADMIN);
         assertThat(get("/admin/settings", ADMIN).body()).contains("Ключи работают: магазин " + FakeYooKassa.SHOP_ID + ", тестовый");
@@ -260,6 +296,10 @@ class OnlinePaymentTest {
         YOOKASSA.calls("POST", "/refunds").stream().filter(c -> paymentId.equals(c.body().get("payment_id")))
                 .forEach(c -> byKey.putIfAbsent(c.idempotenceKey(), c));
         return List.copyOf(byKey.values());
+    }
+
+    private static List<FakeYooKassa.Call> receipts(String paymentId) {
+        return YOOKASSA.calls("POST", "/receipts").stream().filter(c -> paymentId.equals(c.body().get("payment_id"))).toList();
     }
 
     @SuppressWarnings("unchecked")

@@ -107,6 +107,8 @@ public class FakeYooKassa {
             var payment = payments.get((String) body.get("payment_id"));
             payment.put("refunded_amount", body.get("amount"));
             reply(ex, 200, Map.of("id", UUID.randomUUID().toString(), "status", "succeeded", "amount", body.get("amount")));
+        } else if (ex.getRequestMethod().equals("POST") && path.equals("/receipts")) {
+            reply(ex, 200, Map.of("id", UUID.randomUUID().toString(), "type", "payment", "status", "pending"));
         } else if (ex.getRequestMethod().equals("GET") && path.equals("/me")) {
             reply(ex, 200, Map.of("account_id", SHOP_ID, "test", true, "status", "enabled"));
         } else {
