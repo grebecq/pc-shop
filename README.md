@@ -88,9 +88,8 @@ docker compose up -d --build
 
 Нужны JDK 21 и запущенный Docker Desktop.
 
-1. В IDEA: Run → Edit Configurations → `PcShopApplication` → **Environment variables**:
-   `ADMIN_PASSWORD=любой-пароль-от-8-символов`.
-2. Запустите `PcShopApplication` (или `./gradlew bootRun` с той же переменной).
+1. Скопируйте `.env.example` в `.env` и впишите `ADMIN_PASSWORD` (от 8 символов).
+2. Запустите `PcShopApplication` в IDEA или `./gradlew bootRun`. Приложение само прочитает `.env` из папки проекта.
 
 Базу поднимать руками не нужно: при запуске Spring Boot сам стартует сервисы `db` и `mailpit` из `docker-compose.yml`
 (модуль `spring-boot-docker-compose`) и подключается к ним. База слушает `localhost:5433`, чтобы не мешать
@@ -101,7 +100,8 @@ PostgreSQL, установленному на компьютер, и продо�
 
 Схему и каталог (около 110 актуальных товаров с фото и ценами на октябрь 2026) создаёт Flyway при первом запуске (`src/main/resources/db/migration`).
 
-Остальные переменные те же, что в `.env.example`: токен бота и т.п. добавляются туда же, через `;`.
+Остальные настройки (токен бота, почта, ЮKassa) тоже вписываются в `.env`, после правки приложение нужно перезапустить.
+Переменные окружения, если они заданы, важнее `.env`.
 
 Тесты (нужен запущенный Docker):
 
