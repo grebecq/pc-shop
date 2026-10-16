@@ -16,6 +16,7 @@ import dev.pcshop.service.CompatibilityService;
 import dev.pcshop.service.DeliveryService;
 import dev.pcshop.service.OrderService;
 import dev.pcshop.service.PromoService;
+import dev.pcshop.service.StoreInfoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.Invocation;
@@ -52,6 +53,7 @@ class ShopBotTest {
     @Autowired CompatibilityService compatibility;
     @Autowired DeliveryService delivery;
     @Autowired PromoService promos;
+    @Autowired StoreInfoService store;
 
     TelegramClient telegram;
     ShopBot bot;
@@ -62,7 +64,7 @@ class ShopBotTest {
         telegram = mock(TelegramClient.class);
         var props = new ShopProperties("http://localhost:8080", null, new ShopProperties.Telegram("test", null, null, null),
                 new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa(null, null, "https://api.yookassa.ru/v3"));
-        bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, delivery, promos, props, Duration.ofMinutes(30));
+        bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, delivery, promos, props, store, Duration.ofMinutes(30));
         cart.clear(CHAT);
     }
 
@@ -71,7 +73,7 @@ class ShopBotTest {
         long ram = catalog.product("kingston-fury-beast-16-gb-2x8-ddr5-5600-cl40").getId();
 
         text("/start");
-        assertThat(lastText()).contains("магазин комплектующих");
+        assertThat(lastText()).contains("Это <b>Сборка</b>, магазин комплектующих");
 
         callback("c:ram:0");
         assertThat(lastText()).contains("Оперативная память");
@@ -149,7 +151,7 @@ class ShopBotTest {
     void withYookassaBotSendsBuyerToSiteAndDemoButtonIsOff() throws Exception {
         var props = new ShopProperties("https://shop.example.ru", null, new ShopProperties.Telegram("test", null, null, null),
                 new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa("123456", "test_key", "https://api.yookassa.ru/v3"));
-        bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, delivery, promos, props, Duration.ofMinutes(30));
+        bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, delivery, promos, props, store, Duration.ofMinutes(30));
         callback("a:" + catalog.product("deepcool-cc560-v2-black").getId());
         callback("co");
         text("Иван");

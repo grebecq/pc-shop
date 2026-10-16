@@ -24,6 +24,7 @@ public class OrderMailService {
     private final MailService mail;
     private final OrderService orders;
     private final ShopProperties props;
+    private final StoreInfoService store;
     @Value("${shop.orders.payment-timeout:30m}")
     private final Duration paymentTimeout;
 
@@ -112,7 +113,7 @@ public class OrderMailService {
     }
 
     private void send(Order order, String subject, StringBuilder text) {
-        text.append("\nМагазин «Сборка»");
+        text.append("\nМагазин «").append(store.get().getName()).append('»');
         try {
             mail.send(order.getEmail(), subject, text.toString());
         } catch (MailDeliveryException e) {

@@ -8,7 +8,21 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import java.util.Locale;
+
 public record StoreInfoRequest(
+
+        @NotBlank(message = "Укажите название магазина")
+        @Size(max = 64, message = "Название — не длиннее 64 символов")
+        String name,
+
+        @NotBlank(message = "Коротко опишите, чем торгуете")
+        @Size(max = 128, message = "Не длиннее 128 символов")
+        String tagline,
+
+        @NotBlank(message = "Выберите цвет")
+        @Pattern(regexp = "^$|^#[0-9a-f]{6}$", message = "Цвет — в виде #2b50d9")
+        String accent,
 
         @NotBlank(message = "Укажите телефон")
         @Pattern(regexp = "^$|^[+\\d][\\d\\s()-]{5,30}$", message = "Проверьте номер телефона")
@@ -36,6 +50,9 @@ public record StoreInfoRequest(
         String legalAddress) {
 
     public StoreInfoRequest {
+        name = Strings.strip(name);
+        tagline = Strings.strip(tagline);
+        accent = accent == null ? null : accent.strip().toLowerCase(Locale.ROOT);
         phone = Strings.strip(phone);
         email = Strings.strip(email);
         hours = Strings.strip(hours);
@@ -46,8 +63,8 @@ public record StoreInfoRequest(
     }
 
     public static StoreInfoRequest of(StoreInfo store) {
-        return new StoreInfoRequest(store.getPhone(), store.getEmail(), store.getHours(), store.getLegalName(),
-                store.getInn(), store.getOgrn(), store.getLegalAddress());
+        return new StoreInfoRequest(store.getName(), store.getTagline(), store.getAccent(), store.getPhone(), store.getEmail(),
+                store.getHours(), store.getLegalName(), store.getInn(), store.getOgrn(), store.getLegalAddress());
     }
 
     @AssertTrue(message = "Укажите и продавца, и его ИНН")

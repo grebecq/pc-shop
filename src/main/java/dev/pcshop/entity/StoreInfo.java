@@ -28,6 +28,18 @@ public class StoreInfo {
     private Short id;
 
     @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false)
+    private String tagline;
+
+    @Column(nullable = false)
+    private String accent;
+
+    @Column(name = "logo_version")
+    private Long logoVersion;
+
+    @Column(nullable = false)
     private String phone;
 
     @Column(nullable = false)
@@ -51,6 +63,9 @@ public class StoreInfo {
     private Instant updatedAt;
 
     public void apply(StoreInfoRequest form) {
+        this.name = form.name();
+        this.tagline = form.tagline();
+        this.accent = form.accent();
         this.phone = form.phone();
         this.email = form.email();
         this.hours = form.hours();
@@ -58,6 +73,20 @@ public class StoreInfo {
         this.inn = Strings.blankToNull(form.inn());
         this.ogrn = Strings.blankToNull(form.ogrn());
         this.legalAddress = Strings.blankToNull(form.legalAddress());
+    }
+
+    public void logoChanged(Long version) {
+        this.logoVersion = version;
+    }
+
+    public String logoUrl() {
+        return logoVersion == null ? null : "/media/logo?v=" + logoVersion;
+    }
+
+    public String accentInk() {
+        int rgb = Integer.parseInt(accent.substring(1), 16);
+        double luma = 0.299 * (rgb >> 16) + 0.587 * (rgb >> 8 & 0xFF) + 0.114 * (rgb & 0xFF);
+        return luma > 160 ? "#17191c" : "#ffffff";
     }
 
     public boolean hasSeller() {

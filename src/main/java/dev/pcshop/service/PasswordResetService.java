@@ -3,6 +3,7 @@ package dev.pcshop.service;
 import dev.pcshop.config.ShopProperties;
 import dev.pcshop.entity.Account;
 import dev.pcshop.entity.PasswordResetToken;
+import dev.pcshop.entity.StoreInfo;
 import dev.pcshop.exception.BadRequestException;
 import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.repository.AccountRepository;
@@ -25,13 +26,13 @@ public class PasswordResetService {
     private static final Duration LINK_TTL = Duration.ofMinutes(30);
 
     private static final Duration RESEND_PAUSE = Duration.ofMinutes(1);
-    private static final String SUBJECT = "Смена пароля в магазине «Сборка»";
 
     private final AccountRepository accounts;
     private final PasswordResetTokenRepository tokens;
     private final PasswordEncoder encoder;
     private final MailService mail;
     private final ShopProperties props;
+    private final StoreInfoService store;
 
     @Transactional
     public void sendLinkByEmail(String email) {
@@ -70,7 +71,8 @@ public class PasswordResetService {
         String token = Tokens.newToken();
         tokens.save(new PasswordResetToken(account.getId(), Tokens.sha256(token), Instant.now().plus(LINK_TTL)));
 
-        mail.send(account.getEmail(), SUBJECT, letter(account.getName(), link(token)));
+        StoreInfo shop = store.get();
+        mail.send(account.getEmail(), "Смена пароля в магазине «" + shop.getName() + "»", letter(shop, account.getName(), link(token)));
     }
 
     private String link(String token) {
@@ -80,18 +82,18 @@ public class PasswordResetService {
                 .toUriString();
     }
 
-    private static String letter(String name, String link) {
+    private static String letter(StoreInfo shop, String name, String link) {
         return """
                 Здравствуйте, %s!
 
-                Вы попросили сменить пароль в магазине «Сборка». Чтобы задать новый пароль, откройте ссылку:
+                Вы попросили сменить пароль в магазине «%s». Чтобы задать новый пароль, откройте ссылку:
                 %s
 
                 Ссылка действует %d минут и сработает только один раз.
 
                 Если вы не запрашивали смену пароля, просто проигнорируйте письмо: пароль останется прежним.
 
-                «Сборка» — комплектующие и сборка ПК
-                """.formatted(name, link, LINK_TTL.toMinutes());
+                «%s» — %s
+                """.formatted(name, shop.getName(), link, LINK_TTL.toMinutes(), shop.getName(), shop.getTagline());
     }
 }

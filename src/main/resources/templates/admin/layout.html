@@ -11,9 +11,9 @@
     <link rel="stylesheet" th:href="@{/css/shop.css}">
     <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
 </head>
-<header th:fragment="nav" class="header header--admin">
+<header th:fragment="nav" class="header header--admin" th:with="store=${store} ?: ${@storeInfoService.get()}">
     <div class="wrap header__inner">
-        <a class="logo" th:href="@{/admin}"><span class="logo__mark"></span>Сборка · админка</a>
+        <a class="logo" th:href="@{/admin}"><span class="logo__mark"></span><span th:text="${store.name} + ' · админка'">Сборка · админка</span></a>
         <nav class="header__nav">
             <a th:href="@{/admin/orders}">Заказы</a>
             <a th:href="@{/admin/products}">Товары</a>

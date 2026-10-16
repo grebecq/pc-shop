@@ -17,6 +17,7 @@ import dev.pcshop.service.ReviewService;
 import dev.pcshop.service.OrderService;
 import dev.pcshop.service.PaymentService;
 import dev.pcshop.service.StockAlertService;
+import dev.pcshop.service.StoreInfoService;
 import dev.pcshop.util.Attributes;
 import dev.pcshop.util.CatalogQueries;
 import dev.pcshop.util.Formats;
@@ -49,6 +50,7 @@ public class ShopController {
     private final StockAlertService stockAlerts;
     private final PaymentService payments;
     private final ShopProperties props;
+    private final StoreInfoService store;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -77,7 +79,7 @@ public class ShopController {
         model.addAttribute("selected", query.filters());
         model.addAttribute("sort", params.getFirst("sort") == null ? "popular" : params.getFirst("sort"));
         model.addAttribute("pageLinks", pageLinks(slug, params, page.getTotalPages()));
-        model.addAttribute("pageDescription", category.getName() + " в магазине «Сборка»: цены, характеристики и наличие, "
+        model.addAttribute("pageDescription", category.getName() + " в магазине «" + store.get().getName() + "»: цены, характеристики и наличие, "
                 + "подбор по фильтрам и проверка совместимости. Доставка и самовывоз.");
         return "shop/category";
     }

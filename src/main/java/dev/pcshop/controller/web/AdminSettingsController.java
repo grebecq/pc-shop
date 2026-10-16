@@ -2,6 +2,7 @@ package dev.pcshop.controller.web;
 
 import dev.pcshop.config.ShopProperties;
 import dev.pcshop.dto.request.StoreInfoRequest;
+import dev.pcshop.exception.BadRequestException;
 import dev.pcshop.exception.MailDeliveryException;
 import dev.pcshop.service.MailService;
 import dev.pcshop.service.PaymentService;
@@ -20,7 +21,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.io.IOException;
 
 @PreAuthorize("hasRole('ADMIN')")
 @Controller
@@ -52,7 +56,29 @@ public class AdminSettingsController {
             return page(model);
         }
         store.update(form);
-        flash.addFlashAttribute("message", "Контакты и реквизиты сохранены, на сайте они уже обновились");
+        flash.addFlashAttribute("message", "Настройки магазина сохранены, на сайте они уже обновились");
+        return "redirect:/admin/settings";
+    }
+
+    @PostMapping("/logo")
+    public String uploadLogo(@RequestParam("logo") MultipartFile file, RedirectAttributes flash) {
+        if (file.isEmpty()) {
+            flash.addFlashAttribute("error", "Выберите файл с логотипом");
+            return "redirect:/admin/settings";
+        }
+        try {
+            store.saveLogo(file.getBytes());
+            flash.addFlashAttribute("message", "Логотип обновлён");
+        } catch (BadRequestException | IOException e) {
+            flash.addFlashAttribute("error", "Логотип не загрузился: " + e.getMessage());
+        }
+        return "redirect:/admin/settings";
+    }
+
+    @PostMapping("/logo/delete")
+    public String deleteLogo(RedirectAttributes flash) {
+        store.deleteLogo();
+        flash.addFlashAttribute("message", "Логотип убран, вместо него снова значок");
         return "redirect:/admin/settings";
     }
 

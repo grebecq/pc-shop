@@ -5,12 +5,29 @@
 <header th:replace="~{admin/layout :: nav}"></header>
 <main class="wrap narrow settings">
     <h1>Настройки</h1>
-    <p class="muted">Контакты и реквизиты магазина меняются прямо здесь. Ключи и пароли задаются в файле .env на сервере,
+    <p class="muted">Название, логотип, цвет, контакты и реквизиты магазина меняются прямо здесь. Ключи и пароли задаются в файле .env на сервере,
         после их изменения приложение нужно перезапустить. Здесь видно, что подключено, и можно проверить, что всё работает.</p>
     <div th:replace="~{admin/layout :: flash}"></div>
 
     <form class="panel settings__block form-grid" method="post" th:action="@{/admin/settings/store}" th:object="${storeForm}" novalidate>
         <h2 class="h3">Магазин</h2>
+        <div class="field-row">
+            <div class="field">
+                <label for="name">Название</label>
+                <input id="name" th:field="*{name}" maxlength="64" placeholder="Сборка">
+                <p class="form-error" th:errors="*{name}"></p>
+            </div>
+            <div class="field">
+                <label for="accent">Фирменный цвет <span class="muted">— кнопки и ссылки</span></label>
+                <input id="accent" th:field="*{accent}" type="color" class="color-input">
+                <p class="form-error" th:errors="*{accent}"></p>
+            </div>
+        </div>
+        <div class="field">
+            <label for="tagline">Чем торгуете <span class="muted">— в подвале сайта и в подписи писем</span></label>
+            <input id="tagline" th:field="*{tagline}" maxlength="128" placeholder="комплектующие и сборка ПК">
+            <p class="form-error" th:errors="*{tagline}"></p>
+        </div>
         <p class="muted">Контакты видны в подвале сайта и на странице «Контакты», реквизиты — в подвале и в оферте.
             По закону покупатель должен видеть, кто продавец, поэтому заполните их до запуска.</p>
         <div class="field-row">
@@ -57,6 +74,23 @@
             обработки данных</a> — типовой. Перед запуском покажите его юристу.</p>
         <div><button class="btn" type="submit">Сохранить</button></div>
     </form>
+
+    <section class="panel settings__block">
+        <h2 class="h3">Логотип</h2>
+        <div class="photo-edit">
+            <img th:if="${store.logoUrl() != null}" th:src="${store.logoUrl()}" alt="" class="photo-edit__img">
+            <form class="field" method="post" enctype="multipart/form-data" th:action="@{/admin/settings/logo}">
+                <label for="logo" th:text="${store.logoUrl() != null} ? 'Заменить логотип' : 'Загрузить логотип'">Логотип</label>
+                <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp" required>
+                <p class="muted">PNG, JPEG или WebP до 1 МБ, лучше квадратный или вытянутый по ширине. Он заменит значок
+                    в шапке сайта и иконку вкладки браузера.</p>
+                <div><button class="btn btn--ghost" type="submit">Загрузить</button></div>
+            </form>
+        </div>
+        <form th:if="${store.logoUrl() != null}" method="post" th:action="@{/admin/settings/logo/delete}">
+            <button class="btn btn--ghost" type="submit">Убрать логотип</button>
+        </form>
+    </section>
 
     <section class="panel settings__block">
         <h2 class="h3">Оплата</h2>
