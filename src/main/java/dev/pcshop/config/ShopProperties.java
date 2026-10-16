@@ -1,6 +1,7 @@
 package dev.pcshop.config;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -26,7 +27,19 @@ public record ShopProperties(
 
         @NotNull
         @Valid
-        Delivery delivery) {
+        Delivery delivery,
+
+        @NotNull
+        @Valid
+        Yookassa yookassa) {
+
+    /**
+     * Тестовая оплата без денег (форма карты на сайте, кнопка в боте) работает, только пока не подключена настоящая:
+     * иначе ею можно было бы «оплатить» любой заказ бесплатно.
+     */
+    public boolean demoPayments() {
+        return !yookassa.enabled() && !telegram.realPayments();
+    }
 
     public record Admin(
 
@@ -49,6 +62,28 @@ public record ShopProperties(
             @NotNull(message = "Задайте shop.delivery.free-from")
             @PositiveOrZero(message = "shop.delivery.free-from — не меньше 0")
             Integer freeFrom) {
+    }
+
+    /**
+     * ЮKassa: shopId и секретный ключ из личного кабинета (Интеграция → Ключи API).
+     * Оба пустые — на сайте тестовая форма оплаты без денег.
+     */
+    public record Yookassa(String shopId, String secretKey,
+                           @NotBlank(message = "Задайте shop.yookassa.api-url") String apiUrl) {
+
+        public boolean enabled() {
+            return !blank(shopId) && !blank(secretKey);
+        }
+
+        // Один ключ без другого — почти наверняка опечатка в .env: лучше не запуститься, чем молча остаться на тестовой оплате
+        @AssertTrue(message = "Задайте оба ключа ЮKassa: YOOKASSA_SHOP_ID и YOOKASSA_SECRET_KEY")
+        public boolean isComplete() {
+            return blank(shopId) == blank(secretKey);
+        }
+
+        private static boolean blank(String s) {
+            return s == null || s.isBlank();
+        }
     }
 
     public record Telegram(String botToken, String botUsername, Long adminChatId, String paymentToken) {

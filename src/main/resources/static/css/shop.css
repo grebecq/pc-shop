@@ -177,6 +177,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .cell-input { width: 110px; padding: 6px 8px; }
 .cell-input--short { width: 80px; }
 .inline-form { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.settings__block { margin-top: 16px; display: grid; gap: 12px; }
+.settings__block .h3 { margin: 0; }
+.settings__block p, .settings__block .details, .settings__block form { margin: 0; }
+.settings__block code { font-size: 13px; overflow-wrap: anywhere; }
+.settings__block input { flex: 1 1 220px; min-width: 0; }
 
 .footer { border-top: 1px solid var(--line); padding-block: 24px 36px; color: var(--muted); font-size: 14px; }
 .footer__inner { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }

@@ -24,7 +24,8 @@ services:
       # Пароль админки Render сгенерирует сам: Dashboard → pc-shop → Environment
       - key: ADMIN_PASSWORD
         generateValue: true
-      # Токены бота можно добавить там же позже: BOT_TOKEN, BOT_USERNAME, ADMIN_CHAT_ID
+      # Токены бота и ключи ЮKassa можно добавить там же позже: BOT_TOKEN, BOT_USERNAME, ADMIN_CHAT_ID,
+      # YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY
 
 databases:
   - name: pc-shop-db

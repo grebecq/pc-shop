@@ -1,5 +1,6 @@
 package dev.pcshop.service;
 
+import dev.pcshop.config.ShopProperties;
 import dev.pcshop.dto.request.CardPaymentRequest;
 import dev.pcshop.exception.BadRequestException;
 import org.junit.jupiter.api.Test;
@@ -7,10 +8,10 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Имитация банка: платёжная система по номеру и отказ по тестовой карте. */
+/** Имитация банка: платёжная система по номеру, отказ по тестовой карте, выключение при настоящей оплате. */
 class DemoPaymentGatewayTest {
 
-    private final DemoPaymentGateway gateway = new DemoPaymentGateway();
+    private final DemoPaymentGateway gateway = new DemoPaymentGateway(props(null, null));
 
     @Test
     void brandByFirstDigits() {
@@ -36,5 +37,18 @@ class DemoPaymentGatewayTest {
         assertThatThrownBy(() -> gateway.charge(new CardPaymentRequest("4000 0000 0000 0002", "12/40", "123", ""), 1000))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Банк отклонил платёж: недостаточно средств");
+    }
+
+    @Test
+    void offWhenRealPaymentsConfigured() {
+        var withYookassa = new DemoPaymentGateway(props("123456", "test_key"));
+        assertThatThrownBy(() -> withYookassa.charge(new CardPaymentRequest("4242 4242 4242 4242", "12/40", "123", ""), 1000))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Тестовая оплата выключена");
+    }
+
+    private static ShopProperties props(String shopId, String secretKey) {
+        return new ShopProperties("http://localhost:8080", null, new ShopProperties.Telegram(null, null, null, null),
+                new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa(shopId, secretKey, "https://api.yookassa.ru/v3"));
     }
 }

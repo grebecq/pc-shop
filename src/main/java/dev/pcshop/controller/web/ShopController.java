@@ -14,6 +14,7 @@ import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.DeliveryService;
 import dev.pcshop.service.ReviewService;
 import dev.pcshop.service.OrderService;
+import dev.pcshop.service.PaymentService;
 import dev.pcshop.service.StockAlertService;
 import dev.pcshop.util.Attributes;
 import dev.pcshop.util.CatalogQueries;
@@ -46,6 +47,7 @@ public class ShopController {
     private final DeliveryService delivery;
     private final ReviewService reviews;
     private final StockAlertService stockAlerts;
+    private final PaymentService payments;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -141,7 +143,8 @@ public class ShopController {
 
     @GetMapping("/order/{publicId}")
     public String order(@PathVariable UUID publicId, @AuthenticationPrincipal ShopUser user, Model model) {
-        var order = orders.byPublicId(publicId);
+        // Покупатель мог вернуться со страницы ЮKassa раньше, чем пришло уведомление об оплате
+        var order = payments.refresh(orders.byPublicId(publicId));
         model.addAttribute("order", order);
         // Кнопку отмены показываем тому, кто может отменить: см. OrderService.cancelByCustomer
         model.addAttribute("canCancel", order.cancellableByCustomer()

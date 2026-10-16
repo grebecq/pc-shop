@@ -30,7 +30,7 @@ public class MailService {
         } catch (MailException e) {
             // Только причина, без адреса и текста: в письмах бывают ссылки, по которым можно сменить пароль
             log.warn("Не удалось отправить письмо. Тема: {}. Причина: {}", subject, e.getMessage());
-            throw new MailDeliveryException("Не удалось отправить письмо, попробуйте позже");
+            throw new MailDeliveryException("Не удалось отправить письмо, попробуйте позже", e);
         }
     }
 }

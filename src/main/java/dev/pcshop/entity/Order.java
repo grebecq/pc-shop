@@ -109,9 +109,17 @@ public class Order {
     @Column(name = "paid_at")
     private Instant paidAt;
 
-    /** Чем оплачен на сайте: платёжная система и последние 4 цифры («Visa •• 4242»). Номер целиком не храним. */
+    /** Чем оплачен на сайте: «Visa •• 4242», «СБП», «SberPay». Номер карты целиком не храним. */
     @Column(name = "payment_card")
     private String paymentCard;
+
+    /** Последний платёж в ЮKassa: им заказ оплачен или по нему покупатель сейчас платит. */
+    @Column(name = "payment_id")
+    private String paymentId;
+
+    /** Когда вернули деньги за отменённый заказ, оплаченный через ЮKassa. */
+    @Column(name = "refunded_at")
+    private Instant refundedAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id")
@@ -175,14 +183,51 @@ public class Order {
         return true;
     }
 
-    /** Оплата картой на сайте: то же, что markPaid, плюс запоминаем карту для страницы заказа. */
+    /** Тестовая оплата картой на сайте: то же, что markPaid, плюс запоминаем карту для страницы заказа. */
     public boolean markPaidByCard(String cardBrand, String cardLast4) {
+        // «Visa •• 4242», а у неизвестной платёжной системы просто «•• 4242»
+        return markPaidWith((cardBrand == null ? "" : cardBrand + " ") + "•• " + cardLast4);
+    }
+
+    /** Покупатель перешёл к оплате в ЮKassa. Прошлый платёж, если был, он так и не оплатил. */
+    public void attachPayment(String paymentId) {
+        this.paymentId = paymentId;
+    }
+
+    /** Оплата через ЮKassa этим платежом. */
+    public boolean markPaidOnline(String paymentId, String method) {
+        if (!markPaidWith(method)) {
+            return false;
+        }
+        this.paymentId = paymentId;
+        return true;
+    }
+
+    private boolean markPaidWith(String method) {
         if (!markPaid()) {
             return false;
         }
-        // «Visa •• 4242», а у неизвестной платёжной системы просто «•• 4242»
-        paymentCard = (cardBrand == null ? "" : cardBrand + " ") + "•• " + cardLast4;
+        paymentCard = method;
         return true;
+    }
+
+    /**
+     * Деньги пришли через ЮKassa. Способ оплаты записывает только markPaidOnline, поэтому заказ,
+     * отмеченный оплаченным в админке, сюда не попадает, даже если покупатель начинал платить онлайн.
+     */
+    public boolean paidOnline() {
+        return paidAt != null && paymentId != null && paymentCard != null;
+    }
+
+    /** Заказ отменили после онлайн-оплаты, а деньги ещё не вернули. */
+    public boolean awaitingRefund() {
+        return status == OrderStatus.CANCELLED && paidOnline() && refundedAt == null;
+    }
+
+    public void markRefunded() {
+        if (refundedAt == null) {
+            refundedAt = Instant.now();
+        }
     }
 
     public void changeStatus(OrderStatus next) {

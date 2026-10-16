@@ -35,8 +35,17 @@
         <div><dt>Получение</dt><dd th:text="${order.deliveryMethod.label()}">Курьер</dd></div>
         <div><dt th:text="${order.deliveryMethod.name() == 'PICKUP'} ? 'Магазин' : 'Адрес'">Адрес</dt><dd th:text="${order.address}">Адрес</dd></div>
         <div th:if="${order.comment}"><dt>Комментарий</dt><dd th:text="${order.comment}">Комментарий</dd></div>
-        <div th:if="${order.paymentCard}"><dt>Оплата</dt><dd th:text="${order.paymentCard} + ' · тестовая оплата на сайте'">Visa •• 4242</dd></div>
+        <div th:if="${order.paymentCard}"><dt>Оплата</dt>
+            <dd th:text="${order.paymentCard} + (${order.paidOnline()} ? ' · ЮKassa, платёж ' + ${order.paymentId} : ' · тестовая оплата на сайте')">Visa •• 4242</dd></div>
+        <div th:if="${order.refundedAt}"><dt>Возврат</dt><dd th:text="'Деньги возвращены ' + ${@fmt.date(order.refundedAt)}">Деньги возвращены</dd></div>
     </dl>
+
+    <!--/* Возврат делается сам сразу после отмены. Кнопка — на случай, если ЮKassa тогда не ответила */-->
+    <form class="panel inline-form" method="post" th:action="@{/admin/orders/{id}/refund(id=${order.id})}" th:if="${order.awaitingRefund()}">
+        <p class="notice notice--error">Заказ отменён после оплаты, а деньги покупателю ещё не вернулись.
+            Если надпись не пропала после обновления страницы, верните их кнопкой.</p>
+        <button class="btn" type="submit">Вернуть деньги</button>
+    </form>
 
     <form class="panel inline-form" method="post" th:action="@{/admin/orders/{id}/status(id=${order.id})}" th:unless="${order.status.isFinal()}">
         <label for="status">Новый статус</label>

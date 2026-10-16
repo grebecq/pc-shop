@@ -58,7 +58,7 @@ class CardPaymentTest {
         String row = jdbc.sql("SELECT o::text FROM customer_order o WHERE o.id = ?").param(order.getId()).query(String.class).single();
         assertThat(row).contains("Visa •• 4242").doesNotContain("4242424242424242");
 
-        assertThat(get("/order/" + order.getPublicId() + "?paid").body()).contains("Оплата прошла", "Оплачено картой Visa •• 4242");
+        assertThat(get("/order/" + order.getPublicId() + "?paid").body()).contains("Оплата прошла", "Оплачено: Visa •• 4242");
         // Оплаченный заказ на страницу оплаты больше не пускает
         assertThat(get("/pay/" + order.getPublicId()).statusCode()).isEqualTo(302);
     }

@@ -6,6 +6,8 @@
 
 <main class="wrap narrow">
     <p class="notice" th:if="${param.paid != null and order.paidAt != null}">Оплата прошла. Спасибо за заказ!</p>
+    <p class="notice" th:if="${param.paid != null and order.paymentId != null and order.status.name() == 'AWAITING_PAYMENT'}">
+        Оплата ещё не подтверждена. Если вы уже заплатили, обновите страницу через минуту.</p>
     <div th:replace="~{fragments :: flash}"></div>
     <div class="catalog-head">
         <h1 th:text="'Заказ ' + ${order.number()}">Заказ №1001</h1>
@@ -31,7 +33,7 @@
         <div><dt>Доставка</dt><dd th:text="${order.deliveryPrice == 0} ? 'бесплатно' : ${@fmt.rub(order.deliveryPrice)}">0 ₽</dd></div>
         <div class="cart-sum__total"><dt>Итого</dt><dd th:text="${@fmt.rub(order.total)}">0 ₽</dd></div>
     </dl>
-    <p class="muted paid-card" th:if="${order.paymentCard}" th:text="'Оплачено картой ' + ${order.paymentCard}">Оплачено картой Visa •• 4242</p>
+    <p class="muted paid-card" th:if="${order.paymentCard}" th:text="'Оплачено: ' + ${order.paymentCard}">Оплачено: Visa •• 4242</p>
 
     <dl class="details">
         <div><dt>Получатель</dt><dd th:text="${order.customerName} + ', ' + ${order.phone}">Имя</dd></div>
@@ -41,7 +43,7 @@
     </dl>
 
     <p class="muted" th:if="${order.status.name() == 'CANCELLED'}">
-        Заказ отменён, товар вернулся на склад.<th:block th:if="${order.paidAt != null}"> Деньги вернутся на карту в течение нескольких дней.</th:block>
+        Заказ отменён, товар вернулся на склад.<th:block th:if="${order.paidAt != null or order.refundedAt != null}"> Деньги вернутся на карту или счёт в течение нескольких дней.</th:block>
         Его можно оформить заново.</p>
     <div class="order-actions">
         <a th:if="${order.status.name() == 'AWAITING_PAYMENT'}" class="btn" th:href="@{/pay/{id}(id=${order.publicId})}">Перейти к оплате</a>

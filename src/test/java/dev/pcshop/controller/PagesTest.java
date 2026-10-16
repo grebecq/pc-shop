@@ -64,7 +64,7 @@ class PagesTest {
         assertThat(paid.statusCode()).isEqualTo(302);
 
         assertThat(get("/order/" + order.getPublicId(), null).body())
-                .contains("Оплачен", "Kingston NV3", "Оплачено картой Visa •• 4242");
+                .contains("Оплачен", "Kingston NV3", "Оплачено: Visa •• 4242");
         assertThat(get("/admin/orders/" + order.getId(), ADMIN).body()).contains("Visa •• 4242");
     }
 
