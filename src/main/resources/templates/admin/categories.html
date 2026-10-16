@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head('Категории')}"></head>
+<body>
+<header th:replace="~{admin/layout :: nav}"></header>
+<main class="wrap narrow">
+    <div class="catalog-head">
+        <h1>Категории</h1>
+        <a class="btn btn--small admin-head__action" th:href="@{/admin/categories/new}">Добавить категорию</a>
+    </div>
+    <div th:replace="~{admin/layout :: flash}"></div>
+    <p class="muted admin-lead">Порядок категорий — как в меню сайта. У каждой категории свой набор характеристик:
+        они появляются в форме товара, в его карточке на сайте и, если отмечено, в фильтре каталога.</p>
+    <div class="table-scroll">
+        <table class="cart-table">
+            <thead><tr><th>Категория</th><th>Характеристики</th><th class="num">Товаров</th></tr></thead>
+            <tbody>
+            <tr th:each="c : ${categories}">
+                <td><a th:href="@{/admin/categories/{id}(id=${c.id})}" th:text="${c.name}">Категория</a></td>
+                <td class="muted" th:text="${c.specs.isEmpty()} ? 'нет' : ${#strings.listJoin(c.specs.![label()], ', ')}">Сокет, Ядер</td>
+                <td class="num"><a th:href="@{/admin/products(category=${c.id})}" th:text="${counts.getOrDefault(c.id, 0L)}">0</a></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

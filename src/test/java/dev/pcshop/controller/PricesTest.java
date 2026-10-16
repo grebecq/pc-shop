@@ -1,10 +1,10 @@
 package dev.pcshop.controller;
 
+import dev.pcshop.AdminForms;
 import dev.pcshop.TestMailbox;
 import dev.pcshop.TestcontainersConfig;
 import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.dto.request.OrderLineRequest;
-import dev.pcshop.dto.request.ProductUpdateRequest;
 import dev.pcshop.entity.Product;
 import dev.pcshop.enums.Channel;
 import dev.pcshop.enums.OrderStatus;
@@ -13,6 +13,7 @@ import dev.pcshop.repository.ProductRepository;
 import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.OrderService;
 import dev.pcshop.service.StockAlertService;
+import dev.pcshop.service.StockService;
 import dev.pcshop.util.Formats;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +50,7 @@ class PricesTest {
     @Autowired ProductRepository products;
     @Autowired AccountRepository accounts;
     @Autowired StockAlertService stockAlerts;
+    @Autowired StockService stock;
     @Autowired TestMailbox mailbox;
 
     /** Отдельный «браузер» со своими cookie. */
@@ -113,18 +115,17 @@ class PricesTest {
         // Админка: цена до скидки должна быть больше новой, пустое поле убирает скидку
         Product cooler = catalog.product("arctic-freezer-36-a-rgb-white");
         String url = "/admin/products/" + cooler.getId();
-        String stock = String.valueOf(cooler.getStock());
-        b.post(url, "/admin/products", ADMIN, "price", "4190", "oldPrice", "3990", "stock", stock, "active", "true");
-        assertThat(b.get("/admin/products", ADMIN).body()).contains("Цена до скидки должна быть больше новой цены");
+        var invalid = b.post(url, url, ADMIN, AdminForms.product(cooler, "price", "4190", "oldPrice", "3990"));
+        assertThat(invalid.body()).contains("Цена до скидки должна быть больше новой цены");
         assertThat(catalog.product(cooler.getSlug()).onSale()).isFalse();
 
-        b.post(url, "/admin/products", ADMIN, "price", "3990", "oldPrice", "4790", "stock", stock, "active", "true");
+        b.post(url, url, ADMIN, AdminForms.product(cooler, "price", "3990", "oldPrice", "4790"));
         var discounted = catalog.product(cooler.getSlug());
         assertThat(discounted.getPrice()).isEqualTo(3990);
         assertThat(discounted.getOldPrice()).isEqualTo(4790);
         assertThat(b.get("/sale").body()).contains(cooler.getName());
 
-        b.post(url, "/admin/products", ADMIN, "price", "4190", "oldPrice", "", "stock", stock, "active", "true");
+        b.post(url, url, ADMIN, AdminForms.product(cooler, "price", "4190", "oldPrice", ""));
         assertThat(catalog.product(cooler.getSlug()).getOldPrice()).isNull();
     }
 
@@ -176,7 +177,7 @@ class PricesTest {
     void stockAlertLettersWhenProductIsBack() throws Exception {
         var gpu = catalog.product("msi-geforce-rtx-5080-gaming-trio-oc-16-gb");
         String page = "/p/" + gpu.getSlug();
-        catalog.updateProduct(gpu.getId(), new ProductUpdateRequest(gpu.getPrice(), gpu.getOldPrice(), 0, true));
+        stock.count(gpu.getId(), 0, "Всё продали");
 
         assertThat(new Browser().get(page).body()).as("гостя просим войти")
                 .contains("Сообщить о поступлении", "href=\"/login?next=" + page + "\"");
@@ -195,7 +196,7 @@ class PricesTest {
         assertThat(stockAlerts.subscribed(accountId, catalog.product("kingston-nv3-1-tb-m-2-nvme").getId())).isFalse();
 
         // Привезли: письмо подписчику, подписка больше не нужна
-        catalog.updateProduct(gpu.getId(), new ProductUpdateRequest(gpu.getPrice(), gpu.getOldPrice(), 2, true));
+        stock.receive(gpu.getId(), 2, "Привезли");
         await().atMost(Duration.ofSeconds(5)).until(() -> !mailbox.to(email).isEmpty());
         var letter = mailbox.to(email).getFirst();
         assertThat(letter.subject()).isEqualTo("Снова в наличии: " + gpu.getName());
@@ -204,7 +205,7 @@ class PricesTest {
 
         // Последний экземпляр в чужом заказе: после отмены заказа он вернулся на склад — тоже письмо
         var last = catalog.product("palit-geforce-rtx-5090-gamerock-32-gb");
-        catalog.updateProduct(last.getId(), new ProductUpdateRequest(last.getPrice(), last.getOldPrice(), 1, true));
+        stock.count(last.getId(), 1, null);
         var order = orders.create(Channel.SITE, new CustomerRequest("Пётр", "+7 900 000-00-00", "Москва", null),
                 List.of(new OrderLineRequest(last.getId(), 1)), null);
         String lastPage = "/p/" + last.getSlug();

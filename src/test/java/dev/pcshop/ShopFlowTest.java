@@ -2,13 +2,14 @@ package dev.pcshop;
 
 import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.dto.request.OrderLineRequest;
+import dev.pcshop.dto.request.ProductRequest;
 import dev.pcshop.dto.request.ProductSearchRequest;
-import dev.pcshop.dto.request.ProductUpdateRequest;
 import dev.pcshop.enums.Channel;
 import dev.pcshop.enums.DeliveryMethod;
 import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.exception.OrderException;
 import dev.pcshop.repository.ProductRepository;
+import dev.pcshop.service.CatalogAdminService;
 import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.OrderService;
 import jakarta.validation.ConstraintViolationException;
@@ -30,6 +31,7 @@ class ShopFlowTest {
     private static final CustomerRequest CUSTOMER = new CustomerRequest("Тест", "+7 900 000-00-00", "Москва, ул. Тестовая, 1", null);
 
     @Autowired CatalogService catalog;
+    @Autowired CatalogAdminService admin;
     @Autowired OrderService orders;
     @Autowired ProductRepository products;
 
@@ -112,7 +114,9 @@ class ShopFlowTest {
     void adminEditRefreshesUpdatedAt() {
         var gpu = catalog.product("palit-geforce-rtx-5070-infinity-3-12-gb");
         var before = gpu.getUpdatedAt();
-        catalog.updateProduct(gpu.getId(), new ProductUpdateRequest(gpu.getPrice() + 100, gpu.getOldPrice(), gpu.getStock(), true));
+        var form = ProductRequest.of(gpu);
+        admin.update(gpu.getId(), new ProductRequest(form.categoryId(), form.name(), form.brand(), gpu.getPrice() + 100,
+                gpu.getOldPrice(), form.description(), true, form.specs(), null));
         assertThat(products.findById(gpu.getId()).orElseThrow().getUpdatedAt()).isAfter(before);
     }
 

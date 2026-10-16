@@ -10,7 +10,6 @@ import dev.pcshop.enums.Channel;
 import dev.pcshop.enums.DeliveryMethod;
 import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.event.OrderEvents;
-import dev.pcshop.event.ProductEvents;
 import dev.pcshop.exception.OrderException;
 import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.repository.OrderRepository;
@@ -52,6 +51,7 @@ public class OrderService {
     private final DemoPaymentGateway paymentGateway;
     private final DeliveryService delivery;
     private final PromoService promos;
+    private final StockService stock;
 
     /** Заказ из бота: доставка курьером по адресу из чата. */
     @Transactional
@@ -98,7 +98,7 @@ public class OrderService {
             if (product == null || !product.isActive()) {
                 throw new OrderException("Товар больше не продаётся");
             }
-            if (products.reserve(productId, qty) == 0) {
+            if (!stock.reserve(productId, qty)) {
                 throw new OrderException("Недостаточно на складе: " + product.getName() + " (осталось " + product.getStock() + " шт.)");
             }
             order.addItem(productId, product.getName(), product.getPrice(), qty);
@@ -110,6 +110,7 @@ public class OrderService {
         order.chargeDelivery(delivery.price(deliveryMethod, order.itemsTotal()));
 
         orders.save(order);
+        stock.sold(order);
         log.info("Заказ {} создан: {}, {} поз., {} ₽", order.number(), channel, order.getItems().size(), order.getTotal());
         events.publishEvent(new OrderEvents.Created(order.getId()));
         return order;
@@ -178,10 +179,7 @@ public class OrderService {
         log.info("Заказ {}: статус {}", order.number(), status);
         if (status == OrderStatus.CANCELLED) {
             // Отменённый заказ возвращает товар на склад. Если товара не было, подписчики узнают, что он появился
-            order.getItems().forEach(i -> {
-                products.release(i.getProductId(), i.getQuantity());
-                events.publishEvent(new ProductEvents.Restocked(i.getProductId()));
-            });
+            stock.returned(order);
         }
         events.publishEvent(new OrderEvents.StatusChanged(order.getId(), status));
         return order;

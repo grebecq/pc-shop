@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head(${category == null} ? 'Новая категория' : ${category.name})}"></head>
+<body>
+<header th:replace="~{admin/layout :: nav}"></header>
+<main class="wrap narrow">
+    <a class="muted" th:href="@{/admin/categories}">← Все категории</a>
+    <div class="catalog-head admin-head">
+        <h1 th:text="${category == null} ? 'Новая категория' : ${category.name}">Категория</h1>
+        <a class="muted" th:if="${category != null}" th:href="@{/c/{s}(s=${category.slug})}" target="_blank">Открыть на сайте ↗</a>
+    </div>
+    <div th:replace="~{admin/layout :: flash}"></div>
+
+    <form class="panel admin-form" method="post"
+          th:action="${category == null} ? @{/admin/categories} : @{/admin/categories/{id}(id=${category.id})}">
+        <div class="field-row">
+            <div class="field">
+                <label for="name">Название</label>
+                <input id="name" name="name" th:value="${form.name()}" required maxlength="128" placeholder="Например, Мониторы">
+            </div>
+            <div class="field">
+                <label for="sortOrder">Место в меню</label>
+                <input id="sortOrder" name="sortOrder" type="number" min="0" max="1000" th:value="${form.sortOrder()}" required>
+            </div>
+        </div>
+
+        <h2 class="h3">Характеристики товаров</h2>
+        <p class="muted small-line">Число — только целые числа, например мощность в ваттах. Единицы пишите в названии через
+            запятую: «Частота, Гц». Заполните пустые строки внизу, чтобы добавить характеристики, и сохраните.</p>
+        <p class="muted small-line" th:if="${configurator}">Характеристики с замком нужны конфигуратору сборок: их нельзя удалить или поменять им тип.</p>
+        <div class="table-scroll">
+            <table class="cart-table spec-table">
+                <thead><tr><th>Название</th><th>Тип</th><th>В фильтре</th><th>Удалить</th></tr></thead>
+                <tbody>
+                <tr th:each="row, it : ${form.specs()}">
+                    <td>
+                        <input type="hidden" th:name="'specs[' + ${it.index} + '].key'" th:value="${row.key()}">
+                        <input th:name="'specs[' + ${it.index} + '].label'" th:value="${row.label()}" maxlength="64"
+                               th:placeholder="${row.key() == null} ? 'Новая характеристика' : ''" aria-label="Название характеристики">
+                    </td>
+                    <td th:with="locked=${row.key() != null and needed.contains(row.key())}">
+                        <!-- Тип характеристики конфигуратора не меняется: поле только для вида, значение уходит скрытым -->
+                        <input th:if="${locked}" type="hidden" th:name="'specs[' + ${it.index} + '].type'" th:value="${row.type()}">
+                        <select th:name="${locked} ? null : 'specs[' + ${it.index} + '].type'" th:disabled="${locked}" aria-label="Тип">
+                            <option th:each="t : ${types}" th:value="${t}" th:text="${t.label()}" th:selected="${t == row.type()}">Текст</option>
+                        </select>
+                    </td>
+                    <td><input type="checkbox" value="true" th:name="'specs[' + ${it.index} + '].filter'" th:checked="${row.isFilter()}" aria-label="Показывать в фильтре"></td>
+                    <td>
+                        <span th:if="${row.key() != null and needed.contains(row.key())}" title="Нужна конфигуратору сборок">🔒</span>
+                        <input th:unless="${row.key() == null or needed.contains(row.key())}" type="checkbox" value="true"
+                               th:name="'specs[' + ${it.index} + '].remove'" th:checked="${row.isRemove()}" aria-label="Удалить характеристику">
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="form-actions">
+            <button class="btn" type="submit" th:text="${category == null} ? 'Создать категорию' : 'Сохранить'">Сохранить</button>
+            <a class="btn btn--ghost" th:if="${category != null}" th:href="@{/admin/products/new(category=${category.id})}">Добавить товар</a>
+        </div>
+    </form>
+
+    <form class="danger-zone" method="post" th:if="${category != null and !configurator}"
+          th:action="@{/admin/categories/{id}/delete(id=${category.id})}">
+        <span class="muted" th:text="${productCount == 0} ? 'Пустую категорию можно удалить.' : 'Товаров в категории: ' + ${productCount} + '. Удалить можно только пустую.'">Пустую категорию можно удалить.</span>
+        <button class="btn btn--small btn--ghost btn--danger" type="submit" th:disabled="${productCount > 0}"
+                onclick="return confirm('Удалить категорию?')">Удалить категорию</button>
+    </form>
+</main>
+</body>
+</html>

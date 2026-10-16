@@ -4,40 +4,52 @@
 <body>
 <header th:replace="~{admin/layout :: nav}"></header>
 <main class="wrap">
-    <h1>Товары</h1>
+    <div class="catalog-head">
+        <h1>Товары</h1>
+        <span class="muted" th:text="${products.totalElements} + ' шт.'">0</span>
+        <a class="btn btn--small admin-head__action" th:href="@{/admin/products/new(category=${categoryId})}">Добавить товар</a>
+    </div>
     <div th:replace="~{admin/layout :: flash}"></div>
-    <div class="table-scroll">
+
+    <form class="admin-filter" method="get" th:action="@{/admin/products}">
+        <input type="search" name="q" th:value="${q}" placeholder="Название, бренд или артикул" aria-label="Поиск">
+        <select name="category" aria-label="Категория">
+            <option value="">Все категории</option>
+            <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}" th:selected="${c.id == categoryId}">Категория</option>
+        </select>
+        <select name="show" aria-label="Какие товары">
+            <option th:each="f : ${filters}" th:value="${f}" th:text="${f.label()}" th:selected="${f == show}">Все</option>
+        </select>
+        <button class="btn btn--small btn--ghost" type="submit">Найти</button>
+    </form>
+
+    <div class="table-scroll" th:unless="${products.empty}">
         <table class="cart-table admin-table">
-            <thead><tr><th>Фото</th><th>Товар</th><th>Категория</th><th>Цена, ₽</th><th title="Пусто — скидки нет">До скидки, ₽</th><th>Остаток</th><th>Продаётся</th><th></th></tr></thead>
+            <thead><tr><th></th><th>Товар</th><th>Категория</th><th class="num">Цена</th><th class="num">Остаток</th><th></th></tr></thead>
             <tbody>
-            <tr th:each="p : ${products}" th:id="'p' + ${p.id}" th:classappend="${!p.active} ? 'is-muted'">
-                <td class="photo-cell">
-                    <img th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" alt="" class="thumb" referrerpolicy="no-referrer">
-                    <form method="post" enctype="multipart/form-data" th:action="@{/admin/products/{id}/photo(id=${p.id})}" class="photo-form">
-                        <label class="link-btn"><span th:text="${p.imageUrl == null} ? 'Загрузить' : 'Заменить'">Загрузить</span>
-                            <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" hidden onchange="this.form.submit()">
-                        </label>
-                    </form>
-                    <form th:if="${p.imageUrl != null}" method="post" th:action="@{/admin/products/{id}/photo/delete(id=${p.id})}">
-                        <button class="remove" type="submit">Убрать</button>
-                    </form>
+            <tr th:each="p : ${products.content}" th:classappend="${!p.active} ? 'is-muted'">
+                <td class="thumb-cell">
+                    <img th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" alt="" class="thumb" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()">
                 </td>
-                <td><a th:href="@{/p/{s}(s=${p.slug})}" target="_blank" th:text="${p.name}">Товар</a></td>
+                <td><a th:href="@{/admin/products/{id}(id=${p.id})}" th:text="${p.name}">Товар</a>
+                    <div class="muted small-line" th:text="${p.brand}">Бренд</div></td>
                 <td th:text="${p.category.name}">Категория</td>
-                <td><input class="cell-input" type="number" min="1" name="price" th:value="${p.price}" th:form="'f' + ${p.id}" aria-label="Цена"></td>
-                <td><input class="cell-input" type="number" min="1" name="oldPrice" th:value="${p.oldPrice}" th:form="'f' + ${p.id}"
-                           placeholder="—" aria-label="Цена до скидки"></td>
-                <td><input class="cell-input cell-input--short" type="number" min="0" name="stock" th:value="${p.stock}" th:form="'f' + ${p.id}" aria-label="Остаток"></td>
-                <td><input type="checkbox" name="active" value="true" th:checked="${p.active}" th:form="'f' + ${p.id}" aria-label="Продаётся"></td>
-                <td>
-                    <form th:id="'f' + ${p.id}" method="post" th:action="@{/admin/products/{id}(id=${p.id})}">
-                        <button class="btn btn--small btn--ghost" type="submit">Сохранить</button>
-                    </form>
+                <td class="num">
+                    <span th:text="${@fmt.rub(p.price)}">0 ₽</span>
+                    <s class="muted small-line" th:if="${p.oldPrice != null}" th:text="${@fmt.rub(p.oldPrice)}">0 ₽</s>
                 </td>
+                <td class="num" th:classappend="${p.stock == 0 and p.active} ? 'is-warn'" th:text="${p.stock} + ' шт.'">0</td>
+                <td><span class="pill pill--cancelled" th:unless="${p.active}">снят</span></td>
             </tr>
             </tbody>
         </table>
     </div>
+    <p class="empty" th:if="${products.empty}">Ничего не нашлось. Поменяйте условия поиска или добавьте товар.</p>
+    <nav class="pages" th:if="${products.totalPages > 1}">
+        <a th:each="i : ${#numbers.sequence(0, products.totalPages - 1)}"
+           th:href="@{/admin/products(page=${i}, q=${q}, category=${categoryId}, show=${show})}"
+           th:text="${i + 1}" th:classappend="${i == products.number} ? 'is-current'">1</a>
+    </nav>
 </main>
 </body>
 </html>

@@ -5,6 +5,9 @@ import dev.pcshop.dto.response.FacetValueResponse;
 import dev.pcshop.entity.Category;
 import dev.pcshop.entity.FilterDef;
 import dev.pcshop.entity.Product;
+import dev.pcshop.entity.Spec;
+import dev.pcshop.enums.SpecType;
+import dev.pcshop.enums.ProductListFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -124,6 +127,66 @@ public class ProductSearchRepository {
             values.sort(FacetValueResponse.ORDER);
             result.put(filter.key(), values);
         }
+        return result;
+    }
+
+    /** Список товаров в админке: все, включая снятые с продажи. Слова ищутся в названии, бренде и адресе страницы. */
+    public Page<Product> adminSearch(String text, Long categoryId, ProductListFilter show, int page, int size) {
+        var params = new MapSqlParameterSource();
+        var where = new StringBuilder("TRUE");
+        if (text != null) {
+            int n = 0;
+            for (String word : text.toLowerCase().split("\\s+")) {
+                if (word.isBlank() || n == 6) {
+                    continue;
+                }
+                where.append(" AND (lower(p.name) LIKE :w").append(n).append(" OR lower(p.brand) LIKE :w").append(n)
+                        .append(" OR p.slug LIKE :w").append(n).append(')');
+                params.addValue("w" + n, "%" + word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%");
+                n++;
+            }
+        }
+        if (categoryId != null) {
+            where.append(" AND p.category_id = :categoryId");
+            params.addValue("categoryId", categoryId);
+        }
+        switch (show == null ? ProductListFilter.ALL : show) {
+            case ACTIVE -> where.append(" AND p.active");
+            case HIDDEN -> where.append(" AND NOT p.active");
+            case OUT_OF_STOCK -> where.append(" AND p.active AND p.stock = 0");
+            case ALL -> { }
+        }
+        long total = jdbc.queryForObject("SELECT count(*) FROM product p WHERE " + where, params, Long.class);
+        params.addValue("limit", size).addValue("offset", (long) page * size);
+        List<Long> ids = jdbc.queryForList("""
+                SELECT p.id FROM product p JOIN category c ON c.id = p.category_id
+                WHERE %s ORDER BY c.sort_order, p.name, p.id LIMIT :limit OFFSET :offset""".formatted(where), params, Long.class);
+        Map<Long, Product> byId = products.findAllByIdIn(ids).stream()
+                .collect(Collectors.toMap(Product::getId, Function.identity()));
+        return new PageImpl<>(ids.stream().map(byId::get).toList(), PageRequest.of(page, size), total);
+    }
+
+    /** Значения текстовых характеристик у товаров категории, самые частые первыми: подсказки в форме товара. */
+    public Map<String, List<String>> specValues(Category category) {
+        Map<String, List<String>> result = new LinkedHashMap<>();
+        for (Spec spec : category.getSpecs()) {
+            if (spec.type() != SpecType.TEXT) {
+                continue;
+            }
+            var params = new MapSqlParameterSource("categoryId", category.getId()).addValue("key", spec.key());
+            result.put(spec.key(), jdbc.queryForList("""
+                    SELECT p.attributes ->> :key FROM product p
+                    WHERE p.category_id = :categoryId AND p.attributes ->> :key IS NOT NULL
+                    GROUP BY 1 ORDER BY count(*) DESC, 1 LIMIT 50""", params, String.class));
+        }
+        return result;
+    }
+
+    /** Сколько товаров в каждой категории, включая снятые с продажи. */
+    public Map<Long, Long> countByCategory() {
+        Map<Long, Long> result = new LinkedHashMap<>();
+        jdbc.query("SELECT category_id, count(*) FROM product GROUP BY 1", new MapSqlParameterSource(),
+                rs -> { result.put(rs.getLong(1), rs.getLong(2)); });
         return result;
     }
 }
