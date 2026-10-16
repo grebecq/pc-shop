@@ -8,7 +8,6 @@
     <h1 th:text="'Оплата заказа ' + ${order.number()}">Оплата</h1>
     <p class="muted" th:text="'Товар зарезервирован до ' + ${@fmt.time(payBefore)} + ' по Москве. Если не оплатить, заказ отменится.'">Резерв</p>
 
-    <!--/* Настоящая оплата: кнопка ведёт на страницу ЮKassa, карту вводят там */-->
     <div class="pay-layout" th:if="${online}">
         <aside class="pay-test">
             <p><b>Безопасная оплата.</b> Данные карты вы вводите на странице ЮKassa, магазин их не видит и не хранит.</p>
@@ -58,7 +57,6 @@
                 </div>
                 <div class="field">
                     <label for="cvc">CVC</label>
-                    <!--/* Без th:field: CVC никогда не возвращается в форму, даже после ошибки */-->
                     <input id="cvc" name="cvc" th:classappend="${#fields.hasErrors('cvc')} ? 'is-invalid'" inputmode="numeric"
                            autocomplete="cc-csc" placeholder="123" maxlength="3">
                     <p class="form-error" th:errors="*{cvc}"></p>

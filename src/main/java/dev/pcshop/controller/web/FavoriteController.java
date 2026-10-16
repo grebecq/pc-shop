@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Map;
 
-/** Избранное в личном кабинете. Сердечки в карточках переключаются без перезагрузки страницы. */
 @Controller
 @RequestMapping("/account/favorites")
 @RequiredArgsConstructor
@@ -28,7 +27,6 @@ public class FavoriteController {
         return "account/favorites";
     }
 
-    /** Ответ для JS: новое состояние сердечка. */
     @PostMapping("/{productId}")
     @ResponseBody
     public Map<String, Boolean> toggle(@PathVariable long productId, @AuthenticationPrincipal ShopUser user) {

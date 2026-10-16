@@ -8,7 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/** Текущая сборка в Telegram-боте: одна на чат, слот → id товара. */
+// Сборки бота
 @Repository
 @RequiredArgsConstructor
 public class BotBuildRepository {
@@ -25,7 +25,6 @@ public class BotBuildRepository {
     }
 
     public void save(long chatId, Map<String, Long> items) {
-        // Ключи — наши слоты, значения — числа, поэтому JSON собираем без библиотеки
         String json = items.entrySet().stream()
                 .map(e -> "\"" + e.getKey() + "\":" + e.getValue())
                 .collect(Collectors.joining(",", "{", "}"));

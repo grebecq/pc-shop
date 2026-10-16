@@ -3,8 +3,10 @@ package dev.pcshop.controller.web;
 import dev.pcshop.config.SecurityConfig;
 import dev.pcshop.dto.request.RegisterRequest;
 import dev.pcshop.exception.DuplicateResourceException;
+import dev.pcshop.exception.MailDeliveryException;
 import dev.pcshop.security.ShopUser;
 import dev.pcshop.service.AccountService;
+import dev.pcshop.service.EmailConfirmService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -22,12 +24,12 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-/** Вход и регистрация покупателей. Сам вход обрабатывает Spring Security (POST /login). */
 @Controller
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AccountService accounts;
+    private final EmailConfirmService emailConfirm;
     private final SecurityContextRepository contextRepository = new HttpSessionSecurityContextRepository();
 
     @GetMapping("/login")
@@ -55,7 +57,6 @@ public class AuthController {
             errors.rejectValue("email", "taken", e.getMessage());
             return "account/register";
         }
-        // Сразу входим под новым аккаунтом: новая сессия против фиксации, контекст сохраняем в сессию
         if (request.getSession(false) != null) {
             request.changeSessionId();
         }
@@ -63,6 +64,17 @@ public class AuthController {
         context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
         SecurityContextHolder.setContext(context);
         contextRepository.saveContext(context, request, response);
+        try {
+            emailConfirm.send(user.getAccountId());
+        } catch (MailDeliveryException e) {
+        }
         return SecurityConfig.isSafeNext(next) ? "redirect:" + next : "redirect:/account?welcome";
+    }
+
+    @GetMapping("/email/confirm")
+    public String confirmEmail(@RequestParam(required = false) String token, Model model, HttpServletResponse response) {
+        response.setHeader("Referrer-Policy", "no-referrer");
+        model.addAttribute("confirmed", emailConfirm.confirm(token));
+        return "account/email-confirm";
     }
 }

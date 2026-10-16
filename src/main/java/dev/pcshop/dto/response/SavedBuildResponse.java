@@ -6,6 +6,5 @@ import dev.pcshop.model.Issue;
 
 import java.util.List;
 
-/** Сохранённая сборка с актуальными товарами и результатом проверки совместимости. */
 public record SavedBuildResponse(SavedBuild saved, Build build, List<Issue> issues, boolean complete) {
 }

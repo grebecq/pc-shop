@@ -10,7 +10,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** Магазин, где можно забрать заказ. Список задаётся миграцией. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -32,7 +31,6 @@ public class PickupPoint {
 
     private boolean active;
 
-    /** Для заказа и писем: «"Сборка" на Тверской, Москва, Тверская ул., 12». */
     public String oneLine() {
         return name + ", " + address;
     }

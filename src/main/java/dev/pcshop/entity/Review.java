@@ -16,7 +16,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 
-/** Отзыв о товаре. Оставить его может только тот, кто этот товар купил. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -31,7 +30,6 @@ public class Review {
     @Column(name = "product_id", nullable = false)
     private long productId;
 
-    /** null у демо-отзывов: их никто не покупал на этом сайте. */
     @Column(name = "account_id")
     private Long accountId;
 
@@ -62,7 +60,6 @@ public class Review {
         this.text = request.text();
     }
 
-    /** Отзыв от покупателя этого магазина, а не демо-данные. */
     public boolean verified() {
         return accountId != null;
     }

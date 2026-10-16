@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/** Кнопка «Сообщить о поступлении» на странице товара, которого нет в наличии. Только для вошедших. */
 @Controller
 @RequiredArgsConstructor
 public class StockAlertController {

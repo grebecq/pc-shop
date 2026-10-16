@@ -36,10 +36,6 @@ import java.util.regex.Pattern;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-/**
- * Настоящая оплата через ЮKassa, только вместо её API — FakeYooKassa.
- * Ключи заданы, поэтому у этих тестов свой контекст Spring и своя база.
- */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"shop.yookassa.shop-id=" + FakeYooKassa.SHOP_ID, "shop.yookassa.secret-key=" + FakeYooKassa.SECRET_KEY})
 @Import(TestcontainersConfig.class)
@@ -83,7 +79,6 @@ class OnlinePaymentTest {
         assertThat(confirmation).containsEntry("type", "redirect")
                 .containsEntry("return_url", "http://localhost:8080/order/" + order.getPublicId() + "?paid");
 
-        // Повторный клик (или «Назад» в браузере) ведёт на тот же платёж, второй не создаётся
         assertThat(startPayment(order).headers().firstValue("Location").orElseThrow()).endsWith(paymentId);
         assertThat(orders.byPublicId(order.getPublicId()).getPaymentId()).isEqualTo(paymentId);
         assertThat(YOOKASSA.payment(paymentId)).isNotNull();
@@ -93,17 +88,17 @@ class OnlinePaymentTest {
     void buyerReturnsFromYookassaAndSeesPaidOrder() throws Exception {
         Order order = newOrder();
         String paymentId = pay(order);
-        // Пока не заплатил — честно говорим, что оплата не подтверждена
+
         assertThat(get("/order/" + order.getPublicId() + "?paid").body()).contains("Оплата ещё не подтверждена").doesNotContain("Оплата прошла");
 
         YOOKASSA.succeed(paymentId);
-        // Уведомление ещё не пришло, но страница заказа сама спросила ЮKassa
+
         assertThat(get("/order/" + order.getPublicId() + "?paid").body()).contains("Оплата прошла", "Оплачено: Visa •• 4242");
         Order paid = orders.byPublicId(order.getPublicId());
         assertThat(paid.getStatus()).isEqualTo(OrderStatus.PAID);
         assertThat(paid.getPaymentCard()).isEqualTo("Visa •• 4242");
         assertThat(paid.paidOnline()).isTrue();
-        // На оплату больше не пускает
+
         assertThat(get("/pay/" + order.getPublicId()).statusCode()).isEqualTo(302);
     }
 
@@ -112,18 +107,16 @@ class OnlinePaymentTest {
         Order order = newOrder();
         String paymentId = pay(order);
 
-        // Уведомление «оплачено», а API говорит pending: верим API
         assertThat(webhook("payment.succeeded", paymentId).statusCode()).isEqualTo(200);
         assertThat(orders.byPublicId(order.getPublicId()).getStatus()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
-        // Чужие и выдуманные id — просто 200, чтобы ЮKassa не повторяла
+
         assertThat(webhook("payment.succeeded", "2f5e8a1c-000f-5000-9000-1b2c3d4e5f60").statusCode()).isEqualTo(200);
         assertThat(webhook("payment.succeeded", "../me").statusCode()).isEqualTo(200);
 
-        // Без CSRF-токена: уведомление шлёт сервер ЮKassa, а не браузер
         YOOKASSA.succeed(paymentId);
         assertThat(webhook("payment.succeeded", paymentId).statusCode()).isEqualTo(200);
         assertThat(orders.byPublicId(order.getPublicId()).getStatus()).isEqualTo(OrderStatus.PAID);
-        // Повтор уведомления ничего не меняет и денег не возвращает
+
         assertThat(webhook("payment.succeeded", paymentId).statusCode()).isEqualTo(200);
         assertThat(refunds(paymentId)).isEmpty();
     }
@@ -136,7 +129,7 @@ class OnlinePaymentTest {
         YOOKASSA.setDown(true);
         try {
             assertThat(webhook("payment.succeeded", paymentId).statusCode()).isEqualTo(503);
-            // И автоотмена ждёт: вдруг заказ уже оплачен
+
             assertThat(payments.mayExpire(order.getId())).isFalse();
         } finally {
             YOOKASSA.setDown(false);
@@ -151,7 +144,6 @@ class OnlinePaymentTest {
         String paymentId = pay(order);
         orders.cancelByCustomer(order.getPublicId(), null);
 
-        // Покупатель всё-таки заплатил на открытой странице ЮKassa
         YOOKASSA.succeed(paymentId);
         assertThat(webhook("payment.succeeded", paymentId).statusCode()).isEqualTo(200);
 
@@ -164,7 +156,6 @@ class OnlinePaymentTest {
         assertThat(cancelled.getRefundedAt()).isNotNull();
         assertThat(get("/order/" + order.getPublicId()).body()).contains("Деньги вернутся");
 
-        // Повтор уведомления второй раз деньги не возвращает
         webhook("payment.succeeded", paymentId);
         assertThat(refunds(paymentId)).hasSize(1);
     }
@@ -194,7 +185,7 @@ class OnlinePaymentTest {
         YOOKASSA.setDown(true);
         try {
             orders.changeStatus(order.getId(), OrderStatus.CANCELLED);
-            // Автоматический возврат упёрся в недоступную ЮKassa
+
             await().atMost(Duration.ofSeconds(5)).until(() -> YOOKASSA.calls("GET", "/payments/" + paymentId).size() > checks);
         } finally {
             YOOKASSA.setDown(false);
@@ -235,14 +226,12 @@ class OnlinePaymentTest {
         mailbox.setDown(true);
         try {
             post("/admin/settings/test-mail", "/admin/settings", ADMIN, "email", "owner@example.ru");
-            // Админу видна настоящая причина, а не «попробуйте позже»
+
             assertThat(get("/admin/settings", ADMIN).body()).contains("Письмо не ушло: Почтовый сервер недоступен");
         } finally {
             mailbox.setDown(false);
         }
     }
-
-    // ---------- помощники ----------
 
     private Order newOrder() {
         var cpu = catalog.product("intel-core-i5-12400f-oem");
@@ -250,7 +239,6 @@ class OnlinePaymentTest {
                 List.of(new OrderLineRequest(cpu.getId(), 1)), null);
     }
 
-    /** Нажимает «Оплатить» и возвращает id созданного платежа. */
     private String pay(Order order) throws Exception {
         assertThat(startPayment(order).statusCode()).isEqualTo(302);
         return orders.byPublicId(order.getPublicId()).getPaymentId();
@@ -267,7 +255,6 @@ class OnlinePaymentTest {
                 .POST(HttpRequest.BodyPublishers.ofString(json)));
     }
 
-    /** Возвраты по платежу. Запросы с одним Idempotence-Key — один возврат, как у настоящей ЮKassa. */
     private static List<FakeYooKassa.Call> refunds(String paymentId) {
         var byKey = new java.util.LinkedHashMap<String, FakeYooKassa.Call>();
         YOOKASSA.calls("POST", "/refunds").stream().filter(c -> paymentId.equals(c.body().get("payment_id")))
@@ -280,7 +267,6 @@ class OnlinePaymentTest {
         return String.valueOf(((Map<String, Object>) body.get("metadata")).get("order"));
     }
 
-    /** Форма с CSRF-токеном из скрытого поля на странице pageWithToken. */
     private HttpResponse<String> post(String path, String pageWithToken, String auth, String... pairs) throws Exception {
         var body = new StringBuilder("_csrf=").append(enc(csrf(get(pageWithToken, auth).body())));
         for (int i = 0; i < pairs.length; i += 2) {

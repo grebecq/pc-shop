@@ -1,10 +1,10 @@
 package dev.pcshop.controller;
 
+import dev.pcshop.AdminForms;
 import dev.pcshop.TestMailbox;
 import dev.pcshop.TestcontainersConfig;
 import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.dto.request.OrderLineRequest;
-import dev.pcshop.dto.request.ProductUpdateRequest;
 import dev.pcshop.entity.Product;
 import dev.pcshop.enums.Channel;
 import dev.pcshop.enums.OrderStatus;
@@ -13,6 +13,7 @@ import dev.pcshop.repository.ProductRepository;
 import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.OrderService;
 import dev.pcshop.service.StockAlertService;
+import dev.pcshop.service.StockService;
 import dev.pcshop.util.Formats;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +37,6 @@ import java.util.regex.Pattern;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-/** Цены: скидки на товары, промокоды в корзине и письмо «Снова в наличии». */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfig.class)
 class PricesTest {
@@ -49,9 +49,9 @@ class PricesTest {
     @Autowired ProductRepository products;
     @Autowired AccountRepository accounts;
     @Autowired StockAlertService stockAlerts;
+    @Autowired StockService stock;
     @Autowired TestMailbox mailbox;
 
-    /** Отдельный «браузер» со своими cookie. */
     class Browser {
         final HttpClient http = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
 
@@ -65,7 +65,6 @@ class PricesTest {
             return get(path, null);
         }
 
-        /** Форма с CSRF-токеном со страницы pageWithToken: мета-тег на витрине, скрытое поле в админке. */
         HttpResponse<String> post(String path, String pageWithToken, String auth, String... pairs) throws Exception {
             String page = get(pageWithToken, auth).body();
             String token = auth == null ? find(page, "name=\"csrf-token\" content=\"([^\"]+)\"") : find(page, "name=\"_csrf\" value=\"([^\"]+)\"");
@@ -86,7 +85,6 @@ class PricesTest {
                     .POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
         }
 
-        /** Регистрирует покупателя и возвращает его email. */
         String register() throws Exception {
             String email = "prices-" + UUID.randomUUID() + "@example.com";
             var r = post("/register", "/register", null, "name", "Ирина", "email", email, "password", "secret-123", "consent", "true");
@@ -97,7 +95,6 @@ class PricesTest {
 
     @Test
     void discountIsShownEverywhereAndEditedInAdmin() throws Exception {
-        // Скидка из демо-данных: 32 990 → 28 990 ₽, это 12%
         var cpu = catalog.product("amd-ryzen-7-7800x3d-oem");
         assertThat(cpu.onSale()).isTrue();
         assertThat(cpu.discountPercent()).isEqualTo(12);
@@ -110,21 +107,19 @@ class PricesTest {
         assertThat(sale).contains("<h1>Скидки</h1>", cpu.getName()).doesNotContain(catalog.product("amd-ryzen-5-7600-oem").getName());
         assertThat(b.get("/api/products/by-ids?ids=" + cpu.getId()).body()).contains("\"oldPrice\":" + cpu.getOldPrice());
 
-        // Админка: цена до скидки должна быть больше новой, пустое поле убирает скидку
         Product cooler = catalog.product("arctic-freezer-36-a-rgb-white");
         String url = "/admin/products/" + cooler.getId();
-        String stock = String.valueOf(cooler.getStock());
-        b.post(url, "/admin/products", ADMIN, "price", "4190", "oldPrice", "3990", "stock", stock, "active", "true");
-        assertThat(b.get("/admin/products", ADMIN).body()).contains("Цена до скидки должна быть больше новой цены");
+        var invalid = b.post(url, url, ADMIN, AdminForms.product(cooler, "price", "4190", "oldPrice", "3990"));
+        assertThat(invalid.body()).contains("Цена до скидки должна быть больше новой цены");
         assertThat(catalog.product(cooler.getSlug()).onSale()).isFalse();
 
-        b.post(url, "/admin/products", ADMIN, "price", "3990", "oldPrice", "4790", "stock", stock, "active", "true");
+        b.post(url, url, ADMIN, AdminForms.product(cooler, "price", "3990", "oldPrice", "4790"));
         var discounted = catalog.product(cooler.getSlug());
         assertThat(discounted.getPrice()).isEqualTo(3990);
         assertThat(discounted.getOldPrice()).isEqualTo(4790);
         assertThat(b.get("/sale").body()).contains(cooler.getName());
 
-        b.post(url, "/admin/products", ADMIN, "price", "4190", "oldPrice", "", "stock", stock, "active", "true");
+        b.post(url, url, ADMIN, AdminForms.product(cooler, "price", "4190", "oldPrice", ""));
         assertThat(catalog.product(cooler.getSlug()).getOldPrice()).isNull();
     }
 
@@ -139,7 +134,6 @@ class PricesTest {
         assertThat(expired.statusCode()).isEqualTo(400);
         assertThat(expired.body()).contains("Срок действия промокода LETO2026 закончился");
 
-        // Товар с большим остатком, который не трогают другие тесты
         var cpu = catalog.product("intel-core-i3-12100f-oem");
         int stock = cpu.getStock();
         String email = "promo-" + UUID.randomUUID() + "@example.com";
@@ -160,7 +154,6 @@ class PricesTest {
         assertThat(saved.getPromoCode()).isEqualTo("SBORKA10");
         assertThat(saved.getDiscount()).isEqualTo(discount);
         assertThat(saved.itemsTotal()).isEqualTo(items);
-        // Бесплатная доставка — от суммы товаров до скидки, даже если со скидкой вышло меньше 50 000 ₽
         assertThat(items).isGreaterThanOrEqualTo(50_000);
         assertThat(items - discount).isLessThan(50_000);
         assertThat(saved.getDeliveryPrice()).isZero();
@@ -176,7 +169,7 @@ class PricesTest {
     void stockAlertLettersWhenProductIsBack() throws Exception {
         var gpu = catalog.product("msi-geforce-rtx-5080-gaming-trio-oc-16-gb");
         String page = "/p/" + gpu.getSlug();
-        catalog.updateProduct(gpu.getId(), new ProductUpdateRequest(gpu.getPrice(), gpu.getOldPrice(), 0, true));
+        stock.count(gpu.getId(), 0, "Всё продали");
 
         assertThat(new Browser().get(page).body()).as("гостя просим войти")
                 .contains("Сообщить о поступлении", "href=\"/login?next=" + page + "\"");
@@ -188,31 +181,28 @@ class PricesTest {
         assertThat(b.get(page).body()).contains("Готово, напишем, когда товар появится", "Не сообщать");
         assertThat(stockAlerts.subscribed(accountId, gpu.getId())).isTrue();
 
-        // На товар в наличии подписаться нельзя
         String inStock = "/p/" + catalog.product("kingston-nv3-1-tb-m-2-nvme").getSlug();
         b.post(inStock + "/stock-alert", inStock, null);
         assertThat(b.get(inStock).body()).doesNotContain("Не сообщать");
         assertThat(stockAlerts.subscribed(accountId, catalog.product("kingston-nv3-1-tb-m-2-nvme").getId())).isFalse();
 
-        // Привезли: письмо подписчику, подписка больше не нужна
-        catalog.updateProduct(gpu.getId(), new ProductUpdateRequest(gpu.getPrice(), gpu.getOldPrice(), 2, true));
-        await().atMost(Duration.ofSeconds(5)).until(() -> !mailbox.to(email).isEmpty());
-        var letter = mailbox.to(email).getFirst();
+        stock.receive(gpu.getId(), 2, "Привезли");
+        await().atMost(Duration.ofSeconds(5)).until(() -> !mailbox.to(email, "Снова в наличии").isEmpty());
+        var letter = mailbox.to(email, "Снова в наличии").getFirst();
         assertThat(letter.subject()).isEqualTo("Снова в наличии: " + gpu.getName());
         assertThat(letter.text()).contains("Ирина", Formats.price(gpu.getPrice()), "http://localhost:8080" + page);
         await().atMost(Duration.ofSeconds(5)).until(() -> !stockAlerts.subscribed(accountId, gpu.getId()));
 
-        // Последний экземпляр в чужом заказе: после отмены заказа он вернулся на склад — тоже письмо
         var last = catalog.product("palit-geforce-rtx-5090-gamerock-32-gb");
-        catalog.updateProduct(last.getId(), new ProductUpdateRequest(last.getPrice(), last.getOldPrice(), 1, true));
+        stock.count(last.getId(), 1, null);
         var order = orders.create(Channel.SITE, new CustomerRequest("Пётр", "+7 900 000-00-00", "Москва", null),
                 List.of(new OrderLineRequest(last.getId(), 1)), null);
         String lastPage = "/p/" + last.getSlug();
         b.post(lastPage + "/stock-alert", lastPage, null);
         assertThat(stockAlerts.subscribed(accountId, last.getId())).isTrue();
         orders.changeStatus(order.getId(), OrderStatus.CANCELLED);
-        await().atMost(Duration.ofSeconds(5)).until(() -> mailbox.to(email).size() == 2);
-        assertThat(mailbox.to(email).get(1).subject()).isEqualTo("Снова в наличии: " + last.getName());
+        await().atMost(Duration.ofSeconds(5)).until(() -> mailbox.to(email, "Снова в наличии").size() == 2);
+        assertThat(mailbox.to(email, "Снова в наличии").get(1).subject()).isEqualTo("Снова в наличии: " + last.getName());
     }
 
     private URI uri(String path) {

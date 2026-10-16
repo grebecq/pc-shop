@@ -12,7 +12,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Правила формы оплаты картой без Spring: формат, контрольная цифра, срок. */
 class CardPaymentRequestTest {
 
     private static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
@@ -31,7 +30,6 @@ class CardPaymentRequestTest {
     @Test
     void numberChecks() {
         assertThat(errors(card("4242 4242 4242 4241", "12/40"))).containsExactly("Неверный номер карты: проверьте цифры");
-        // Неверная длина — одно сообщение о формате, без второго про контрольную цифру
         assertThat(errors(card("4242 4242 4242 424", "12/40"))).containsExactly("Номер карты — от 16 до 19 цифр");
         assertThat(errors(card("4242-4242-4242-4242", "12/40"))).containsExactly("Номер карты — от 16 до 19 цифр");
         assertThat(errors(card("6011 0000 0000 0000 001", "12/40"))).isEmpty();

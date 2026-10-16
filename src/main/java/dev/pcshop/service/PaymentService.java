@@ -22,20 +22,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Настоящая оплата через ЮKassa. Покупатель уходит с сайта на её страницу, платит картой, через СБП или SberPay
- * и возвращается. Номер карты наш сервер не видит.
- * <p>
- * Заказ становится оплаченным, только когда сам API ЮKassa отвечает «succeeded». Уведомлению (webhook) и возврату
- * покупателя на сайт на слово не верим: из них берём только id платежа и перепрашиваем платёж.
- * Деньги за отменённый заказ возвращаются автоматически.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
 
-    /** Ключ в metadata платежа: по нему уведомление находит заказ. */
     private static final String ORDER = "order";
 
     private final YooKassaClient yookassa;
@@ -47,12 +38,6 @@ public class PaymentService {
         return props.yookassa().enabled();
     }
 
-    /**
-     * Ссылка на страницу оплаты ЮKassa. Пока покупатель не заплатил, повторный клик отдаёт тот же платёж, а не создаёт новый.
-     *
-     * @return null, если платить уже не нужно: заказ оплачен или отменён
-     * @throws BadRequestException если ЮKassa не ответила — сообщение можно показать покупателю
-     */
     public String start(UUID publicId) {
         Order order = orders.byPublicId(publicId);
         if (order.getStatus() != OrderStatus.AWAITING_PAYMENT) {
@@ -62,19 +47,19 @@ public class PaymentService {
             if (order.getPaymentId() != null) {
                 YooKassa.Payment current = yookassa.payment(order.getPaymentId());
                 if (current.succeeded()) {
-                    // Заплатил в другой вкладке, а уведомление ещё не дошло
+
                     sync(current);
                     return null;
                 }
                 if (current.pending() && current.confirmationUrl() != null) {
                     return current.confirmationUrl();
                 }
-                // Прошлый платёж отменён (отказ банка или покупатель закрыл страницу) — нужен новый
+
             }
-            String returnUrl = props.baseUrl().replaceAll("/+$", "") + "/order/" + publicId + "?paid";
+            String returnUrl = props.siteUrl() + "/order/" + publicId + "?paid";
             var request = new YooKassa.CreatePayment(YooKassa.Amount.rub(order.getTotal()), true,
                     YooKassa.Confirmation.redirect(returnUrl), "Заказ " + order.number(), Map.of(ORDER, publicId.toString()));
-            // Ключ зависит от заказа и прошлого платежа: двойной клик вернёт тот же платёж, а после отменённого создастся новый
+
             YooKassa.Payment payment = yookassa.createPayment(request, key(publicId + "/" + order.getPaymentId()));
             orders.attachPayment(order.getId(), payment.id());
             log.info("Заказ {}: создан платёж {} в ЮKassa", order.number(), payment.id());
@@ -85,15 +70,8 @@ public class PaymentService {
         }
     }
 
-    /**
-     * Сверяет заказ с платежом по данным API ЮKassa: оплачивает заказ или возвращает деньги.
-     * Вызывается из уведомления, при возврате покупателя на сайт, перед автоотменой и после отмены заказа.
-     * Повторный вызов ничего не ломает. Платёж, которого ЮKassa не знает (чужой или выдуманный id), пропускаем.
-     *
-     * @throws RestClientException если ЮKassa не ответила: уведомление тогда придёт ещё раз
-     */
     public void sync(String paymentId) {
-        // Из уведомления id приходит от кого угодно: в адрес запроса пускаем только буквы, цифры и дефис
+
         if (paymentId == null || !paymentId.matches("[\\w-]{1,64}")) {
             return;
         }
@@ -102,8 +80,7 @@ public class PaymentService {
         } catch (HttpClientErrorException.NotFound e) {
             log.warn("ЮKassa не знает платёж {}", paymentId);
         } catch (ObjectOptimisticLockingFailureException e) {
-            // Тот же заказ в ту же секунду сверял другой поток (уведомление и страница заказа) — сверяем ещё раз.
-            // Повторный возврат не страшен: у него тот же Idempotence-Key
+
             sync(yookassa.payment(paymentId));
         }
     }
@@ -122,7 +99,7 @@ public class PaymentService {
         }
         order = orders.markPaidOnline(order.getId(), payment.id(), payment.methodLabel());
         boolean ownPayment = payment.id().equals(order.getPaymentId());
-        // Заказ успели отменить или он уже оплачен другим платежом (заплатили дважды в двух вкладках)
+
         if (order.getStatus() == OrderStatus.CANCELLED || !ownPayment) {
             refund(order, payment, ownPayment);
         }
@@ -146,7 +123,7 @@ public class PaymentService {
         if (ownPayment && order.getRefundedAt() != null) {
             return;
         }
-        // Если деньги уже возвращали (например, вручную в личном кабинете), второй раз не возвращаем
+
         if (!payment.refunded()) {
             yookassa.refund(new YooKassa.Refund(payment.id(), payment.amount()), key("refund/" + payment.id()));
             log.info("Заказ {}: вернули {} ₽ по платежу {}", order.number(), payment.amount().value(), payment.id());
@@ -156,10 +133,6 @@ public class PaymentService {
         }
     }
 
-    /**
-     * Покупатель вернулся со страницы ЮKassa раньше уведомления: проверяем платёж сами.
-     * Если ЮKassa не ответила, просто показываем заказ как есть — уведомление досчитает.
-     */
     public Order refresh(Order order) {
         if (!online() || order.getStatus() != OrderStatus.AWAITING_PAYMENT || order.getPaymentId() == null) {
             return order;
@@ -173,11 +146,6 @@ public class PaymentService {
         return orders.byPublicId(order.getPublicId());
     }
 
-    /**
-     * Перед автоотменой: вдруг покупатель как раз заплатил, а уведомление ещё не дошло.
-     *
-     * @return false — отменять нельзя: заказ оплачен или ЮKassa не ответила (проверим в следующий раз)
-     */
     public boolean mayExpire(long orderId) {
         Order order = orders.byId(orderId);
         if (!online() || order.getPaymentId() == null) {
@@ -192,11 +160,6 @@ public class PaymentService {
         return orders.byId(orderId).getStatus() == OrderStatus.AWAITING_PAYMENT;
     }
 
-    /**
-     * Заказ отменили (покупатель, админка или таймаут) — если за него заплатили онлайн, возвращаем деньги.
-     * После коммита и в отдельном потоке: ЮKassa может отвечать долго. Если возврат не прошёл, в админке
-     * у заказа будет кнопка «Вернуть деньги».
-     */
     @Async
     @TransactionalEventListener
     public void onStatusChanged(OrderEvents.StatusChanged event) {
@@ -214,7 +177,6 @@ public class PaymentService {
         }
     }
 
-    /** Кнопка «Вернуть деньги» в админке, если автоматический возврат не прошёл. */
     public void retryRefund(long orderId) {
         Order order = orders.byId(orderId);
         if (!online() || !order.awaitingRefund()) {
@@ -227,12 +189,10 @@ public class PaymentService {
         }
     }
 
-    /** Проверка ключей со страницы настроек. */
     public YooKassa.Shop shop() {
         return yookassa.me();
     }
 
-    /** Idempotence-Key для ЮKassa: один и тот же для одного и того же действия. */
     private static String key(String action) {
         return UUID.nameUUIDFromBytes(action.getBytes(StandardCharsets.UTF_8)).toString();
     }

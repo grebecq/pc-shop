@@ -20,22 +20,13 @@ import static dev.pcshop.enums.Slot.PSU;
 import static dev.pcshop.enums.Slot.RAM;
 import static dev.pcshop.enums.Slot.SSD;
 
-/**
- * Правила совместимости сборки. Каждое правило смотрит только на уже выбранные детали,
- * поэтому сборку можно проверять на любом шаге, а не только целиком.
- */
 @Service
 public class CompatibilityService {
 
-    /** Плата, память, накопитель и вентиляторы — примерно столько же сверх процессора и видеокарты. */
     public static final int BASE_POWER_W = 75;
-    /** Запас по мощности блока питания: под пиковыми нагрузками потребление выше паспортного. */
+
     public static final double PSU_HEADROOM = 1.4;
 
-    /**
-     * Насколько можно отступить от блока, который советует производитель видеокарты: совет с запасом,
-     * на 50–100 Вт меньше обычно работает, но дальше начинаются отключения под нагрузкой.
-     */
     public static final int GPU_ADVICE_SLACK_W = 100;
 
     private static final List<String> BOARD_SIZES = List.of("Mini-ITX", "mATX", "ATX");
@@ -51,13 +42,11 @@ public class CompatibilityService {
         var pcCase = build.get(CASE);
         var ssd = build.get(SSD);
 
-        // Процессор и плата: один сокет
         if (cpu.isPresent() && mb.isPresent() && !cpu.get().str("socket").equals(mb.get().str("socket"))) {
             issues.add(Issue.error("Процессор под сокет " + cpu.get().str("socket") + ", а плата под "
                     + mb.get().str("socket") + ".", CPU, MOTHERBOARD));
         }
 
-        // Память: тип решает плата, а если её ещё нет — процессор
         if (ram.isPresent()) {
             String type = ram.get().str("memory_type");
             if (mb.isPresent()) {
@@ -69,14 +58,13 @@ public class CompatibilityService {
                 issues.add(Issue.error("Процессор не поддерживает " + type + ".", RAM, CPU));
             }
         }
-        // Плата и процессор по памяти: например, плата DDR4 и процессор только с DDR5
+
         if (cpu.isPresent() && mb.isPresent() && cpu.get().str("socket").equals(mb.get().str("socket"))
                 && !supports(cpu.get().str("memory_type"), mb.get().str("memory_type"))) {
             issues.add(Issue.error("Процессор не работает с памятью " + mb.get().str("memory_type") + ", а плата рассчитана на неё.",
                     CPU, MOTHERBOARD));
         }
 
-        // Плата влезает в корпус, если корпус рассчитан на такой же или больший форм-фактор
         if (mb.isPresent() && pcCase.isPresent()) {
             String board = mb.get().str("form_factor");
             String max = pcCase.get().str("form_factor");
@@ -86,13 +74,11 @@ public class CompatibilityService {
             }
         }
 
-        // Длина видеокарты
         if (gpu.isPresent() && pcCase.isPresent() && gpu.get().num("length_mm") > pcCase.get().num("max_gpu_mm")) {
             issues.add(Issue.error("Видеокарта длиной " + gpu.get().num("length_mm") + " мм не влезет: в корпус входит до "
                     + pcCase.get().num("max_gpu_mm") + " мм.", GPU, CASE));
         }
 
-        // Кулер: сокет, габариты, хватит ли его
         if (cooler.isPresent()) {
             Product c = cooler.get();
             Optional<Product> socketSource = cpu.isPresent() ? cpu : mb;
@@ -113,14 +99,13 @@ public class CompatibilityService {
                             COOLER, CASE));
                 }
             }
-            // Не у всех кулеров производитель указывает рассеиваемую мощность — тогда не проверяем
+
             if (cpu.isPresent() && c.num("max_tdp") > 0 && c.num("max_tdp") < cpu.get().num("tdp")) {
                 issues.add(Issue.warning("Кулер рассчитан на " + c.num("max_tdp") + " Вт, а процессор выделяет "
                         + cpu.get().num("tdp") + " Вт: под нагрузкой он будет сбрасывать частоты.", COOLER, CPU));
             }
         }
 
-        // Блок питания
         if (psu.isPresent()) {
             int power = psu.get().num("power");
             int draw = estimatedDraw(build);
@@ -137,19 +122,16 @@ public class CompatibilityService {
             }
         }
 
-        // Быстрый SSD в плате без PCIe 5.0
         if (ssd.isPresent() && mb.isPresent() && ssd.get().str("interface").contains("PCIe 5.0") && !mb.get().flag("m2_gen5")) {
             issues.add(Issue.warning("На этой плате SSD с PCIe 5.0 будет работать на скорости PCIe 4.0.", SSD, MOTHERBOARD));
         }
 
-        // Нет в наличии
         build.parts().forEach((slot, p) -> {
             if (!p.inStock()) {
                 issues.add(Issue.warning(p.getName() + " сейчас нет в наличии.", slot));
             }
         });
 
-        // Чего не хватает
         for (Slot slot : Slot.values()) {
             if (slot.required() && !build.has(slot)) {
                 issues.add(Issue.missing("Не выбран: " + slot.title().toLowerCase() + ".", slot));
@@ -164,36 +146,28 @@ public class CompatibilityService {
         return issues;
     }
 
-    /**
-     * Почему товар не подходит в слот при остальных выбранных деталях. Пусто — подходит.
-     * Считаем только ошибки, которые касаются этого слота: несовместимость между другими деталями тут ни при чём.
-     */
     public List<Issue> problems(Build build, Slot slot, Product candidate) {
         return check(build.with(slot, candidate)).stream()
                 .filter(i -> !i.isMissing() && i.slots().contains(slot))
                 .toList();
     }
 
-    /** Примерное потребление под нагрузкой, Вт. */
     public int estimatedDraw(Build build) {
         return build.get(CPU).map(p -> p.num("tdp")).orElse(0)
                 + build.get(GPU).map(p -> p.num("tdp")).orElse(0)
                 + BASE_POWER_W;
     }
 
-    /** Рекомендуемая мощность блока: потребление с запасом, округлённое вверх до 50 Вт, но не ниже совета производителя видеокарты. */
     public int recommendedPsu(Build build) {
         int withHeadroom = (int) Math.ceil(estimatedDraw(build) * PSU_HEADROOM / 50) * 50;
         int gpuAdvice = build.get(GPU).map(p -> p.num("recommended_psu")).orElse(0);
         return Math.max(withHeadroom, gpuAdvice);
     }
 
-    /** Сборка готова к заказу: ничего не забыто и нет ошибок. */
     public boolean complete(List<Issue> issues) {
         return issues.stream().noneMatch(i -> i.isError() || i.isMissing());
     }
 
-    /** "DDR4, DDR5" содержит "DDR5". */
     private static boolean supports(String list, String value) {
         return Arrays.stream(list.split(",")).map(String::strip).anyMatch(value::equals);
     }

@@ -12,7 +12,6 @@
     </div>
 
     <div class="catalog">
-        <!-- Фильтры: обычная GET-форма, отправляется при каждом изменении -->
         <form class="filters" method="get" th:action="@{/c/{s}(s=${category.slug})}" data-autosubmit>
             <input type="hidden" name="sort" th:value="${sort}">
             <fieldset th:each="f : ${category.filters}" th:if="${facets[f.key()] != null and !facets[f.key()].isEmpty()}">

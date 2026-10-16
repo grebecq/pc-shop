@@ -14,8 +14,8 @@ import org.hibernate.type.SqlTypes;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-/** Категория каталога. Справочник: меняется только миграциями. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -26,7 +26,7 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, updatable = false)
     private String slug;
 
     @Column(nullable = false)
@@ -35,8 +35,26 @@ public class Category {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
-    /** Характеристики, по которым можно фильтровать категорию. */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false)
-    private List<FilterDef> filters = new ArrayList<>();
+    private List<Spec> specs = new ArrayList<>();
+
+    public Category(String slug, String name, int sortOrder, List<Spec> specs) {
+        this.slug = slug;
+        update(name, sortOrder, specs);
+    }
+
+    public void update(String name, int sortOrder, List<Spec> specs) {
+        this.name = name;
+        this.sortOrder = sortOrder;
+        this.specs = new ArrayList<>(specs);
+    }
+
+    public List<FilterDef> getFilters() {
+        return specs.stream().filter(Spec::filter).map(s -> new FilterDef(s.key(), s.label())).toList();
+    }
+
+    public Optional<Spec> spec(String key) {
+        return specs.stream().filter(s -> s.key().equals(key)).findFirst();
+    }
 }

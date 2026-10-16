@@ -22,12 +22,6 @@ import org.springframework.security.web.authentication.SavedRequestAwareAuthenti
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
-/**
- * Две независимые зоны входа:
- * админка — логин и пароль владельца из переменных окружения (HTTP Basic),
- * сайт — аккаунты покупателей из базы (форма входа).
- * Плюс @PreAuthorize на контроллерах: если правило по адресу случайно потеряется, доступ всё равно закрыт.
- */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -56,7 +50,7 @@ public class SecurityConfig {
                 .authenticationManager(manager(accounts, encoder))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/account/**", "/configurator/save", "/p/*/reviews", "/p/*/stock-alert").authenticated()
-                        // «Забыли пароль?» и ссылка из письма: покупатель как раз не может войти
+
                         .requestMatchers("/password/**").permitAll()
                         .anyRequest().permitAll())
                 .formLogin(form -> form
@@ -66,20 +60,13 @@ public class SecurityConfig {
                         .failureHandler(loginLimiter)
                         .permitAll())
                 .logout(logout -> logout.logoutUrl("/logout").logoutSuccessUrl("/"))
-                // CSRF включён везде, в том числе для /api: JS сайта берёт токен и имя заголовка из meta-тегов страницы.
-                // Токен храним в cookie, а не в сессии: иначе каждый анонимный посетитель (и поисковый бот)
-                // получал бы сессию в памяти на 14 дней.
-                // Кроме уведомлений ЮKassa: их шлёт её сервер, а не браузер покупателя, и им всё равно не верим на слово
+
                 .csrf(csrf -> csrf.csrfTokenRepository(new CookieCsrfTokenRepository())
                         .ignoringRequestMatchers("/api/payments/yookassa"))
                 .addFilterBefore(loginLimiter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
-    /**
-     * После входа: на страницу из параметра next (только внутренние пути вида /cart — без открытого редиректа),
-     * иначе туда, куда покупатель шёл до входа, иначе в кабинет.
-     */
     private static AuthenticationSuccessHandler afterLogin() {
         var fallback = new SavedRequestAwareAuthenticationSuccessHandler();
         fallback.setDefaultTargetUrl("/account");
@@ -94,10 +81,6 @@ public class SecurityConfig {
         };
     }
 
-    /**
-     * Внутренний путь сайта: начинается с одного «/», без хоста. Параметры — только из букв, цифр, «=» и «&»
-     * (нужно, чтобы после входа вернуться к своей сборке в конфигураторе: /configurator?cpu=1&mb=5).
-     */
     public static boolean isSafeNext(String next) {
         return next != null && next.matches("^/(?!/)[a-z0-9/-]*(\\?[a-z0-9=&]*)?$");
     }

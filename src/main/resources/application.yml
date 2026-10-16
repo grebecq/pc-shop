@@ -1,45 +1,29 @@
 spring:
   application:
     name: pc-shop
-  # Переменные из .env подхватываются и при запуске из IDEA. Настоящие переменные окружения (docker, Render) важнее
   config:
     import: optional:file:.env[.properties][encoding=utf-8]
   datasource:
-    # Либо целиком DB_URL, либо по частям (так их отдают хостинги вроде Render).
-    # По умолчанию — база из docker-compose (порт 5433), чтобы приложение можно было запускать из IDEA
-    # DB_SCHEMA — отдельная схема, если база общая с другим проектом (Flyway создаст её сам)
     url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:pcshop}?currentSchema=${DB_SCHEMA:public}}
     username: ${DB_USER:pcshop}
     password: ${DB_PASSWORD:pcshop}
   flyway:
     schemas: ${DB_SCHEMA:public}
-  # Запуск из IDEA или bootRun: Spring сам поднимает базу и почту (Mailpit) из docker-compose.yml и подключается к ним.
-  # В собранном jar и в тестах этого модуля нет, там работают DB_URL / DB_HOST и MAIL_HOST
   docker:
     compose:
       file: docker-compose.yml
       start:
-        # База и Mailpit: само приложение уже запущено из IDEA
         arguments: [db, mailpit]
-        # По умолчанию Spring ничего не запускает, если хоть один сервис уже работает, и тогда при базе,
-        # оставшейся с прошлого раза, Mailpit не поднялся бы. Уже работающие сервисы compose не перезапускает
         skip: never
-      # База продолжает работать после остановки приложения, следующий запуск быстрее
       lifecycle-management: start-only
-  # Письма покупателям (ссылка для смены пароля). По умолчанию — Mailpit из docker-compose:
-  # письма никуда не уходят, их видно на http://localhost:8025
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}
-    # Логин и пароль — только если их требует SMTP-сервер (Mailpit не требует)
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
     properties:
-      # STARTTLS, если сервер его предлагает (обычно порт 587)
       mail.smtp.starttls.enable: true
-      # Сразу SSL — для порта 465 (Яндекс, Mail.ru): MAIL_SSL=true
       mail.smtp.ssl.enable: ${MAIL_SSL:false}
-      # Без таймаутов недоступный SMTP-сервер подвесил бы запрос покупателя
       mail.smtp.connectiontimeout: 5000
       mail.smtp.timeout: 5000
       mail.smtp.writetimeout: 5000
@@ -55,7 +39,6 @@ spring:
     cache: ${THYMELEAF_CACHE:true}
 
 springdoc:
-  # В Swagger показываем только REST API, без страниц сайта
   packages-to-scan: dev.pcshop.controller.api
   api-docs:
     enabled: ${SWAGGER_ENABLED:true}
@@ -67,7 +50,6 @@ server:
   forward-headers-strategy: framework
   servlet:
     session:
-      # Покупатель остаётся в аккаунте две недели (сессии живут в памяти приложения)
       timeout: 14d
       cookie:
         http-only: true
@@ -75,31 +57,23 @@ server:
 
 shop:
   orders:
-    # Сколько ждём оплату. Потом заказ отменяется, а товар возвращается на склад
     payment-timeout: ${PAYMENT_TIMEOUT:30m}
-  # Публичный адрес сайта: нужен для ссылок в сообщениях бота и в письмах
   base-url: ${SHOP_BASE_URL:${RENDER_EXTERNAL_URL:http://localhost:8080}}
+  metrika-id: ${YANDEX_METRIKA_ID:}
   delivery:
-    # Доставка курьером в рублях и сумма заказа, от которой она бесплатная
     courier-price: 490
     free-from: 50000
   yookassa:
-    # Онлайн-оплата: shopId и секретный ключ из личного кабинета ЮKassa (Интеграция → Ключи API).
-    # Пусто = тестовая форма оплаты без денег
     shop-id: ${YOOKASSA_SHOP_ID:}
     secret-key: ${YOOKASSA_SECRET_KEY:}
     api-url: https://api.yookassa.ru/v3
   mail:
-    # Отправитель писем покупателям
     from: "${MAIL_FROM:Сборка <noreply@pc-shop.local>}"
   admin:
     username: ${ADMIN_USER:admin}
     password: ${ADMIN_PASSWORD:}
   telegram:
-    # Пустой токен = бот выключен, сайт и API работают без него
     bot-token: ${BOT_TOKEN:}
-    # Имя бота без @ — для кнопки «Открыть бота» на сайте
     bot-username: ${BOT_USERNAME:}
     admin-chat-id: ${ADMIN_CHAT_ID:}
-    # Токен платёжного провайдера из @BotFather (Payments). Пусто = демо-оплата кнопкой
     payment-token: ${TELEGRAM_PAYMENT_TOKEN:}

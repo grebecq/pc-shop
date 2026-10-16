@@ -11,12 +11,12 @@
     <div class="info-cards">
         <div class="info-card">
             <b>Телефон</b>
-            <a href="tel:+78000000000">8 800 000-00-00</a>
-            <span class="muted">ежедневно 9:00–21:00, звонок бесплатный</span>
+            <a th:href="${store.phoneLink()}" th:text="${store.phone}">8 800 000-00-00</a>
+            <span class="muted" th:text="${store.hours}">ежедневно 9:00–21:00</span>
         </div>
         <div class="info-card">
             <b>Email</b>
-            <a href="mailto:hello@pc-shop.local">hello@pc-shop.local</a>
+            <a th:href="'mailto:' + ${store.email}" th:text="${store.email}">hello@pc-shop.local</a>
             <span class="muted">отвечаем в течение дня</span>
         </div>
         <div class="info-card" th:if="${botLink}">
@@ -35,7 +35,12 @@
         </div>
     </div>
 
-    <p class="info-note">Это демо-магазин: телефон, почта и адреса ненастоящие.</p>
+    <th:block th:if="${store.hasSeller()}">
+        <h2>Реквизиты</h2>
+        <p th:text="${store.sellerLine()}">ООО «Сборка», ИНН 7700000000</p>
+    </th:block>
+
+    <p class="info-note" th:unless="${store.hasSeller()}">Это демо-магазин: телефон, почта и адреса ненастоящие.</p>
 </main>
 
 <footer th:replace="~{fragments :: footer}"></footer>

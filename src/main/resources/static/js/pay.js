@@ -1,16 +1,13 @@
-// Форма оплаты картой: только удобство ввода. Всё проверяет сервер, без JS форма тоже работает.
 (function () {
   "use strict";
 
   var form = document.querySelector("[data-card-form]");
   if (!form) return;
 
-  // 4242424242424242 → «4242 4242 4242 4242»
   function formatNumber(value) {
     return value.replace(/\D/g, "").slice(0, 19).replace(/(\d{4})(?=\d)/g, "$1 ");
   }
 
-  // «1230» → «12/30»; слеш появляется сам после месяца, «4» сразу становится «04/»
   function formatExpiry(value, deleting) {
     var d = value.replace(/\D/g, "").slice(0, 4);
     if (d.length === 1 && d > "1") d = "0" + d;
@@ -22,7 +19,6 @@
     return value.replace(/\D/g, "").slice(0, 3);
   }
 
-  // Переформатирует поле, не сбивая курсор: он остаётся после той же цифры, что и до правки
   function bind(input, format) {
     if (!input) return;
     input.addEventListener("input", function (e) {
@@ -48,6 +44,5 @@
   bind(number, formatNumber);
   bind(form.querySelector("[name=expiry]"), formatExpiry);
   bind(form.querySelector("[name=cvc]"), formatCvc);
-  // После ошибки сервер возвращает номер без пробелов — показываем его снова группами
   if (number) number.value = formatNumber(number.value);
 })();

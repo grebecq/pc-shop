@@ -21,10 +21,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import java.time.Duration;
 import java.util.UUID;
 
-/**
- * Страница оплаты заказа. С ключами ЮKassa — кнопка, которая ведёт на её страницу (см. PaymentService).
- * Без ключей — тестовая форма карты: деньги не списываются, «банк» имитирует DemoPaymentGateway.
- */
 @Controller
 @RequiredArgsConstructor
 public class PaymentController {
@@ -47,7 +43,6 @@ public class PaymentController {
         return payPage(order, model);
     }
 
-    /** Кнопка «Оплатить»: создаём платёж в ЮKassa и отправляем покупателя на её страницу. */
     @PostMapping("/pay/{publicId}/online")
     public String online(@PathVariable UUID publicId, Model model) {
         if (!payments.online()) {
@@ -62,7 +57,6 @@ public class PaymentController {
         }
     }
 
-    /** Тестовая форма карты. Когда подключена настоящая оплата, её нет и запрос не принимается. */
     @PostMapping("/pay/{publicId}")
     public String pay(@PathVariable UUID publicId, @Valid @ModelAttribute("form") CardPaymentRequest form,
                       BindingResult errors, Model model) {
@@ -71,7 +65,7 @@ public class PaymentController {
             return "redirect:/pay/" + publicId;
         }
         if (order.getStatus() != OrderStatus.AWAITING_PAYMENT) {
-            // Повторная отправка формы или заказ уже отменён по таймауту: карту не трогаем
+
             return afterPayment(order);
         }
         if (!errors.hasErrors()) {
@@ -81,7 +75,7 @@ public class PaymentController {
                 model.addAttribute("error", e.getMessage());
             }
         }
-        // Номер, срок и имя остаются в форме, CVC шаблон обратно не выводит
+
         return payPage(order, model);
     }
 
@@ -92,7 +86,6 @@ public class PaymentController {
         return "shop/pay";
     }
 
-    /** «Оплата прошла» показываем, только если заказ действительно оплачен (а не отменён по таймауту). */
     private static String afterPayment(Order order) {
         return "redirect:/order/" + order.getPublicId() + (order.getStatus() == OrderStatus.PAID ? "?paid" : "");
     }

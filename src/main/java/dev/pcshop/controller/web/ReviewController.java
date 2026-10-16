@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/** Отзыв с формы на странице товара. После отправки возвращаемся к отзывам. */
 @Controller
 @RequiredArgsConstructor
 public class ReviewController {
@@ -30,7 +29,6 @@ public class ReviewController {
         var product = catalog.product(slug);
         String back = "redirect:/p/" + slug + "#reviews";
         if (errors.hasErrors()) {
-            // Что покупатель уже написал, возвращаем в форму вместе с ошибкой
             flash.addFlashAttribute("reviewError", errors.getAllErrors().getFirst().getDefaultMessage());
             flash.addFlashAttribute("review", form);
             return back;

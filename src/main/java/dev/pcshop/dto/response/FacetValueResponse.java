@@ -2,10 +2,9 @@ package dev.pcshop.dto.response;
 
 import java.util.Comparator;
 
-/** Значение характеристики и сколько товаров с ним — строка фильтра каталога. */
+// Значение фильтра
 public record FacetValueResponse(String value, int count) {
 
-    /** Числа сортируем как числа (8 < 16 < 32), остальное — по алфавиту. */
     public static final Comparator<FacetValueResponse> ORDER = Comparator
             .comparing((FacetValueResponse f) -> asNumber(f.value()) == null)
             .thenComparing(f -> asNumber(f.value()), Comparator.nullsLast(Comparator.naturalOrder()))

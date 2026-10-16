@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -33,11 +34,14 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @EntityGraph(attributePaths = "category")
     List<Product> findTop8ByActiveTrueAndStockGreaterThanOrderByPriceDesc(int stock);
 
-    /** Товары со скидкой. Их немного, поэтому сортируем по размеру скидки уже в Java. */
+    record SitemapLink(String slug, Instant updatedAt) {
+    }
+
+    List<SitemapLink> findSitemapLinksByActiveTrueOrderById();
+
     @EntityGraph(attributePaths = "category")
     List<Product> findAllByActiveTrueAndOldPriceNotNull();
 
-    /** Похожие товары: та же категория, в наличии, ближе всего по цене. */
     @Query(value = """
             SELECT p.id FROM product p
             WHERE p.category_id = :categoryId AND p.id <> :productId AND p.active AND p.stock > 0
@@ -46,15 +50,32 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Long> similarIds(@Param("categoryId") long categoryId, @Param("productId") long productId,
                           @Param("price") int price, @Param("limit") int limit);
 
-    /**
-     * Атомарно списывает остаток. Возвращает 0, если товара не хватает:
-     * так два одновременных заказа не уведут остаток в минус.
-     */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("update Product p set p.stock = p.stock - :qty where p.id = :id and p.active = true and p.stock >= :qty")
+    @Query(value = "UPDATE product SET stock = stock - :qty WHERE id = :id AND active AND stock >= :qty", nativeQuery = true)
     int reserve(@Param("id") long id, @Param("qty") int qty);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("update Product p set p.stock = p.stock + :qty where p.id = :id")
-    int release(@Param("id") long id, @Param("qty") int qty);
+    @Query(value = "UPDATE product SET stock = stock - :qty WHERE id = :id AND stock >= :qty", nativeQuery = true)
+    int take(@Param("id") long id, @Param("qty") int qty);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "UPDATE product SET stock = stock + :qty WHERE id = :id", nativeQuery = true)
+    int add(@Param("id") long id, @Param("qty") int qty);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = "UPDATE product SET stock = :stock WHERE id = :id", nativeQuery = true)
+    int setStock(@Param("id") long id, @Param("stock") int stock);
+
+    @Query(value = "SELECT stock FROM product WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<Integer> lockStock(@Param("id") long id);
+
+    @Query(value = "SELECT stock FROM product WHERE id = :id", nativeQuery = true)
+    int stockOf(@Param("id") long id);
+
+    boolean existsBySlug(String slug);
+
+    @EntityGraph(attributePaths = "category")
+    List<Product> findAllByIdIn(Collection<Long> ids);
+
+    long countByCategoryId(long categoryId);
 }

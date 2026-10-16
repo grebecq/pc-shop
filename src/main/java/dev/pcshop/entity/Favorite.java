@@ -17,7 +17,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.io.Serializable;
 import java.time.Instant;
 
-/** Товар в избранном у покупателя. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -43,7 +42,6 @@ public class Favorite {
         this.productId = productId;
     }
 
-    /** Составной ключ: один товар в избранном у покупателя один раз. */
     @NoArgsConstructor
     @AllArgsConstructor
     @EqualsAndHashCode

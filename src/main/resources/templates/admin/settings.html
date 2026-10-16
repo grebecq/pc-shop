@@ -5,9 +5,58 @@
 <header th:replace="~{admin/layout :: nav}"></header>
 <main class="wrap narrow settings">
     <h1>Настройки</h1>
-    <p class="muted">Ключи и пароли задаются в файле .env на сервере, после изменения приложение нужно перезапустить.
-        Здесь видно, что подключено, и можно проверить, что всё работает.</p>
+    <p class="muted">Контакты и реквизиты магазина меняются прямо здесь. Ключи и пароли задаются в файле .env на сервере,
+        после их изменения приложение нужно перезапустить. Здесь видно, что подключено, и можно проверить, что всё работает.</p>
     <div th:replace="~{admin/layout :: flash}"></div>
+
+    <form class="panel settings__block form-grid" method="post" th:action="@{/admin/settings/store}" th:object="${storeForm}" novalidate>
+        <h2 class="h3">Магазин</h2>
+        <p class="muted">Контакты видны в подвале сайта и на странице «Контакты», реквизиты — в подвале и в оферте.
+            По закону покупатель должен видеть, кто продавец, поэтому заполните их до запуска.</p>
+        <div class="field-row">
+            <div class="field">
+                <label for="phone">Телефон</label>
+                <input id="phone" th:field="*{phone}" type="tel" maxlength="32" placeholder="8 800 000-00-00">
+                <p class="form-error" th:errors="*{phone}"></p>
+            </div>
+            <div class="field">
+                <label for="email">Почта для покупателей</label>
+                <input id="email" th:field="*{email}" type="email" maxlength="128" placeholder="hello@shop.ru">
+                <p class="form-error" th:errors="*{email}"></p>
+            </div>
+        </div>
+        <div class="field">
+            <label for="hours">Когда отвечаете</label>
+            <input id="hours" th:field="*{hours}" maxlength="128" placeholder="ежедневно 9:00–21:00, звонок бесплатный">
+            <p class="form-error" th:errors="*{hours}"></p>
+        </div>
+        <div class="field">
+            <label for="legalName">Продавец <span class="muted">— ООО «Название», ИП Фамилия Имя Отчество или самозанятый</span></label>
+            <input id="legalName" th:field="*{legalName}" maxlength="256" placeholder="ООО «Сборка»">
+            <p class="form-error" th:errors="*{legalName}"></p>
+            <p class="form-error" th:errors="*{sellerComplete}"></p>
+        </div>
+        <div class="field-row">
+            <div class="field">
+                <label for="inn">ИНН</label>
+                <input id="inn" th:field="*{inn}" inputmode="numeric" maxlength="12">
+                <p class="form-error" th:errors="*{inn}"></p>
+            </div>
+            <div class="field">
+                <label for="ogrn">ОГРН или ОГРНИП <span class="muted">— у самозанятого нет</span></label>
+                <input id="ogrn" th:field="*{ogrn}" inputmode="numeric" maxlength="15">
+                <p class="form-error" th:errors="*{ogrn}"></p>
+            </div>
+        </div>
+        <div class="field">
+            <label for="legalAddress">Юридический адрес</label>
+            <input id="legalAddress" th:field="*{legalAddress}" maxlength="512">
+            <p class="form-error" th:errors="*{legalAddress}"></p>
+        </div>
+        <p class="muted">Текст <a th:href="@{/offer}" target="_blank">оферты</a> и <a th:href="@{/privacy}" target="_blank">политики
+            обработки данных</a> — типовой. Перед запуском покажите его юристу.</p>
+        <div><button class="btn" type="submit">Сохранить</button></div>
+    </form>
 
     <section class="panel settings__block">
         <h2 class="h3">Оплата</h2>

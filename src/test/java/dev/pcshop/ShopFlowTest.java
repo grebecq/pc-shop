@@ -2,13 +2,14 @@ package dev.pcshop;
 
 import dev.pcshop.dto.request.CustomerRequest;
 import dev.pcshop.dto.request.OrderLineRequest;
+import dev.pcshop.dto.request.ProductRequest;
 import dev.pcshop.dto.request.ProductSearchRequest;
-import dev.pcshop.dto.request.ProductUpdateRequest;
 import dev.pcshop.enums.Channel;
 import dev.pcshop.enums.DeliveryMethod;
 import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.exception.OrderException;
 import dev.pcshop.repository.ProductRepository;
+import dev.pcshop.service.CatalogAdminService;
 import dev.pcshop.service.CatalogService;
 import dev.pcshop.service.OrderService;
 import jakarta.validation.ConstraintViolationException;
@@ -23,6 +24,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+// Сквозной сценарий покупки
 @SpringBootTest
 @Import(TestcontainersConfig.class)
 class ShopFlowTest {
@@ -30,6 +32,7 @@ class ShopFlowTest {
     private static final CustomerRequest CUSTOMER = new CustomerRequest("Тест", "+7 900 000-00-00", "Москва, ул. Тестовая, 1", null);
 
     @Autowired CatalogService catalog;
+    @Autowired CatalogAdminService admin;
     @Autowired OrderService orders;
     @Autowired ProductRepository products;
 
@@ -98,7 +101,6 @@ class ShopFlowTest {
     @Test
     void orderServiceChecksCustomerForEveryChannel() {
         long ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme").getId();
-        // Бот проверяет ввод сам, но сервис не доверяет никакому каналу
         var bad = new CustomerRequest(" ", "не телефон", "Мск", null);
         assertThatThrownBy(() -> orders.create(Channel.TELEGRAM, bad, List.of(new OrderLineRequest(ssd, 1)), 1L))
                 .isInstanceOf(ConstraintViolationException.class)
@@ -112,7 +114,9 @@ class ShopFlowTest {
     void adminEditRefreshesUpdatedAt() {
         var gpu = catalog.product("palit-geforce-rtx-5070-infinity-3-12-gb");
         var before = gpu.getUpdatedAt();
-        catalog.updateProduct(gpu.getId(), new ProductUpdateRequest(gpu.getPrice() + 100, gpu.getOldPrice(), gpu.getStock(), true));
+        var form = ProductRequest.of(gpu);
+        admin.update(gpu.getId(), new ProductRequest(form.categoryId(), form.name(), form.brand(), gpu.getPrice() + 100,
+                gpu.getOldPrice(), form.description(), true, form.specs(), null));
         assertThat(products.findById(gpu.getId()).orElseThrow().getUpdatedAt()).isAfter(before);
     }
 
@@ -127,7 +131,6 @@ class ShopFlowTest {
                 .isInstanceOf(OrderException.class)
                 .hasMessageContaining("Недостаточно на складе");
 
-        // Резерв по первой позиции тоже откатился вместе с транзакцией
         assertThat(products.findById(case_.getId()).orElseThrow().getStock()).isEqualTo(caseStock);
     }
 }

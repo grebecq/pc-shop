@@ -8,6 +8,7 @@
     <div th:replace="~{account/parts :: head}"></div>
     <nav th:replace="~{fragments :: account-tabs('profile')}"></nav>
     <div th:replace="~{fragments :: flash}"></div>
+    <form th:replace="~{account/parts :: email-reminder('profile')}"></form>
 
     <div class="profile-grid">
         <form class="panel form-grid" method="post" th:action="@{/account/profile}" th:object="${form}" novalidate>

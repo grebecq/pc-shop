@@ -7,10 +7,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/**
- * Данные карты из формы тестовой оплаты. Живут только в запросе: в заказ попадают
- * платёжная система и последние 4 цифры, номер целиком и CVC нигде не сохраняются.
- */
 public record CardPaymentRequest(
 
         @NotBlank(message = "Введите номер карты")
@@ -31,7 +27,7 @@ public record CardPaymentRequest(
         String holder) {
 
     public CardPaymentRequest {
-        // Номер вводят группами по 4 цифры, срок — иногда как «12 / 30»: пробелы внутри убираем
+
         number = number == null ? null : number.replaceAll("\\s+", "");
         expiry = expiry == null ? null : expiry.replaceAll("\\s+", "");
         cvc = Strings.strip(cvc);
@@ -42,12 +38,10 @@ public record CardPaymentRequest(
         return new CardPaymentRequest("", "", "", "");
     }
 
-    /** Последние 4 цифры — единственное, что можно хранить и показывать. */
     public String last4() {
         return number == null || number.length() < 4 ? "" : number.substring(number.length() - 4);
     }
 
-    /** Номер и CVC не должны попасть в лог, даже если запрос случайно залогируют целиком. */
     @Override
     public String toString() {
         return "CardPaymentRequest[number=•• " + last4() + ", expiry=" + expiry + "]";

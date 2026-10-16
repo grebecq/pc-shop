@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
 
+// Картинки товаров
 @RestController
 @RequiredArgsConstructor
 public class MediaController {
@@ -21,7 +22,6 @@ public class MediaController {
     public ResponseEntity<byte[]> productPhoto(@PathVariable long id) {
         return photos.find(id)
                 .map(p -> ResponseEntity.ok()
-                        // В ссылке есть версия (?v=...), поэтому кешировать можно надолго
                         .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic())
                         .header("X-Content-Type-Options", "nosniff")
                         .contentType(MediaType.parseMediaType(p.contentType()))

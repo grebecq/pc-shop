@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout :: head(${product == null} ? 'Новый товар' : ${product.name})}"></head>
+<body>
+<header th:replace="~{admin/layout :: nav}"></header>
+<main class="wrap narrow">
+    <a class="muted" th:href="@{/admin/products}">← Все товары</a>
+    <div class="catalog-head admin-head">
+        <h1 th:text="${product == null} ? 'Новый товар' : ${product.name}">Товар</h1>
+        <th:block th:if="${product != null}">
+            <a class="muted" th:href="@{/p/{s}(s=${product.slug})}" target="_blank" th:if="${product.active}">Открыть на сайте ↗</a>
+            <a class="btn btn--small btn--ghost admin-head__action" th:href="@{/admin/products/new(copy=${product.id})}">Создать похожий</a>
+        </th:block>
+    </div>
+    <div th:replace="~{admin/layout :: flash}"></div>
+
+    <form class="panel admin-form" method="post" enctype="multipart/form-data"
+          th:action="${product == null} ? @{/admin/products} : @{/admin/products/{id}(id=${product.id})}">
+        <div class="field">
+            <label for="categoryId">Категория</label>
+            <select id="categoryId" name="categoryId" data-change-category>
+                <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}" th:selected="${c.id == category.id}">Категория</option>
+            </select>
+            <button class="btn btn--small btn--ghost js-hide" type="submit" name="changeCategory" value="1" formnovalidate>Показать характеристики</button>
+        </div>
+        <div class="field">
+            <label for="name">Название</label>
+            <input id="name" name="name" th:value="${form.name()}" required maxlength="256" placeholder="Например, AMD Ryzen 5 7600 OEM">
+        </div>
+        <div class="field-row">
+            <div class="field">
+                <label for="brand">Бренд</label>
+                <input id="brand" name="brand" th:value="${form.brand()}" required maxlength="64">
+            </div>
+            <label class="check admin-form__check"><input type="checkbox" name="active" value="true" th:checked="${form.isActive()}"> Продаётся на сайте</label>
+        </div>
+        <div class="field-row">
+            <div class="field">
+                <label for="price">Цена, ₽</label>
+                <input id="price" name="price" type="number" min="1" max="10000000" th:value="${form.price()}" required>
+            </div>
+            <div class="field">
+                <label for="oldPrice">Цена до скидки, ₽ <span class="muted">— пусто, если скидки нет</span></label>
+                <input id="oldPrice" name="oldPrice" type="number" min="1" max="10000000" th:value="${form.oldPrice()}">
+            </div>
+        </div>
+        <div class="field" th:if="${product == null}">
+            <label for="stock">Сколько есть на складе, шт.</label>
+            <input id="stock" name="stock" type="number" min="0" max="100000" th:value="${form.stock()}" placeholder="0">
+        </div>
+        <div class="field">
+            <label for="description">Описание</label>
+            <textarea id="description" name="description" rows="4" maxlength="5000" th:text="${form.description()}"></textarea>
+        </div>
+
+        <h2 class="h3">Характеристики</h2>
+        <p class="muted" th:if="${category.specs.isEmpty()}">У категории пока нет характеристик.
+            <a th:href="@{/admin/categories/{id}(id=${category.id})}">Добавить их</a></p>
+        <p class="muted small-line" th:unless="${needed.isEmpty()}">Отмеченные * нужны конфигуратору сборок, без них товар не сохранится.</p>
+        <div class="spec-grid">
+            <th:block th:each="s : ${category.specs}">
+                <label class="check" th:if="${s.type().name() == 'BOOL'}">
+                    <input type="checkbox" value="true" th:name="'specs[' + ${s.key()} + ']'" th:checked="${form.specs().get(s.key()) == 'true'}">
+                    <span th:text="${s.label()}">Галочка</span>
+                </label>
+                <div class="field" th:unless="${s.type().name() == 'BOOL'}">
+                    <label th:for="'spec-' + ${s.key()}"><span th:text="${s.label()}">Характеристика</span><b th:if="${needed.contains(s.key())}"> *</b></label>
+                    <input th:id="'spec-' + ${s.key()}" th:name="'specs[' + ${s.key()} + ']'" th:value="${form.specs().get(s.key())}"
+                           th:attr="inputmode=${s.type().name() == 'NUMBER'} ? 'numeric' : null, list=${s.type().name() == 'TEXT'} ? 'list-' + ${s.key()} : null"
+                           th:required="${needed.contains(s.key())}" autocomplete="off">
+                    <datalist th:if="${s.type().name() == 'TEXT'}" th:id="'list-' + ${s.key()}">
+                        <option th:each="v : ${suggestions.get(s.key())}" th:value="${v}"></option>
+                    </datalist>
+                </div>
+            </th:block>
+        </div>
+
+        <h2 class="h3">Фото</h2>
+        <div class="photo-edit">
+            <img th:if="${product != null and product.imageUrl != null}" th:src="${product.imageUrl}" alt="" class="photo-edit__img" referrerpolicy="no-referrer">
+            <div class="field">
+                <label for="photo" th:text="${product != null and product.imageUrl != null} ? 'Заменить фото' : 'Загрузить фото'">Фото</label>
+                <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp">
+                <span class="muted small-line">JPEG, PNG или WebP до 3 МБ</span>
+            </div>
+            <button th:if="${product != null and product.imageUrl != null}" class="remove" type="submit" formnovalidate
+                    th:formaction="@{/admin/products/{id}/photo/delete(id=${product.id})}">Убрать фото</button>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn" type="submit" th:text="${product == null} ? 'Создать товар' : 'Сохранить'">Сохранить</button>
+        </div>
+    </form>
+
+    <section class="panel admin-form" id="stock" th:if="${product != null}">
+        <div class="catalog-head admin-head">
+            <h2 class="h3">Склад</h2>
+            <span class="stock-now" th:text="'На складе: ' + ${product.stock} + ' шт.'">На складе: 0 шт.</span>
+        </div>
+        <p class="notice" th:if="${stockMessage}" th:text="${stockMessage}">Проведено</p>
+        <p class="notice notice--error" th:if="${stockError}" th:text="${stockError}">Ошибка</p>
+        <form class="stock-form" method="post" th:action="@{/admin/products/{id}/stock(id=${product.id})}">
+            <div class="stock-form__ops" role="radiogroup" aria-label="Операция">
+                <label class="choice" th:each="op, it : ${operations}">
+                    <input type="radio" name="operation" th:value="${op}" th:checked="${it.first}" required>
+                    <span th:text="${op.label()}">Приход</span>
+                </label>
+            </div>
+            <div class="field">
+                <label for="quantity">Количество, шт. <span class="muted">— для пересчёта: сколько есть на самом деле</span></label>
+                <input id="quantity" name="quantity" type="number" min="0" max="100000" required>
+            </div>
+            <div class="field">
+                <label for="comment">Комментарий</label>
+                <input id="comment" name="comment" maxlength="256" placeholder="Накладная, поставщик или причина списания">
+            </div>
+            <button class="btn btn--ghost" type="submit">Провести</button>
+        </form>
+
+        <h3 class="h3">Журнал</h3>
+        <p class="muted" th:if="${history.isEmpty()}">Операций ещё не было.</p>
+        <div class="table-scroll" th:unless="${history.isEmpty()}">
+            <table class="cart-table stock-log">
+                <thead><tr><th>Когда</th><th>Операция</th><th class="num">Изменение</th><th class="num">Стало</th><th>Комментарий</th></tr></thead>
+                <tbody>
+                <tr th:each="m : ${history}">
+                    <td th:text="${@fmt.date(m.createdAt)}">дата</td>
+                    <td th:text="${m.reason.label()}">Приход</td>
+                    <td class="num" th:classappend="${m.delta > 0} ? 'is-plus' : 'is-minus'" th:text="${m.delta > 0} ? '+' + ${m.delta} : '−' + ${-m.delta}">+1</td>
+                    <td class="num" th:text="${m.stockAfter}">1</td>
+                    <td>
+                        <a th:if="${m.orderId != null}" th:href="@{/admin/orders/{id}(id=${m.orderId})}" th:text="'Заказ ' + ${m.orderNumber()}">Заказ</a>
+                        <span th:text="${m.comment}">Комментарий</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="muted small-line" th:if="${history.size() == 50}">Показаны последние 50 операций.</p>
+    </section>
+</main>
+<script>
+    // Сменили категорию — сразу показываем её характеристики, не теряя введённое
+    document.querySelectorAll('.js-hide').forEach(el => el.hidden = true);
+    document.querySelector('[data-change-category]')?.addEventListener('change', e =>
+        e.target.form.requestSubmit(e.target.form.querySelector('[name=changeCategory]')));
+</script>
+</body>
+</html>

@@ -10,7 +10,6 @@ import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
-/** Бот включается, только если задан BOT_TOKEN. Без него сайт и API работают как обычно. */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnExpression("!'${shop.telegram.bot-token:}'.isBlank()")
@@ -24,7 +23,6 @@ public class TelegramConfig {
     @Bean(destroyMethod = "close")
     public TelegramBotsLongPollingApplication telegramBots(ShopProperties props, ShopBot bot) {
         var app = new TelegramBotsLongPollingApplication();
-        // Telegram недоступен (нет сети, блокировка) — сайт всё равно запускается, без бота
         try {
             app.registerBot(props.telegram().botToken(), bot);
         } catch (TelegramApiException e) {

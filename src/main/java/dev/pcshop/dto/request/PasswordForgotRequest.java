@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** «Забыли пароль?»: email, на который отправить ссылку для смены пароля. */
 public record PasswordForgotRequest(
 
         @NotBlank(message = "Укажите email")

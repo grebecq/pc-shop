@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Имитация банка: платёжная система по номеру, отказ по тестовой карте, выключение при настоящей оплате. */
 class DemoPaymentGatewayTest {
 
     private final DemoPaymentGateway gateway = new DemoPaymentGateway(props(null, null));

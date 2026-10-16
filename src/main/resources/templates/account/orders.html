@@ -7,7 +7,9 @@
 <main class="wrap narrow">
     <div th:replace="~{account/parts :: head}"></div>
     <nav th:replace="~{fragments :: account-tabs('orders')}"></nav>
+    <div th:replace="~{fragments :: flash}"></div>
     <p class="notice" th:if="${param.welcome}">Аккаунт создан. Добавьте адрес доставки, чтобы оформлять заказы в пару кликов.</p>
+    <form th:replace="~{account/parts :: email-reminder('orders')}"></form>
 
     <div class="order-list" th:unless="${orders.empty}">
         <a class="order-row" th:each="o : ${orders.content}" th:href="@{/order/{id}(id=${o.publicId})}">

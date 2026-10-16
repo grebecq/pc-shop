@@ -18,7 +18,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Неоплаченные заказы не держат склад вечно. */
 @SpringBootTest
 @Import(TestcontainersConfig.class)
 class OrderExpiryTest {
@@ -48,7 +47,6 @@ class OrderExpiryTest {
         assertThat(orders.byId(paid.getId()).getStatus()).isEqualTo(OrderStatus.PAID);
         assertThat(catalog.product("corsair-rm1000x-2024-1000-vt").getStock()).isEqualTo(before - 2);
 
-        // Опоздавшая оплата отменённый заказ не «оживляет»
         assertThat(orders.markPaid(stale.getPublicId()).getPaidAt()).isNull();
     }
 

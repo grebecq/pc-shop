@@ -12,13 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClientException;
 
-/**
- * HTTP-уведомления ЮKassa. Адрес указывают в личном кабинете: Интеграция → HTTP-уведомления,
- * https://ваш-домен/api/payments/yookassa, события payment.succeeded и payment.canceled.
- * <p>
- * Тело уведомлению не нужно подписывать: из него берём только id платежа и перепрашиваем платёж у API.
- * Ответ не 200 — ЮKassa повторит уведомление позже.
- */
+// Уведомления от ЮKassa
 @Slf4j
 @Hidden
 @RestController
@@ -32,7 +26,7 @@ public class PaymentWebhookController {
         if (!payments.online()) {
             return ResponseEntity.notFound().build();
         }
-        // refund.succeeded и прочие события нам не нужны: возвраты магазин делает сам
+
         if (notification.event() == null || !notification.event().startsWith("payment.") || notification.object() == null) {
             return ResponseEntity.ok().build();
         }

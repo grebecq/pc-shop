@@ -17,7 +17,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 
-/** Аккаунт покупателя на сайте. */
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -41,6 +40,15 @@ public class Account {
 
     private String phone;
 
+    @Column(name = "email_confirmed_at")
+    private Instant emailConfirmedAt;
+
+    @Column(name = "email_token_hash", length = 64)
+    private String emailTokenHash;
+
+    @Column(name = "email_token_sent_at")
+    private Instant emailTokenSentAt;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -55,4 +63,19 @@ public class Account {
         this.name = name;
     }
 
+    public boolean isEmailConfirmed() {
+        return emailConfirmedAt != null;
+    }
+
+    public void newEmailToken(String tokenHash, Instant now) {
+        this.emailTokenHash = tokenHash;
+        this.emailTokenSentAt = now;
+    }
+
+    public void confirmEmail(Instant now) {
+        if (emailConfirmedAt == null) {
+            emailConfirmedAt = now;
+        }
+        emailTokenHash = null;
+    }
 }
