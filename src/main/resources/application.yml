@@ -67,6 +67,9 @@ shop:
     shop-id: ${YOOKASSA_SHOP_ID:}
     secret-key: ${YOOKASSA_SECRET_KEY:}
     api-url: https://api.yookassa.ru/v3
+    receipts: ${YOOKASSA_RECEIPTS:false}
+    vat-code: ${YOOKASSA_VAT_CODE:1}
+    tax-system-code: ${YOOKASSA_TAX_SYSTEM:}
   mail:
     from: "${MAIL_FROM:Сборка <noreply@pc-shop.local>}"
   admin:

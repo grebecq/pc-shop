@@ -49,6 +49,15 @@ public class YooKassaClient {
         return http.get().uri("/me").retrieve().body(YooKassa.Shop.class);
     }
 
+    public void createReceipt(YooKassa.FinalReceipt receipt, String idempotenceKey) {
+        http.post().uri("/receipts")
+                .header("Idempotence-Key", idempotenceKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(receipt)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
     public void refund(YooKassa.Refund refund, String idempotenceKey) {
         http.post().uri("/refunds")
                 .header("Idempotence-Key", idempotenceKey)

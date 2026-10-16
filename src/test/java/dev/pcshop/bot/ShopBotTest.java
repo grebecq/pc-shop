@@ -61,7 +61,7 @@ class ShopBotTest {
     void setUp() {
         telegram = mock(TelegramClient.class);
         var props = new ShopProperties("http://localhost:8080", null, new ShopProperties.Telegram("test", null, null, null),
-                new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa(null, null, "https://api.yookassa.ru/v3"));
+                new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa(null, null, "https://api.yookassa.ru/v3", false, 1, null));
         bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, delivery, promos, props, Duration.ofMinutes(30));
         cart.clear(CHAT);
     }
@@ -148,7 +148,7 @@ class ShopBotTest {
     @Test
     void withYookassaBotSendsBuyerToSiteAndDemoButtonIsOff() throws Exception {
         var props = new ShopProperties("https://shop.example.ru", null, new ShopProperties.Telegram("test", null, null, null),
-                new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa("123456", "test_key", "https://api.yookassa.ru/v3"));
+                new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa("123456", "test_key", "https://api.yookassa.ru/v3", false, 1, null));
         bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, delivery, promos, props, Duration.ofMinutes(30));
         callback("a:" + catalog.product("deepcool-cc560-v2-black").getId());
         callback("co");
