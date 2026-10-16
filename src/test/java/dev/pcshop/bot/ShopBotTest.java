@@ -9,8 +9,13 @@ import dev.pcshop.enums.OrderStatus;
 import dev.pcshop.service.BotCartService;
 import dev.pcshop.service.BuildService;
 import dev.pcshop.service.CatalogService;
+import dev.pcshop.dto.request.CustomerRequest;
+import dev.pcshop.dto.request.OrderLineRequest;
+import dev.pcshop.enums.DeliveryMethod;
 import dev.pcshop.service.CompatibilityService;
+import dev.pcshop.service.DeliveryService;
 import dev.pcshop.service.OrderService;
+import dev.pcshop.service.PromoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.Invocation;
@@ -21,6 +26,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.time.Duration;
@@ -32,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
 
-/** Полный сценарий покупки в боте: каталог → товар → корзина → оформление → тестовая оплата. */
+/** Сценарии бота: каталог, поиск, корзина, оформление с самовывозом и промокодом, оплата, «Мои заказы». */
 @SpringBootTest
 @Import(TestcontainersConfig.class)
 class ShopBotTest {
@@ -45,6 +51,8 @@ class ShopBotTest {
     @Autowired BotCartService cart;
     @Autowired BuildService builds;
     @Autowired CompatibilityService compatibility;
+    @Autowired DeliveryService delivery;
+    @Autowired PromoService promos;
 
     TelegramClient telegram;
     ShopBot bot;
@@ -55,7 +63,7 @@ class ShopBotTest {
         telegram = mock(TelegramClient.class);
         var props = new ShopProperties("http://localhost:8080", null, new ShopProperties.Telegram("test", null, null, null),
                 new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa(null, null, "https://api.yookassa.ru/v3"));
-        bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, props, Duration.ofMinutes(30));
+        bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, delivery, promos, props, Duration.ofMinutes(30));
         cart.clear(CHAT);
     }
 
@@ -71,7 +79,8 @@ class ShopBotTest {
         assertThat(lastButtons()).contains("p:" + ram);
 
         callback("p:" + ram);
-        assertThat(lastText()).contains("Kingston FURY Beast").contains("Тип памяти: DDR5");
+        // «×» остаётся символом: Telegram не понимает &times;
+        assertThat(lastText()).contains("Kingston FURY Beast 16 ГБ (2×8)").contains("Тип памяти: DDR5").doesNotContain("&times;");
 
         callback("a:" + ram);
         callback("a:" + ram);
@@ -81,9 +90,14 @@ class ShopBotTest {
         callback("co");
         text("Иван");
         contact("79001234567");
+        assertThat(lastText()).contains("Как получить заказ?", "Курьер — бесплатно");
+        text(ShopBot.BTN_COURIER);
         text("Москва, ул. Тверская, 1");
+        assertThat(lastText()).contains("Есть промокод?");
+        text(ShopBot.BTN_NO_PROMO);
 
-        assertThat(sentTexts()).anyMatch(t -> t.contains("создан") && t.contains("65 980 ₽"));
+        // 65 980 ₽ — больше порога бесплатной доставки
+        assertThat(sentTexts()).anyMatch(t -> t.contains("создан") && t.contains("65 980 ₽") && t.contains("Доставка: бесплатно"));
         assertThat(cart.lines(CHAT)).isEmpty();
 
         String payData = lastButtons().stream().filter(d -> d.startsWith("pay:")).findFirst().orElseThrow();
@@ -103,8 +117,9 @@ class ShopBotTest {
         callback("a:" + catalog.product("kingston-nv3-1-tb-m-2-nvme").getId());
         callback("co");
         text("Отменить оформление");
+        // Оформление сброшено: «Иван» теперь просто поисковый запрос, а не имя
         text("Иван");
-        assertThat(lastText()).contains("Не понял команду");
+        assertThat(lastText()).contains("ничего не нашлось");
     }
 
     @Test
@@ -124,7 +139,9 @@ class ShopBotTest {
         callback("co");
         text("Иван");
         text("+7 900 000-00-00");
+        text(ShopBot.BTN_COURIER);
         text("Москва, ул. Тверская, 1");
+        text(ShopBot.BTN_NO_PROMO);
         String payData = lastButtons().stream().filter(d -> d.startsWith("pay:")).findFirst().orElseThrow();
         assertThat(lastText()).contains("зарезервирован до");
 
@@ -137,12 +154,14 @@ class ShopBotTest {
     void withYookassaBotSendsBuyerToSiteAndDemoButtonIsOff() throws Exception {
         var props = new ShopProperties("https://shop.example.ru", null, new ShopProperties.Telegram("test", null, null, null),
                 new ShopProperties.Delivery(490, 50000), new ShopProperties.Yookassa("123456", "test_key", "https://api.yookassa.ru/v3"));
-        bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, props, Duration.ofMinutes(30));
+        bot = new ShopBot(telegram, catalog, orders, cart, builds, compatibility, delivery, promos, props, Duration.ofMinutes(30));
         callback("a:" + catalog.product("deepcool-cc560-v2-black").getId());
         callback("co");
         text("Иван");
         text("+7 900 000-00-00");
+        text(ShopBot.BTN_COURIER);
         text("Москва, ул. Тверская, 1");
+        text(ShopBot.BTN_NO_PROMO);
 
         assertThat(lastText()).contains("СБП", "зарезервирован до");
         var button = ((InlineKeyboardMarkup) ((SendMessage) sent().getLast()).getReplyMarkup()).getKeyboard().getFirst().getFirst();
@@ -153,6 +172,88 @@ class ShopBotTest {
         callback("pay:" + publicId);
         assertThat(toasts().getLast()).contains("Тестовая оплата выключена");
         assertThat(orders.byPublicId(publicId).getStatus()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
+    }
+
+    @Test
+    void searchByText() throws Exception {
+        text("kingston ddr5");
+        long ram = catalog.product("kingston-fury-beast-16-gb-2x8-ddr5-5600-cl40").getId();
+        assertThat(lastText()).contains("kingston ddr5", "Найдено");
+        assertThat(lastButtons()).contains("p:" + ram, "cats");
+
+        callback("s:0");
+        assertThat(lastButtons()).contains("p:" + ram);
+
+        text("абракадабра");
+        assertThat(lastText()).contains("ничего не нашлось");
+        text("/nope");
+        assertThat(lastText()).contains("Не понял команду");
+    }
+
+    @Test
+    void pickupWithPromoCode() throws Exception {
+        var ram = catalog.product("kingston-fury-beast-16-gb-2x8-ddr5-5600-cl40");
+        var store = delivery.pickupPoints().getFirst();
+        callback("a:" + ram.getId());
+        callback("co");
+        text("Мария");
+        text("+7 900 111-22-33");
+        text(ShopBot.BTN_PICKUP);
+        assertThat(lastText()).contains("Выберите магазин", store.getName(), store.getHours());
+        text("Несуществующий магазин");
+        assertThat(lastText()).contains("Выберите магазин");
+        text(store.getName());
+
+        text("NOPE");
+        assertThat(lastText()).contains("Такого промокода нет", "Без промокода");
+        text("sborka10");
+
+        Order order = orders.recentForChat(CHAT).getFirst();
+        assertThat(order.getDeliveryMethod()).isEqualTo(DeliveryMethod.PICKUP);
+        assertThat(order.getAddress()).isEqualTo(store.oneLine());
+        assertThat(order.getDeliveryPrice()).isZero();
+        assertThat(order.getPromoCode()).isEqualTo("SBORKA10");
+        assertThat(order.getTotal()).isEqualTo(ram.getPrice() - ram.getPrice() / 10);
+        assertThat(sentTexts()).anyMatch(t -> t.contains("создан") && t.contains("Промокод SBORKA10: −") && t.contains("Самовывоз: " + store.getName()));
+
+        // В следующий раз бот подскажет имя из прошлого заказа
+        callback("a:" + ram.getId());
+        callback("co");
+        var keyboard = (ReplyKeyboardMarkup) ((SendMessage) sent().getLast()).getReplyMarkup();
+        assertThat(keyboard.getKeyboard().getFirst().getFirst().getText()).isEqualTo("Мария");
+        text(ShopBot.BTN_CANCEL);
+    }
+
+    @Test
+    void myOrdersShowCardAndCancel() throws Exception {
+        long ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme").getId();
+        Order order = orders.create(Channel.TELEGRAM, new CustomerRequest("Иван", "+7 900 000-00-00", "Москва, ул. Тверская, 1", null),
+                List.of(new OrderLineRequest(ssd, 1)), CHAT);
+        Order foreign = orders.create(Channel.TELEGRAM, new CustomerRequest("Пётр", "+7 900 000-00-01", "Москва, ул. Тверская, 2", null),
+                List.of(new OrderLineRequest(ssd, 1)), CHAT + 1);
+
+        text(ShopBot.BTN_ORDERS);
+        assertThat(lastButtons()).contains("o:" + order.getId()).doesNotContain("o:" + foreign.getId());
+
+        callback("o:" + order.getId());
+        assertThat(lastText()).contains(order.number(), "Ждёт оплаты", "Kingston NV3", "Оплатить до");
+        assertThat(lastButtons()).contains("pay:" + order.getPublicId(), "oc:" + order.getId(), "ol");
+
+        // Отмена — только после подтверждения
+        callback("oc:" + order.getId());
+        assertThat(lastButtons()).containsExactly("ox:" + order.getId(), "o:" + order.getId());
+        assertThat(orders.byId(order.getId()).getStatus()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
+        callback("ox:" + order.getId());
+        assertThat(toasts().getLast()).isEqualTo("Заказ отменён");
+        assertThat(orders.byId(order.getId()).getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(lastText()).contains("Отменён");
+        assertThat(lastButtons()).containsExactly("ol");
+
+        // Чужой заказ по подделанной кнопке не открыть и не отменить
+        callback("o:" + foreign.getId());
+        callback("ox:" + foreign.getId());
+        assertThat(toasts()).endsWith("Кнопка устарела", "Кнопка устарела");
+        assertThat(orders.byId(foreign.getId()).getStatus()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
     }
 
     @Test

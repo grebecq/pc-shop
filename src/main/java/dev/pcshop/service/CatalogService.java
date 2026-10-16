@@ -49,7 +49,12 @@ public class CatalogService {
 
     /** Поиск по названию и бренду из строки поиска в шапке сайта. */
     public Page<Product> searchText(String text, int page) {
-        return search.searchText(text, page, CatalogQueries.PAGE_SIZE);
+        return searchText(text, page, CatalogQueries.PAGE_SIZE);
+    }
+
+    /** То же для бота: у него на странице меньше товаров. */
+    public Page<Product> searchText(String text, int page, int size) {
+        return search.searchText(text, page, size);
     }
 
     public Map<String, List<FacetValueResponse>> facets(String categorySlug) {
