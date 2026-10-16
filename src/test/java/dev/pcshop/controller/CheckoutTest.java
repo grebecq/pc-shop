@@ -156,7 +156,7 @@ class CheckoutTest {
         assertThat(deliveryPage.body()).contains("Самовывоз из магазина", "490 ₽", "50 000 ₽", delivery.pickupPoints().getFirst().getAddress());
         assertThat(get("/warranty").body()).contains("Гарантия и возврат", "в течение 7 дней");
         assertThat(get("/contacts").body()).contains("8 800 000-00-00", "ежедневно 10:00–22:00");
-        assertThat(get("/privacy").body()).contains("Какие данные мы храним");
+        assertThat(get("/privacy").body()).contains("Чьи и какие данные мы обрабатываем");
 
         var cart = get("/cart").body();
         assertThat(cart).contains("name=\"delivery\" value=\"PICKUP\"", "name=\"pickupPointId\"", "name=\"consent\"", "href=\"/privacy\"");

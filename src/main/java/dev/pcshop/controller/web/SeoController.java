@@ -23,7 +23,7 @@ public class SeoController {
     private static final List<String> CLOSED = List.of("/admin", "/account", "/cart", "/order/", "/pay/", "/api/", "/login",
             "/register", "/password/", "/email/", "/search", "/compare", "/cards", "/swagger-ui", "/v3/");
     private static final List<String> INFO_PAGES = List.of("/", "/sale", "/configurator", "/delivery", "/warranty",
-            "/contacts", "/offer", "/privacy");
+            "/contacts", "/offer", "/privacy", "/consent");
     private static final DateTimeFormatter DAY = DateTimeFormatter.ISO_LOCAL_DATE.withZone(ZoneOffset.UTC);
 
     private final ShopProperties props;

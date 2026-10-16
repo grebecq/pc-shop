@@ -45,4 +45,10 @@ public class InfoController {
     public String privacy() {
         return "info/privacy";
     }
+
+    @GetMapping("/consent")
+    public String consent(Model model) {
+        model.addAttribute("siteUrl", props.siteUrl());
+        return "info/consent";
+    }
 }

@@ -19,7 +19,7 @@
         <p class="hint">Не короче 8 символов.</p>
         <p class="form-error" th:errors="*{password}"></p>
         <label class="check consent"><input type="checkbox" name="consent" value="true" th:checked="*{consent}">
-            <span>Согласен на <a th:href="@{/privacy}" target="_blank">обработку персональных данных</a></span></label>
+            <span>Даю <a th:href="@{/consent}" target="_blank">согласие на обработку персональных данных</a></span></label>
         <p class="form-error" th:errors="*{consent}"></p>
         <input type="hidden" name="next" th:if="${param.next}" th:value="${param.next}">
         <button class="btn btn--wide" type="submit">Создать аккаунт</button>

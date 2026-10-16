@@ -60,6 +60,8 @@ class StorePagesTest {
             assertThat(get("/offer", null).body()).contains("ООО «Сборка» (далее — продавец)", "ОГРН",
                     "1027700000001", "mailto:shop@example.ru").doesNotContain("Это демо-магазин");
             assertThat(get("/privacy", null).body()).contains("Оператор персональных данных — " + seller);
+            assertThat(get("/consent", null).body()).contains("Согласие на обработку персональных данных", seller,
+                    "152-ФЗ", "Отозвать согласие можно письмом на").doesNotContain("Это демо-магазин");
             assertThat(get("/warranty", null).body()).contains("публичной оферте").doesNotContain("Это демо-магазин");
         } finally {
             jdbc.sql("""
@@ -111,6 +113,16 @@ class StorePagesTest {
     }
 
     @Test
+    void consentIsSeparateFromPolicyAndOffer() throws Exception {
+        assertThat(get("/cart", null).body()).contains("Даю <a href=\"/consent\" target=\"_blank\">согласие на обработку персональных данных</a>");
+        assertThat(get("/register", null).body()).contains("href=\"/consent\"");
+        assertThat(get("/consent", null).body()).contains("Это демо-магазин", "href=\"/privacy\"");
+        assertThat(get("/privacy", null).body()).contains("на серверах в России", "href=\"/consent\"", "5 лет");
+        assertThat(get("/offer", null).body()).contains("покупатель даёт отдельно");
+        assertThat(get("/", null).body()).contains("Согласие на обработку данных");
+    }
+
+    @Test
     void robotsAndSitemapForSearchEngines() throws Exception {
         var robots = get("/robots.txt", null);
         assertThat(robots.headers().firstValue("Content-Type").orElseThrow()).startsWith("text/plain");
@@ -122,7 +134,7 @@ class StorePagesTest {
         String hidden = jdbc.sql("SELECT slug FROM product WHERE NOT active LIMIT 1").query(String.class).single();
         assertThat(sitemap.body()).startsWith("<?xml")
                 .contains("<loc>http://localhost:8080/</loc>", "<loc>http://localhost:8080/c/cpu</loc>",
-                        "<loc>http://localhost:8080/offer</loc>",
+                        "<loc>http://localhost:8080/offer</loc>", "<loc>http://localhost:8080/consent</loc>",
                         "<loc>http://localhost:8080/p/kingston-fury-beast-white-32-gb-2x16-ddr5-6000-cl36</loc><lastmod>")
                 .doesNotContain("/p/" + hidden + "<");
         long active = jdbc.sql("SELECT count(*) FROM product WHERE active").query(Long.class).single();
