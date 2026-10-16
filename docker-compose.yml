@@ -5,8 +5,6 @@ services:
       POSTGRES_DB: pcshop
       POSTGRES_USER: pcshop
       POSTGRES_PASSWORD: ${DB_PASSWORD:-pcshop}
-    # Для запуска приложения из IDEA. Порт 5433, чтобы не мешать PostgreSQL, установленному на компьютер.
-    # Только 127.0.0.1: на сервере база не должна быть видна из интернета
     ports:
       - "127.0.0.1:5433:5432"
     volumes:
@@ -17,8 +15,6 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # Почта для разработки: принимает письма по SMTP и ничего никуда не отправляет.
-  # Письма видно в браузере на http://localhost:8025. Порты только на 127.0.0.1, как у базы
   mailpit:
     image: axllent/mailpit:v1.31.4
     ports:
@@ -28,7 +24,6 @@ services:
 
   app:
     build: .
-    # Без .env compose тоже запускается: например, когда нужна только база (docker compose up -d db)
     env_file:
       - path: .env
         required: false
@@ -36,7 +31,6 @@ services:
       DB_URL: jdbc:postgresql://db:5432/pcshop
       DB_USER: pcshop
       DB_PASSWORD: ${DB_PASSWORD:-pcshop}
-      # Без своего SMTP в .env письма уходят в Mailpit
       MAIL_HOST: ${MAIL_HOST:-mailpit}
       MAIL_PORT: ${MAIL_PORT:-1025}
     ports:

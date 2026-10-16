@@ -16,10 +16,6 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.Duration;
 
-/**
- * Письма покупателю о заказе: оформлен, оплачен, сменился статус. Уходят, только если в заказе есть email.
- * Как и уведомления в Telegram, срабатывают после коммита и в отдельном потоке: недоступная почта не мешает заказу.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -60,7 +56,7 @@ public class OrderMailService {
             return;
         }
         if (event.status() == OrderStatus.PAID) {
-            // Оплату отметили в админке, а не на сайте
+
             sendPaid(order);
             return;
         }
@@ -120,7 +116,7 @@ public class OrderMailService {
         try {
             mail.send(order.getEmail(), subject, text.toString());
         } catch (MailDeliveryException e) {
-            // Причину уже записал MailService. Заказ от этого не страдает: статус видно на сайте
+
             log.warn("Письмо по заказу {} не отправлено", order.number());
         }
     }

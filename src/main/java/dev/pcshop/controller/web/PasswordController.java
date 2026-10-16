@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-/** «Забыли пароль?» и форма нового пароля по ссылке из письма. Доступны без входа. */
 @Controller
 @RequestMapping("/password")
 @RequiredArgsConstructor
@@ -34,7 +33,6 @@ public class PasswordController {
         return "account/password-forgot";
     }
 
-    /** Ответ одинаковый, есть такой аккаунт или нет: по нему нельзя узнать, зарегистрирован ли адрес. */
     @PostMapping("/forgot")
     public String forgot(@Valid @ModelAttribute("form") PasswordForgotRequest form, BindingResult errors, Model model) {
         if (errors.hasErrors()) {
@@ -51,7 +49,6 @@ public class PasswordController {
 
     @GetMapping("/reset")
     public String resetForm(@RequestParam(required = false) String token, Model model, HttpServletResponse response) {
-        // Токен из адреса страницы не должен уходить на другие сайты в заголовке Referer
         response.setHeader("Referrer-Policy", "no-referrer");
         if (!resets.isValid(token)) {
             model.addAttribute("expired", true);
@@ -73,7 +70,6 @@ public class PasswordController {
             model.addAttribute("expired", true);
             return "account/password-reset";
         }
-        // Если в этом браузере кто-то вошёл, выходим: дальше вход только с новым паролем
         if (auth != null) {
             new SecurityContextLogoutHandler().logout(request, response, auth);
         }

@@ -3,11 +3,6 @@ package dev.pcshop.dto.request;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Параметры поиска по каталогу.
- *
- * @param filters характеристика → допустимые значения (внутри ключа ИЛИ, между ключами И)
- */
 public record ProductSearchRequest(String categorySlug,
                            Map<String, List<String>> filters,
                            Integer minPrice,

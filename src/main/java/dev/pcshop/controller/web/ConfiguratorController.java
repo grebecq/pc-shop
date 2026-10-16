@@ -26,10 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * Конфигуратор сборки. Сборка целиком живёт в ссылке (/configurator?cpu=1&mb=5),
- * поэтому ей можно поделиться, а гостю не нужна ни сессия, ни база.
- */
 @Controller
 @RequiredArgsConstructor
 public class ConfiguratorController {
@@ -47,7 +43,7 @@ public class ConfiguratorController {
         model.addAttribute("slots", Slot.values());
         model.addAttribute("errors", issues.stream().filter(Issue::isError).toList());
         model.addAttribute("warnings", issues.stream().filter(Issue::isWarning).toList());
-        // Пустые обязательные слоты сводим в одну строку, а особые причины («процессор без кулера») показываем отдельно
+
         model.addAttribute("remaining", Arrays.stream(Slot.values()).filter(s -> s.required() && !build.has(s))
                 .map(s -> s.title().toLowerCase()).toList());
         model.addAttribute("missing", issues.stream()
@@ -58,10 +54,10 @@ public class ConfiguratorController {
         model.addAttribute("presets", builds.presets());
         model.addAttribute("shareUrl", props.baseUrl() + build.link());
         model.addAttribute("cartIds", build.products().stream().map(p -> p.getId().toString()).collect(Collectors.joining(",")));
-        // Слоты с проблемами подсвечиваем прямо в списке
+
         model.addAttribute("badSlots", issues.stream().filter(Issue::isError)
                 .flatMap(i -> i.slots().stream()).filter(build::has).collect(Collectors.toSet()));
-        // С какого шага продолжить: его кнопку выделяем
+
         model.addAttribute("next", build.firstEmpty().orElse(null));
         model.addAttribute("builderPage", true);
         return "build/configurator";
@@ -78,12 +74,12 @@ public class ConfiguratorController {
         model.addAttribute("slots", Slot.values());
         model.addAttribute("current", build.part(slot));
         model.addAttribute("candidates", candidates);
-        // Подходящие показываем сразу, остальные — свёрнутым списком с причинами
+
         model.addAttribute("fit", candidates.stream().filter(CandidateResponse::fits).toList());
         model.addAttribute("unfit", candidates.stream().filter(c -> !c.fits()).toList());
         model.addAttribute("skipLink", build.nextLink(slot));
         model.addAttribute("builderPage", true);
-        // Почему шаг нужен именно этой сборке: «процессор без кулера», «нет встроенной графики»
+
         model.addAttribute("reason", compatibility.check(build).stream()
                 .filter(i -> i.isMissing() && i.slots().contains(slot)).map(Issue::text).findFirst().orElse(null));
         return "build/pick";

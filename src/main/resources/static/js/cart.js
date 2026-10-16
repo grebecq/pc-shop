@@ -1,5 +1,3 @@
-// Корзина сайта: хранится в localStorage как { productId: количество }.
-// Цены и остатки всегда берутся с сервера, браузеру доверяем только список товаров.
 (function () {
   "use strict";
 
@@ -10,7 +8,7 @@
     try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
   }
   function write(cart) {
-    try { localStorage.setItem(KEY, JSON.stringify(cart)); } catch (e) { /* приватный режим */ }
+    try { localStorage.setItem(KEY, JSON.stringify(cart)); } catch (e) {  }
     updateBadge();
   }
   function count(cart) {
@@ -33,7 +31,6 @@
     write(cart);
   }
 
-  // Кнопки «В корзину»
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-add-to-cart]");
     if (!btn) return;
@@ -45,7 +42,6 @@
     setTimeout(function () { btn.textContent = label; btn.classList.remove("is-done"); }, 1400);
   });
 
-  // Конфигуратор: вся сборка в корзину одной кнопкой
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-add-build]");
     if (!btn) return;
@@ -57,7 +53,6 @@
     location.href = "/cart";
   });
 
-  // «Повторить заказ»: товары заказа в корзину. Формат data-repeat: "id:количество,id:количество"
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-repeat]");
     if (!btn) return;
@@ -70,7 +65,6 @@
     location.href = "/cart";
   });
 
-  // Копирование ссылки на сборку
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-copy]");
     if (!btn) return;
@@ -81,7 +75,6 @@
     else { document.execCommand("copy"); done(); }
   });
 
-  // +/− на странице товара
   document.querySelectorAll("[data-qty]").forEach(function (b) {
     b.addEventListener("click", function () {
       var input = document.getElementById("qty");
@@ -90,7 +83,6 @@
     });
   });
 
-  // Фильтры каталога: применяем сразу при изменении
   var filters = document.querySelector("[data-autosubmit]");
   if (filters) {
     filters.addEventListener("change", function () { filters.submit(); });
@@ -103,7 +95,6 @@
     });
   }
 
-  // ---------- Страница корзины ----------
   var rows = document.querySelector("[data-cart-rows]");
   if (rows) {
     renderCart();
@@ -120,7 +111,6 @@
     var orderForm = document.querySelector("[data-order-form]");
     orderForm.addEventListener("submit", submitOrder);
     orderForm.addEventListener("change", function (e) {
-      // Выбор «Другой адрес» открывает поля нового адреса
       if (e.target.name === "addressId") {
         orderForm.querySelector("[data-new-address]").hidden = e.target.value !== "";
       }
@@ -129,7 +119,6 @@
         updateSummary();
       }
     });
-    // Браузер может восстановить выбор «Самовывоз» при возврате на страницу
     showDeliveryPane();
 
     var promoInput = document.querySelector("[data-promo-input]");
@@ -139,9 +128,6 @@
     });
   }
 
-  // ---------- Промокод ----------
-  // Условия кода берём с сервера, скидку считаем по той же формуле, что PromoCode.discountFor.
-  // При оформлении сервер всё равно пересчитает её сам
   var promo = null;
 
   function promoDiscount() {
@@ -153,7 +139,6 @@
     var input = document.querySelector("[data-promo-input]");
     var button = document.querySelector("[data-promo-apply]");
     if (promo) {
-      // Второе нажатие — убрать промокод
       promo = null;
       input.readOnly = false;
       input.value = "";
@@ -192,7 +177,6 @@
     note.classList.toggle("is-error", !!isError);
   }
 
-  // Самовывоз или курьер: показываем только блок выбранного способа
   function showDeliveryPane() {
     var method = deliveryMethod();
     document.querySelectorAll("[data-delivery-pane]").forEach(function (pane) {
@@ -207,12 +191,10 @@
     return picked ? picked.value : "COURIER";
   }
 
-  // Та же формула, что в DeliveryService. Окончательную цену всё равно считает сервер
   function updateSummary() {
     var form = document.querySelector("[data-order-form]");
     var courierPrice = Number(form.dataset.courierPrice), freeFrom = Number(form.dataset.freeFrom);
     var courier = deliveryMethod() === "COURIER";
-    // Бесплатная доставка — от суммы товаров без скидки по промокоду, как на сервере
     var price = courier && itemsTotal < freeFrom ? courierPrice : 0;
     var discount = promoDiscount();
     document.querySelector("[data-cart-items]").textContent = rub(itemsTotal);
@@ -254,7 +236,6 @@
       .then(function (list) {
         products = {};
         list.forEach(function (p) { products[p.id] = p; });
-        // Товары, которые сняли с продажи, тихо убираем из корзины
         ids.forEach(function (id) { if (!products[id]) delete cart[id]; });
         write(cart);
         draw(cart);
@@ -304,7 +285,6 @@
     var address = "";
 
     if (delivery === "PICKUP") {
-      // Магазин сервер тоже возьмёт из базы по id
       var point = form.querySelector("input[name=pickupPointId]:checked");
       if (!point) {
         error.textContent = "Выберите магазин для самовывоза.";
@@ -315,7 +295,6 @@
       var label = point.closest("label");
       address = label.querySelector("[data-point-name]").textContent + ", " + label.querySelector("[data-point-address]").textContent;
     } else if (addressId) {
-      // Сохранённый адрес: сервер возьмёт его из базы, здесь только текст для проверки формы
       address = picked.closest("label").querySelector(".muted").textContent;
     } else {
       var city = form.city.value.trim(), street = form.street.value.trim(), apt = form.apartment.value.trim();
@@ -341,9 +320,7 @@
       addressId: addressId,
       newAddress: newAddress,
       saveAddress: !!(form.saveAddress && form.saveAddress.checked && newAddress),
-      // Галочка есть только у гостя: вошедший дал согласие при регистрации
       consent: form.consent ? form.consent.checked : false,
-      // Код, который не дотягивает до минимальной суммы, не отправляем: иначе сервер откажет во всём заказе
       promoCode: promoDiscount() > 0 ? promo.code : null
     };
     if (!body.customer.name || !body.customer.phone) {
@@ -363,7 +340,6 @@
       body: JSON.stringify(body)
     })
       .then(function (r) {
-        // Ответ может быть не JSON (например, истекла сессия) — тогда общее сообщение
         return r.json().catch(function () { return {}; }).then(function (data) {
           if (!r.ok) throw new Error(data.message || "Не удалось оформить заказ. Обновите страницу и попробуйте ещё раз.");
           return data;

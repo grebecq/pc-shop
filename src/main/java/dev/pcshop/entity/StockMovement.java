@@ -18,7 +18,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 
-/** Строка журнала склада: приход, списание, пересчёт, продажа или возврат из отменённого заказа. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -37,11 +36,9 @@ public class StockMovement {
     @Column(nullable = false, updatable = false)
     private StockReason reason;
 
-    /** Сколько добавилось (+) или ушло (−). */
     @Column(nullable = false, updatable = false)
     private int delta;
 
-    /** Остаток сразу после операции. */
     @Column(name = "stock_after", nullable = false, updatable = false)
     private int stockAfter;
 

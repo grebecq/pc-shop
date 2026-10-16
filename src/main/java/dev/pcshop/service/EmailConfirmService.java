@@ -14,16 +14,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.time.Duration;
 import java.time.Instant;
 
-/**
- * Подтверждение почты по ссылке из письма после регистрации. Заказы без подтверждения не блокируются:
- * покупатель видит в кабинете напоминание, а магазин знает, что письма о заказах доходят.
- */
 @Service
 @RequiredArgsConstructor
 public class EmailConfirmService {
 
     private static final Duration LINK_TTL = Duration.ofDays(3);
-    // Не чаще одного письма в минуту, чтобы кнопкой «Отправить ещё раз» нельзя было завалить ящик
+
     private static final Duration RESEND_PAUSE = Duration.ofMinutes(1);
     private static final String SUBJECT = "Подтвердите почту в магазине «Сборка»";
 
@@ -31,12 +27,11 @@ public class EmailConfirmService {
     private final MailService mail;
     private final ShopProperties props;
 
-    /** Письмо со ссылкой. Уже подтверждённая почта или письмо меньше минуты назад — BadRequestException. */
     @Transactional
     public void send(long accountId) {
         Account account = accounts.findById(accountId).orElseThrow(() -> new ResourceNotFoundException("Аккаунт не найден"));
         if (account.isEmailConfirmed()) {
-            // Кнопка могла остаться на открытой вкладке, а почту подтвердили по ссылке
+
             throw new BadRequestException("Почта уже подтверждена");
         }
         Instant now = Instant.now();
@@ -45,11 +40,10 @@ public class EmailConfirmService {
         }
         String token = Tokens.newToken();
         account.newEmailToken(Tokens.sha256(token), now);
-        // Если письмо не ушло, исключение откатит транзакцию: можно сразу попробовать снова
+
         mail.send(account.getEmail(), SUBJECT, letter(account.getName(), link(token)));
     }
 
-    /** Подтверждает почту по ссылке. false — ссылка устарела, уже использована или выдумана. */
     @Transactional
     public boolean confirm(String token) {
         Instant now = Instant.now();

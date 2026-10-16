@@ -7,7 +7,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/** Корзина Telegram-бота. Хранится в базе, чтобы не теряться при перезапуске. */
 @Service
 @RequiredArgsConstructor
 public class BotCartService {

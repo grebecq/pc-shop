@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Контакты и реквизиты продавца: читает каждая страница сайта (подвал), меняет владелец в админке. */
 @Service
 @RequiredArgsConstructor
 public class StoreInfoService {
@@ -16,7 +15,6 @@ public class StoreInfoService {
 
     @Transactional(readOnly = true)
     public StoreInfo get() {
-        // Строку создаёт миграция V16, удалить её из приложения нельзя
         return repository.findById(StoreInfo.ID).orElseThrow();
     }
 

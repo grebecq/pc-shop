@@ -1,4 +1,4 @@
-# Дополняет основной application.yml только в тестах
 shop:
   admin:
+    username: admin
     password: admin-test-pass

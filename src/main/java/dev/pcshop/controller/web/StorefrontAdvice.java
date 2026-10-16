@@ -15,10 +15,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 
 import java.util.Set;
 
-/**
- * Общие данные всех страниц сайта: категории и ссылка на бота в шапке, вошедший покупатель и его избранное,
- * контакты и реквизиты для подвала, адрес страницы для поисковиков и счётчик Метрики.
- */
+// Общие данные страниц
 @ControllerAdvice(basePackageClasses = StorefrontAdvice.class)
 @RequiredArgsConstructor
 public class StorefrontAdvice {
@@ -35,12 +32,12 @@ public class StorefrontAdvice {
         model.addAttribute("categories", catalog.categories());
         model.addAttribute("botLink", props.telegram().botLink());
         model.addAttribute("user", user);
-        // Чтобы в карточках товаров сразу были закрашены сердечки избранного
+
         model.addAttribute("favoriteIds", user == null ? Set.of() : favorites.productIds(user.getAccountId()));
         model.addAttribute("store", store.get());
-        // Без параметров: страница каталога с фильтрами и сортировкой для поисковика — та же страница категории
+
         model.addAttribute("canonicalUrl", props.siteUrl() + request.getRequestURI());
-        // Номер попадает в скрипт страницы, поэтому берём только цифры
+
         model.addAttribute("metrikaId", metrikaId.matches("\\d+") ? metrikaId : null);
     }
 }

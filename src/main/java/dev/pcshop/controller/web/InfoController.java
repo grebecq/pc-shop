@@ -7,7 +7,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 
-/** Страницы для покупателя: доставка и оплата, гарантия и возврат, контакты, оферта, политика обработки данных. */
+// Информационные страницы
 @Controller
 @RequiredArgsConstructor
 public class InfoController {

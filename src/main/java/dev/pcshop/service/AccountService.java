@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Locale;
 
-/** Регистрация, профиль и адреса доставки покупателя. */
 @Service
 @RequiredArgsConstructor
 public class AccountService implements UserDetailsService {
@@ -54,7 +53,6 @@ public class AccountService implements UserDetailsService {
             Account account = accounts.saveAndFlush(new Account(email, encoder.encode(form.password()), form.name()));
             return new ShopUser(account);
         } catch (DataIntegrityViolationException e) {
-            // Две регистрации с одним email одновременно: вторая упирается в UNIQUE
             throw new DuplicateResourceException(EMAIL_TAKEN);
         }
     }
@@ -71,7 +69,6 @@ public class AccountService implements UserDetailsService {
         account.setPhone(Strings.blankToNull(form.phone()));
     }
 
-    /** Телефон из первого заказа запоминаем в профиле, чтобы не вводить его снова. */
     @Transactional
     public void rememberPhone(long accountId, String phone) {
         Account account = get(accountId);
@@ -87,7 +84,6 @@ public class AccountService implements UserDetailsService {
 
     @Transactional(readOnly = true)
     public DeliveryAddress address(long accountId, long addressId) {
-        // Ищем только среди адресов этого аккаунта: чужой id даст «не найден»
         return addresses.findByIdAndAccountId(addressId, accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Адрес не найден"));
     }
@@ -100,7 +96,6 @@ public class AccountService implements UserDetailsService {
         }
         DeliveryAddress address = new DeliveryAddress(accountId);
         address.apply(form);
-        // Первый адрес сразу становится основным
         if (form.wantsDefault() || count == 0) {
             addresses.clearDefault(accountId);
             address.setDefaultAddress(true);
@@ -130,7 +125,6 @@ public class AccountService implements UserDetailsService {
         boolean wasDefault = address.isDefaultAddress();
         addresses.delete(address);
         addresses.flush();
-        // Удалили основной — основным становится самый старый из оставшихся
         if (wasDefault) {
             addresses.findAllByAccountIdOrderByDefaultAddressDescIdAsc(accountId).stream()
                     .findFirst().ifPresent(a -> a.setDefaultAddress(true));

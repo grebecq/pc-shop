@@ -10,16 +10,6 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
-/**
- * Оформление заказа на сайте.
- *
- * @param delivery      самовывоз или курьер; если не указан — курьер, как было до самовывоза
- * @param pickupPointId магазин для самовывоза (тогда customer.address игнорируется)
- * @param addressId     сохранённый адрес вошедшего покупателя (тогда customer.address игнорируется)
- * @param newAddress    новый адрес по полям — сохраняется в кабинет, если saveAddress
- * @param consent       согласие на обработку персональных данных. Нужно от гостя: вошедший дал его при регистрации
- * @param promoCode     промокод из корзины; скидку сервер пересчитает сам
- */
 public record CreateOrderRequest(
 
         @NotNull(message = "Укажите данные покупателя")

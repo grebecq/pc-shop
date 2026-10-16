@@ -39,7 +39,6 @@
                                th:placeholder="${row.key() == null} ? 'Новая характеристика' : ''" aria-label="Название характеристики">
                     </td>
                     <td th:with="locked=${row.key() != null and needed.contains(row.key())}">
-                        <!-- Тип характеристики конфигуратора не меняется: поле только для вида, значение уходит скрытым -->
                         <input th:if="${locked}" type="hidden" th:name="'specs[' + ${it.index} + '].type'" th:value="${row.type()}">
                         <select th:name="${locked} ? null : 'specs[' + ${it.index} + '].type'" th:disabled="${locked}" aria-label="Тип">
                             <option th:each="t : ${types}" th:value="${t}" th:text="${t.label()}" th:selected="${t == row.type()}">Текст</option>

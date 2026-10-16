@@ -38,7 +38,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
 
-/** Сценарии бота: каталог, поиск, корзина, оформление с самовывозом и промокодом, оплата, «Мои заказы». */
 @SpringBootTest
 @Import(TestcontainersConfig.class)
 class ShopBotTest {
@@ -79,7 +78,6 @@ class ShopBotTest {
         assertThat(lastButtons()).contains("p:" + ram);
 
         callback("p:" + ram);
-        // «×» остаётся символом: Telegram не понимает &times;
         assertThat(lastText()).contains("Kingston FURY Beast 16 ГБ (2×8)").contains("Тип памяти: DDR5").doesNotContain("&times;");
 
         callback("a:" + ram);
@@ -96,7 +94,6 @@ class ShopBotTest {
         assertThat(lastText()).contains("Есть промокод?");
         text(ShopBot.BTN_NO_PROMO);
 
-        // 65 980 ₽ — больше порога бесплатной доставки
         assertThat(sentTexts()).anyMatch(t -> t.contains("создан") && t.contains("65 980 ₽") && t.contains("Доставка: бесплатно"));
         assertThat(cart.lines(CHAT)).isEmpty();
 
@@ -117,7 +114,6 @@ class ShopBotTest {
         callback("a:" + catalog.product("kingston-nv3-1-tb-m-2-nvme").getId());
         callback("co");
         text("Отменить оформление");
-        // Оформление сброшено: «Иван» теперь просто поисковый запрос, а не имя
         text("Иван");
         assertThat(lastText()).contains("ничего не нашлось");
     }
@@ -128,7 +124,6 @@ class ShopBotTest {
         callback("p:999999");
         callback("c:nope:0");
         callback("garbage");
-        // Каждое нажатие получило ответ (иначе у кнопки вечно крутятся часики), в корзину ничего не попало
         assertThat(toasts()).containsExactly("Товара нет в наличии", "Кнопка устарела", "Кнопка устарела", "Кнопка устарела");
         assertThat(cart.lines(CHAT)).isEmpty();
     }
@@ -168,7 +163,6 @@ class ShopBotTest {
         assertThat(button.getUrl()).startsWith("https://shop.example.ru/pay/");
         UUID publicId = UUID.fromString(button.getUrl().substring("https://shop.example.ru/pay/".length()));
 
-        // Старая тестовая кнопка из чата больше не оплачивает заказ
         callback("pay:" + publicId);
         assertThat(toasts().getLast()).contains("Тестовая оплата выключена");
         assertThat(orders.byPublicId(publicId).getStatus()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
@@ -216,7 +210,6 @@ class ShopBotTest {
         assertThat(order.getTotal()).isEqualTo(ram.getPrice() - ram.getPrice() / 10);
         assertThat(sentTexts()).anyMatch(t -> t.contains("создан") && t.contains("Промокод SBORKA10: −") && t.contains("Самовывоз: " + store.getName()));
 
-        // В следующий раз бот подскажет имя из прошлого заказа
         callback("a:" + ram.getId());
         callback("co");
         var keyboard = (ReplyKeyboardMarkup) ((SendMessage) sent().getLast()).getReplyMarkup();
@@ -239,7 +232,6 @@ class ShopBotTest {
         assertThat(lastText()).contains(order.number(), "Ждёт оплаты", "Kingston NV3", "Оплатить до");
         assertThat(lastButtons()).contains("pay:" + order.getPublicId(), "oc:" + order.getId(), "ol");
 
-        // Отмена — только после подтверждения
         callback("oc:" + order.getId());
         assertThat(lastButtons()).containsExactly("ox:" + order.getId(), "o:" + order.getId());
         assertThat(orders.byId(order.getId()).getStatus()).isEqualTo(OrderStatus.AWAITING_PAYMENT);
@@ -249,7 +241,6 @@ class ShopBotTest {
         assertThat(lastText()).contains("Отменён");
         assertThat(lastButtons()).containsExactly("ol");
 
-        // Чужой заказ по подделанной кнопке не открыть и не отменить
         callback("o:" + foreign.getId());
         callback("ox:" + foreign.getId());
         assertThat(toasts()).endsWith("Кнопка устарела", "Кнопка устарела");
@@ -263,13 +254,11 @@ class ShopBotTest {
         assertThat(lastText()).contains("Сборка ПК", "Процессор: —");
         assertThat(lastButtons()).contains("bs:cpu:0", "bpl");
 
-        // Готовая сборка «Игровой 2K» совместима
         callback("bpl");
         assertThat(lastText()).contains("Готовые сборки", "Игровой 2K");
         callback("bpre:2");
         assertThat(lastText()).contains("готова к заказу", "AMD Ryzen 7 7800X3D").doesNotContain("❌");
 
-        // В списке плат — только платы под AM5, выбранная отмечена
         callback("bs:mb:0");
         long am4Board = catalog.product("msi-mpg-b550-gaming-plus").getId();
         long am5Board = catalog.product("gigabyte-a620m-gaming-x").getId();
@@ -278,7 +267,6 @@ class ShopBotTest {
         callback("bp:mb:" + am5Board);
         assertThat(lastText()).contains("Gigabyte A620M GAMING X");
 
-        // Кнопка с товаром не той категории или подделанная — не ломает сборку
         long ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme").getId();
         callback("bp:mb:" + ssd);
         callback("bs:zzz:0");
@@ -297,8 +285,6 @@ class ShopBotTest {
         callback("bclr");
         assertThat(builds.botBuild(CHAT).isEmpty()).isTrue();
     }
-
-    // ---------- Помощники: собираем Update из JSON, как его присылает Telegram ----------
 
     private void text(String text) throws Exception {
         message("\"text\": " + JSON.writeValueAsString(text));

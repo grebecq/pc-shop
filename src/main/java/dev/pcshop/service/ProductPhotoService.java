@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
-/** Фото товаров, загруженные владельцем через админку. */
 @Service
 @RequiredArgsConstructor
 public class ProductPhotoService {
@@ -28,7 +27,6 @@ public class ProductPhotoService {
         if (data.length == 0 || data.length > MAX_BYTES) {
             throw new BadRequestException("Фото должно быть не больше 3 МБ");
         }
-        // Тип определяем по содержимому файла, а не по имени или заголовку из браузера
         String type = detectType(data);
         if (type == null) {
             throw new BadRequestException("Подойдёт JPEG, PNG или WebP");
@@ -39,7 +37,6 @@ public class ProductPhotoService {
                         ON CONFLICT (product_id) DO UPDATE SET content_type = :type, data = :data, updated_at = now()""")
                 .param("id", productId).param("type", type).param("data", data)
                 .update();
-        // Версия в ссылке сбрасывает кеш браузера после замены фото
         product.setImageUrl("/media/products/" + productId + "?v=" + System.currentTimeMillis());
     }
 

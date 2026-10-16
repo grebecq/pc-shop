@@ -10,10 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/**
- * Оформление заказа на сайте: сам заказ плюс данные кабинета (телефон, новый адрес).
- * Без общей транзакции: если адрес не сохранится, уже созданный заказ откатываться не должен.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -29,14 +25,13 @@ public class CheckoutService {
         }
         CustomerRequest customer = request.customer();
 
-        // Магазин и сохранённый адрес берём из базы, а не из текста от браузера
         String address = customer.address();
         if (request.delivery() == DeliveryMethod.PICKUP) {
             address = deliveryService.pickupPoint(request.pickupPointId()).oneLine();
         } else if (accountId != null && request.addressId() != null) {
             address = accountService.address(accountId, request.addressId()).oneLine();
         }
-        // Вошедшему без email в форме письма о заказе идут на email аккаунта
+
         String email = customer.email() == null && accountId != null ? accountService.get(accountId).getEmail() : customer.email();
         customer = customer.withAddressAndEmail(address, email);
 
@@ -49,7 +44,7 @@ public class CheckoutService {
                 try {
                     accountService.addAddress(accountId, request.newAddress());
                 } catch (BadRequestException e) {
-                    // Заказ уже создан; если адрес не сохранился (лимит), покупатель добавит его в кабинете
+
                     log.info("Адрес из заказа {} не сохранён: {}", order.number(), e.getMessage());
                 }
             }

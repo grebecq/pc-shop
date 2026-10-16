@@ -7,15 +7,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Поля формы товара в админке, заполненные как у товара: тест меняет только нужные. */
+// Формы админки в тестах
 public final class AdminForms {
 
     private AdminForms() {
     }
 
-    /**
-     * @param overrides пары «поле, значение»; значение null убирает поле, как снятая галочка
-     */
     public static String[] product(Product p, String... overrides) {
         Map<String, String> form = new LinkedHashMap<>();
         form.put("categoryId", String.valueOf(p.getCategory().getId()));

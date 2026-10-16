@@ -35,12 +35,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/** Страницы сайта-витрины. Корзина хранится в браузере, заказ создаётся через /api/orders. */
 @Controller
 @RequiredArgsConstructor
 public class ShopController {
 
-    /** Сколько товаров берём в сравнение и «недавно смотрели»: защита от огромных запросов. */
     private static final int MAX_LISTED = 12;
 
     private final CatalogService catalog;
@@ -91,7 +89,6 @@ public class ShopController {
         model.addAttribute("specs", Attributes.readable(product));
         model.addAttribute("pageDescription", pageDescription(product));
         if (product.getImageUrl() != null) {
-            // Мессенджеру нужен полный адрес картинки, а загруженные в админке фото лежат у нас: /media/products/5
             String image = product.getImageUrl();
             model.addAttribute("pageImage", image.startsWith("/") ? props.siteUrl() + image : image);
         }
@@ -104,7 +101,6 @@ public class ShopController {
         if (!model.containsAttribute("review")) {
             model.addAttribute("review", new ReviewRequest(null, null, null, null));
         }
-        // «Собрать ПК с этим товаром»: товар уже в сборке, дальше — первый пустой шаг конфигуратора
         model.addAttribute("buildLink", Slot.byCategory(product.getCategory().getSlug()).map(slot -> {
             Build build = Build.empty().with(slot, product);
             return build.firstEmpty().map(build::pickLink).orElseGet(build::link);
@@ -112,7 +108,6 @@ public class ShopController {
         return "shop/product";
     }
 
-    /** Описание для поисковиков и превью ссылки: «AMD Ryzen 5 7600: AM5 · 6 ядер · 65 Вт. Цена 18 990 ₽, в наличии». */
     private static String pageDescription(Product product) {
         String brief = Attributes.brief(product);
         return product.getName() + (brief.isEmpty() ? "" : ": " + brief) + ". Цена " + Formats.price(product.getPrice())
@@ -132,14 +127,12 @@ public class ShopController {
         return "shop/search";
     }
 
-    /** Сравнение: id товаров приходят из браузера (список хранится в localStorage, как корзина). */
     @GetMapping("/compare")
     public String compare(@RequestParam(defaultValue = "") List<Long> ids, Model model) {
         model.addAttribute("tables", Comparison.of(catalog.productsInOrder(ids.stream().limit(MAX_LISTED).toList())));
         return "shop/compare";
     }
 
-    /** Карточки товаров без страницы вокруг — для блока «Вы недавно смотрели», его собирает JS. */
     @GetMapping("/cards")
     public String cards(@RequestParam(defaultValue = "") List<Long> ids, Model model) {
         model.addAttribute("products", catalog.productsInOrder(ids.stream().limit(MAX_LISTED).toList()));
@@ -148,7 +141,6 @@ public class ShopController {
 
     @GetMapping("/cart")
     public String cart(@AuthenticationPrincipal ShopUser user, Model model) {
-        // Вошедшему покупателю подставляем имя, телефон и сохранённые адреса
         if (user != null) {
             model.addAttribute("account", accounts.get(user.getAccountId()));
             model.addAttribute("addresses", accounts.addresses(user.getAccountId()));
@@ -161,10 +153,8 @@ public class ShopController {
 
     @GetMapping("/order/{publicId}")
     public String order(@PathVariable UUID publicId, @AuthenticationPrincipal ShopUser user, Model model) {
-        // Покупатель мог вернуться со страницы ЮKassa раньше, чем пришло уведомление об оплате
         var order = payments.refresh(orders.byPublicId(publicId));
         model.addAttribute("order", order);
-        // Кнопку отмены показываем тому, кто может отменить: см. OrderService.cancelByCustomer
         model.addAttribute("canCancel", order.cancellableByCustomer()
                 && (order.getAccountId() == null || user != null && order.getAccountId().equals(user.getAccountId())));
         return "shop/order";
@@ -181,7 +171,6 @@ public class ShopController {
         return "redirect:/order/" + publicId;
     }
 
-    /** Ссылки на страницы с сохранением фильтров. */
     private static List<String> pageLinks(String slug, MultiValueMap<String, String> params, int totalPages) {
         String base = params.entrySet().stream()
                 .filter(e -> !e.getKey().equals("page"))

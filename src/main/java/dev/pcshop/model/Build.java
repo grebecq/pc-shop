@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/** Набор выбранных деталей: не больше одной на слот. Неизменяемый, with/without возвращают новую сборку. */
+// Сборка ПК
 public final class Build {
 
     private final Map<Slot, Product> parts;
@@ -29,7 +29,6 @@ public final class Build {
         return Optional.ofNullable(parts.get(slot));
     }
 
-    /** Для шаблонов: деталь или null. */
     public Product part(Slot slot) {
         return parts.get(slot);
     }
@@ -66,21 +65,18 @@ public final class Build {
         return parts.values().stream().mapToLong(Product::getPrice).sum();
     }
 
-    /** {"cpu": 1, "mb": 5}: так сборка хранится в базе. */
     public Map<String, Long> ids() {
         Map<String, Long> ids = new LinkedHashMap<>();
         parts.forEach((slot, p) -> ids.put(slot.key(), p.getId()));
         return ids;
     }
 
-    /** cpu=1&mb=5 — для ссылок на сборку. */
     public String query() {
         return parts.entrySet().stream()
                 .map(e -> e.getKey().key() + "=" + e.getValue().getId())
                 .collect(Collectors.joining("&"));
     }
 
-    /** Ссылка на конфигуратор с этой сборкой. */
     public String link() {
         return isEmpty() ? "/configurator" : "/configurator?" + query();
     }
@@ -89,7 +85,6 @@ public final class Build {
         return without(slot).link();
     }
 
-    /** Ссылка на выбор детали для слота с сохранением остальной сборки. */
     public String pickLink(Slot slot) {
         return "/configurator/" + slot.key() + (isEmpty() ? "" : "?" + query());
     }
@@ -98,27 +93,20 @@ public final class Build {
         return with(slot, product).link();
     }
 
-    /** Сколько слотов уже заполнено. */
     public int size() {
         return parts.size();
     }
 
-    /**
-     * Первый пустой слот после данного. Конфигуратор ведёт по шагам в порядке Slot,
-     * а пропущенные шаги не предлагает снова: к ним можно вернуться со страницы сборки.
-     */
     public Optional<Slot> nextEmptyAfter(Slot slot) {
         return Arrays.stream(Slot.values())
                 .filter(s -> s.ordinal() > slot.ordinal() && !has(s))
                 .findFirst();
     }
 
-    /** Первый пустой слот по порядку: с него сборку удобнее продолжить. */
     public Optional<Slot> firstEmpty() {
         return Arrays.stream(Slot.values()).filter(s -> !has(s)).findFirst();
     }
 
-    /** Куда вести после шага: к выбору следующей пустой детали или, если пустых не осталось, к итогу сборки. */
     public String nextLink(Slot after) {
         return nextEmptyAfter(after).map(this::pickLink).orElseGet(this::link);
     }

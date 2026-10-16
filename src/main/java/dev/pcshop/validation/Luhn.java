@@ -11,11 +11,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/**
- * Контрольная цифра номера карты по алгоритму Луна: ловит опечатку в одной цифре и перестановку соседних.
- * Проверяет только номер правильного формата (16–19 цифр): пустое поле и неверный формат ловят
- * {@code @NotBlank} и {@code @Pattern} рядом, чтобы у поля было одно понятное сообщение, а не два-три сразу.
- */
+// Проверка номера карты
 @Documented
 @Constraint(validatedBy = Luhn.Validator.class)
 @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.RECORD_COMPONENT})
@@ -38,7 +34,6 @@ public @interface Luhn {
             return checksum(value) % 10 == 0;
         }
 
-        /** Справа налево каждую вторую цифру удваиваем (из двузначного результата вычитаем 9) и всё складываем. */
         static int checksum(String digits) {
             int sum = 0;
             boolean twice = false;

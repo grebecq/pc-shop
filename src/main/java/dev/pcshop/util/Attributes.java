@@ -8,10 +8,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/** Характеристики товара для сайта и бота: названия и порядок берутся из категории (их задаёт владелец в админке). */
+// Характеристики товара
 public final class Attributes {
 
-    // Короткая запись значения с единицами для карточек товара
     private static final Map<String, String> SHORT = Map.ofEntries(
             Map.entry("cores", "%s ядер"),
             Map.entry("threads", "%s потоков"),
@@ -44,7 +43,6 @@ public final class Attributes {
         return String.valueOf(value);
     }
 
-    /** Характеристики товара в виде «Название → значение» в порядке, заданном у категории. */
     public static Map<String, String> readable(Product product) {
         Map<String, String> result = new LinkedHashMap<>();
         for (Spec spec : product.getCategory().getSpecs()) {
@@ -56,7 +54,6 @@ public final class Attributes {
         return result;
     }
 
-    /** Три главные характеристики одной строкой: «AM5 · 6 ядер · 65 Вт». Главные — первые в списке категории. */
     public static String brief(Product product) {
         return product.getCategory().getSpecs().stream()
                 .filter(s -> s.type() != SpecType.BOOL && product.getAttributes().get(s.key()) != null)
@@ -69,7 +66,6 @@ public final class Attributes {
         if (SHORT.containsKey(spec.key())) {
             return SHORT.get(spec.key()).formatted(value);
         }
-        // У характеристик, заведённых в админке, единица — в названии после запятой: «Частота, Гц» → «144 Гц»
         int comma = spec.label().lastIndexOf(", ");
         return spec.type() == SpecType.NUMBER && comma > 0 ? value + " " + spec.label().substring(comma + 2) : value;
     }

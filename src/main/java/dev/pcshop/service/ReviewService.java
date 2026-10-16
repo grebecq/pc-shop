@@ -16,14 +16,12 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 
-/** Отзывы о товарах. Оставить отзыв может только покупатель, который оплатил заказ с этим товаром. */
 @Slf4j
 @Service
 @Validated
 @RequiredArgsConstructor
 public class ReviewService {
 
-    /** Что показать вместо формы отзыва или над ней. */
     public enum Permission {
         CAN_WRITE, GUEST, NOT_BOUGHT, ALREADY_WROTE
     }
@@ -55,7 +53,6 @@ public class ReviewService {
             case NOT_BOUGHT -> throw new BadRequestException("Отзыв можно оставить после покупки товара");
             default -> { }
         }
-        // Имя берём из профиля: подписаться чужим именем нельзя
         Review review = reviews.save(new Review(productId, accountId, accounts.get(accountId).getName(), request));
         reviews.refreshRating(productId);
         log.info("Новый отзыв о товаре {}: {} из 5", productId, request.rating());

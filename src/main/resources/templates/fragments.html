@@ -2,14 +2,13 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<!-- Общий <head>: title передаётся параметром -->
 <head th:fragment="head(title)" th:with="metaDescription=${pageDescription} ?: 'Комплектующие для ПК с проверкой совместимости: процессоры, видеокарты, память, накопители и готовые сборки. Доставка и самовывоз.'">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${title} + ' · Сборка'">Сборка</title>
     <meta name="description" th:content="${metaDescription}">
     <link rel="canonical" th:if="${canonicalUrl}" th:href="${canonicalUrl}">
-    <!-- Превью ссылки в Telegram, ВКонтакте и других мессенджерах -->
+
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Сборка">
     <meta property="og:locale" content="ru_RU">
@@ -22,7 +21,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/shop.css}">
     <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
-    <!-- CSRF-токен для запросов из JS (оформление заказа) -->
+
     <meta name="csrf-token" th:if="${_csrf}" th:content="${_csrf.token}">
     <meta name="csrf-header" th:if="${_csrf}" th:content="${_csrf.headerName}">
 </head>
@@ -64,7 +63,7 @@
     <div class="wrap footer__inner">
         <div class="footer__about">
             <span>© 2026 «Сборка» — комплектующие и сборка ПК с проверкой совместимости</span>
-            <!-- На странице ошибки общих данных сайта нет, поэтому проверяем store -->
+
             <span th:if="${store != null}"><a th:href="${store.phoneLink()}" th:text="${store.phone}">8 800 000-00-00</a>
                 · <a th:href="'mailto:' + ${store.email}" th:text="${store.email}">hello@pc-shop.local</a></span>
             <span th:if="${store != null and store.hasSeller()}" th:text="${store.sellerLine()}">ООО «Сборка», ИНН 7700000000</span>
@@ -77,11 +76,10 @@
     </div>
     <script th:src="@{/js/cart.js}"></script>
     <script th:src="@{/js/catalog.js}"></script>
-    <!-- Метрика загружается только после согласия посетителя на cookie -->
+
     <script th:if="${metrikaId}" th:src="@{/js/consent.js}" th:attr="data-metrika=${metrikaId}"></script>
 </footer>
 
-<!-- Иконка категории вместо фотографии товара -->
 <svg th:fragment="icon(slug)" class="icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6"
      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" th:switch="${slug}">
     <g th:case="'cpu'"><rect x="13" y="13" width="22" height="22" rx="2"/><rect x="19" y="19" width="10" height="10"/><path d="M18 8v5M24 8v5M30 8v5M18 35v5M24 35v5M30 35v5M8 18h5M8 24h5M8 30h5M35 18h5M35 24h5M35 30h5"/></g>
@@ -94,7 +92,6 @@
     <g th:case="*"><rect x="14" y="6" width="20" height="36" rx="2"/><circle cx="24" cy="14" r="2"/><path d="M19 22h10M19 26h10M19 30h10"/></g>
 </svg>
 
-<!-- Меню личного кабинета -->
 <nav th:fragment="account-tabs(tab)" class="tabs" aria-label="Личный кабинет">
     <a th:href="@{/account}" th:classappend="${tab == 'orders'} ? 'is-current'">Мои заказы</a>
     <a th:href="@{/account/builds}" th:classappend="${tab == 'builds'} ? 'is-current'">Мои сборки</a>
@@ -103,21 +100,17 @@
     <a th:href="@{/account/profile}" th:classappend="${tab == 'profile'} ? 'is-current'">Профиль</a>
 </nav>
 
-<!-- Сообщения после действий -->
 <div th:fragment="flash">
     <p class="notice" th:if="${message}" th:text="${message}">Сохранено</p>
     <p class="notice notice--error" th:if="${error}" th:text="${error}">Ошибка</p>
 </div>
 
-<!-- Фото товара или значок категории. Обёртке с фото нужен класс has-photo.
-     Фото лежат на сайтах производителей: если картинка не загрузилась, убираем её и показываем значок -->
 <th:block th:fragment="photo(p)">
     <img th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" th:alt="${p.name}" loading="lazy"
          referrerpolicy="no-referrer" onerror="this.parentElement.classList.remove('has-photo'); this.remove()">
     <svg th:replace="~{fragments :: icon(${p.category.slug})}"></svg>
 </th:block>
 
-<!-- Карточка товара в сетке -->
 <article th:fragment="card(p)" class="card">
     <a class="card__media" th:href="@{/p/{s}(s=${p.slug})}" th:classappend="${p.imageUrl != null} ? 'has-photo'">
         <th:block th:replace="~{fragments :: photo(${p})}"></th:block>

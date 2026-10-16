@@ -22,10 +22,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/**
- * Контакты и реквизиты магазина, а также что подключено: оплата, почта, бот. Ключи и пароли задаются только в .env —
- * здесь их можно проверить, но не увидеть и не поменять.
- */
 @PreAuthorize("hasRole('ADMIN')")
 @Controller
 @RequestMapping("/admin/settings")
@@ -94,7 +90,7 @@ public class AdminSettingsController {
             mail.send(email, "Проверка почты магазина", "Это тестовое письмо из админки. Раз оно дошло, письма покупателям тоже дойдут.");
             flash.addFlashAttribute("message", "Письмо отправлено на " + email + ". Если его нет во входящих, загляните в спам");
         } catch (MailDeliveryException e) {
-            // Админу — настоящая причина: неверный пароль, порт закрыт, сервер не найден
+
             Throwable cause = NestedExceptionUtils.getMostSpecificCause(e);
             flash.addFlashAttribute("error", "Письмо не ушло: " + cause.getMessage());
         }

@@ -7,7 +7,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/** Отзыв с формы на странице товара. */
 public record ReviewRequest(
 
         @NotNull(message = "Поставьте оценку")

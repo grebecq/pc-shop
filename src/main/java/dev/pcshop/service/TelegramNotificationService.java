@@ -15,10 +15,6 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import static dev.pcshop.util.Formats.telegramHtml;
 
-/**
- * Уведомления в Telegram: владельцу о новых и оплаченных заказах, покупателю о смене статуса.
- * Срабатывают после коммита и в отдельном потоке, чтобы медленный Telegram не тормозил оформление заказа.
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -86,7 +82,7 @@ public class TelegramNotificationService {
         try {
             client.execute(SendMessage.builder().chatId(chatId).text(html).parseMode("HTML").build());
         } catch (Exception e) {
-            // Частая причина: владелец ещё не нажал /start у бота
+
             log.warn("Не удалось отправить уведомление в чат {}: {}", chatId, e.getMessage());
         }
     }

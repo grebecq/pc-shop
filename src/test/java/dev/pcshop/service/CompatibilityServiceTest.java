@@ -31,7 +31,6 @@ import static dev.pcshop.enums.Slot.SSD;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Правила совместимости на каталоге из миграций и сохранённые сборки. */
 @SpringBootTest
 @Import(TestcontainersConfig.class)
 class CompatibilityServiceTest {
@@ -49,7 +48,7 @@ class CompatibilityServiceTest {
             assertThat(issues).as(p.name()).noneMatch(i -> i.isError() || i.isMissing());
             assertThat(compatibility.complete(issues)).isTrue();
         });
-        // Офисная сборка без видеокарты: графика есть у процессора
+
         assertThat(builds.presets().getFirst().build().has(GPU)).isFalse();
     }
 
@@ -61,7 +60,7 @@ class CompatibilityServiceTest {
         assertThat(errors(b)).anyMatch(t -> t.contains("сокет LGA1700") && t.contains("AM5"))
                 .anyMatch(t -> t.contains("DDR5") && t.contains("DDR4"))
                 .anyMatch(t -> t.contains("mATX") && t.contains("Mini-ITX"));
-        // RX 9070 304 мм в CH160 (до 305 мм) влезает, а Nitro+ на 331 мм — уже нет
+
         assertThat(errors(b)).noneMatch(t -> t.contains("Видеокарта длиной"));
         assertThat(errors(b.with(GPU, product("sapphire-nitro-plus-radeon-rx-9070-xt-16-gb"))))
                 .anyMatch(t -> t.contains("Видеокарта длиной 331 мм"));
@@ -71,7 +70,7 @@ class CompatibilityServiceTest {
 
     @Test
     void memoryWithoutBoardIsCheckedAgainstCpu() {
-        // LGA1700 понимает обе памяти, AM5 — только DDR5
+
         assertThat(errors(build(CPU, "intel-core-i5-14400f-oem", RAM, "g-skill-ripjaws-v-16-gb-2x8-ddr4-3200-cl16"))).isEmpty();
         assertThat(errors(build(CPU, "amd-ryzen-5-7600-oem", RAM, "g-skill-ripjaws-v-16-gb-2x8-ddr4-3200-cl16")))
                 .containsExactly("Процессор не поддерживает DDR4.");
@@ -79,7 +78,7 @@ class CompatibilityServiceTest {
 
     @Test
     void coolerFitsSocketAndCase() {
-        // Все кулеры в каталоге универсальные, поэтому сокет и высоту проверяем на изменённой копии
+
         var amdOnly = product("deepcool-ak620");
         amdOnly.getAttributes().put("sockets", "AM4, AM5");
         amdOnly.getAttributes().put("height_mm", 180);
@@ -96,7 +95,7 @@ class CompatibilityServiceTest {
 
         var weak = compatibility.check(build(CPU, "amd-ryzen-9-9950x-oem", COOLER, "id-cooling-is-55-black"));
         assertThat(weak).anyMatch(i -> i.isWarning() && i.text().contains("рассчитан на 125 Вт"));
-        // У этой СЖО производитель не указал мощность — предупреждения нет
+
         assertThat(compatibility.check(build(CPU, "amd-ryzen-9-9950x-oem", COOLER, "arctic-liquid-freezer-iii-pro-360-a-rgb-white")))
                 .noneMatch(i -> i.slots().contains(COOLER));
     }
@@ -143,7 +142,7 @@ class CompatibilityServiceTest {
         assertThat(fit).hasSize(12).allMatch(c -> c.product().str("socket").equals("AM5"));
         assertThat(boards.subList(0, 12)).containsExactlyElementsOf(fit);
         assertThat(boards.getLast().note()).contains("сокет");
-        // Ссылка выбора сохраняет остальную сборку
+
         assertThat(fit.getFirst().link()).contains("cpu=" + am5.part(CPU).getId()).contains("mb=");
     }
 
@@ -152,12 +151,12 @@ class CompatibilityServiceTest {
         long cpu = product("amd-ryzen-5-7600-oem").getId();
         long ram = product("kingston-fury-beast-16-gb-2x8-ddr5-5600-cl40").getId();
         long retired = jdbc.sql("SELECT id FROM product WHERE slug = 'amd-ryzen-5-7600'").query(Long.class).single();
-        // Процессор в слоте видеокарты, мусор, несуществующий id, лишний параметр
+
         var b = builds.fromParams(Map.of("cpu", String.valueOf(cpu), "gpu", String.valueOf(cpu),
                 "ram", "abc", "ssd", "999999", "x", "1", "psu", "-5"));
         assertThat(b.parts()).containsOnlyKeys(CPU);
         assertThat(builds.fromParams(Map.of("ram", ram)).has(RAM)).isTrue();
-        // Снятый с продажи товар из старой ссылки пропускается
+
         assertThat(builds.fromParams(Map.of("cpu", retired)).isEmpty()).isTrue();
     }
 
@@ -205,10 +204,6 @@ class CompatibilityServiceTest {
         return b;
     }
 
-    /**
-     * Правила проверяем и на товарах, снятых с продажи: среди тех, что продаются, нет СЖО,
-     * низкого кулера и маленького корпуса, а проверки для них всё равно нужны.
-     */
     private Product product(String slug) {
         return products.findAllByOrderByCategorySortOrderAscNameAsc().stream()
                 .filter(p -> p.getSlug().equals(slug))

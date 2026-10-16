@@ -15,12 +15,11 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-/** Файлы для Яндекса и Google: какие страницы индексировать (robots.txt) и полный список страниц каталога (sitemap.xml). */
+// Файлы для поисковиков
 @Controller
 @RequiredArgsConstructor
 public class SeoController {
 
-    // Корзина, кабинет, заказы, поиск и служебные адреса в поиске не нужны: там либо личные данные, либо дубли каталога
     private static final List<String> CLOSED = List.of("/admin", "/account", "/cart", "/order/", "/pay/", "/api/", "/login",
             "/register", "/password/", "/email/", "/search", "/compare", "/cards", "/swagger-ui", "/v3/");
     private static final List<String> INFO_PAGES = List.of("/", "/sale", "/configurator", "/delivery", "/warranty",

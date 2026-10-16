@@ -8,11 +8,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/** Контакты и реквизиты продавца из админки. Реквизиты необязательны, пока магазин работает как демо. */
 public record StoreInfoRequest(
 
         @NotBlank(message = "Укажите телефон")
-        // Пустое поле ловит @NotBlank: без «^$|» под полем было бы две ошибки сразу
         @Pattern(regexp = "^$|^[+\\d][\\d\\s()-]{5,30}$", message = "Проверьте номер телефона")
         String phone,
 
@@ -52,7 +50,6 @@ public record StoreInfoRequest(
                 store.getInn(), store.getOgrn(), store.getLegalAddress());
     }
 
-    // Без ИНН название продавца ничего не подтверждает, а ИНН без названия покупателю непонятен
     @AssertTrue(message = "Укажите и продавца, и его ИНН")
     public boolean isSellerComplete() {
         return isBlank(legalName) == isBlank(inn);

@@ -17,7 +17,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 
-/** Аккаунт покупателя на сайте. */
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -44,7 +43,6 @@ public class Account {
     @Column(name = "email_confirmed_at")
     private Instant emailConfirmedAt;
 
-    // Ссылка для подтверждения почты: в базе только SHA-256 токена, сам токен есть лишь в письме
     @Column(name = "email_token_hash", length = 64)
     private String emailTokenHash;
 
@@ -69,7 +67,6 @@ public class Account {
         return emailConfirmedAt != null;
     }
 
-    /** Новая ссылка для подтверждения почты заменяет прежнюю. */
     public void newEmailToken(String tokenHash, Instant now) {
         this.emailTokenHash = tokenHash;
         this.emailTokenSentAt = now;

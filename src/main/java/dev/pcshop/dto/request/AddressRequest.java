@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/** Адрес доставки из формы личного кабинета или оформления заказа. */
 public record AddressRequest(
 
         @NotBlank(message = "Назовите адрес, например «Дом»")
@@ -40,7 +39,6 @@ public record AddressRequest(
         return new AddressRequest("Дом", "", "", "", "", false);
     }
 
-    /** Чекбокс не приходит в запросе, если не отмечен, поэтому null = «нет». */
     public boolean wantsDefault() {
         return Boolean.TRUE.equals(makeDefault);
     }

@@ -1,5 +1,3 @@
-// Яндекс Метрика с согласием на cookie: счётчик загружается, только когда посетитель нажал «Принять».
-// Решение хранится в localStorage. Скрипт подключается, только если в .env задан YANDEX_METRIKA_ID.
 (function () {
   "use strict";
 
@@ -10,10 +8,9 @@
     try { return localStorage.getItem(KEY); } catch (e) { return null; }
   }
   function save(value) {
-    try { localStorage.setItem(KEY, value); } catch (e) { /* приватный режим: спросим на следующей странице */ }
+    try { localStorage.setItem(KEY, value); } catch (e) {  }
   }
 
-  // Код счётчика из инструкции Яндекса, без Вебвизора: записи действий посетителей магазину не нужны
   function loadMetrika() {
     (function (m, e, t, r, i, k, a) {
       m[i] = m[i] || function () { (m[i].a = m[i].a || []).push(arguments); };
@@ -48,11 +45,10 @@
   if (answer === "yes") loadMetrika();
   else if (answer !== "no") showBanner();
 
-  // Ссылка «Изменить решение» на странице о персональных данных
   document.addEventListener("click", function (e) {
     if (!e.target.closest("[data-cookie-reset]")) return;
     e.preventDefault();
-    try { localStorage.removeItem(KEY); } catch (err) { /* ничего */ }
+    try { localStorage.removeItem(KEY); } catch (err) {  }
     showBanner();
   });
 })();

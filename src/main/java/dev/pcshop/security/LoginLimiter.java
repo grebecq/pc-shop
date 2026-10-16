@@ -16,10 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Защита от перебора паролей: после 10 неудачных попыток вход в аккаунт блокируется на 15 минут.
- * Счётчик в памяти — для одного экземпляра приложения этого достаточно.
- */
+// Защита от перебора паролей
 @Component
 public class LoginLimiter extends OncePerRequestFilter implements AuthenticationFailureHandler {
 
@@ -32,7 +29,6 @@ public class LoginLimiter extends OncePerRequestFilter implements Authentication
     private record Attempts(int failures, Instant since) {
     }
 
-    /** Попытки считаем по email, чтобы перебор одного аккаунта не помогал сменой IP. */
     private static String key(HttpServletRequest request) {
         String email = request.getParameter("email");
         return email == null ? "" : email.strip().toLowerCase(Locale.ROOT);
@@ -62,7 +58,7 @@ public class LoginLimiter extends OncePerRequestFilter implements Authentication
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
                                         AuthenticationException exception) throws IOException {
         if (ATTEMPTS.size() > MAX_TRACKED) {
-            // Не даём карте расти бесконечно: убираем истёкшие записи
+
             Instant border = Instant.now().minus(LOCK);
             ATTEMPTS.values().removeIf(x -> x.since().isBefore(border));
         }

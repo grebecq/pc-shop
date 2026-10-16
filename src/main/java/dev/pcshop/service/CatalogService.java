@@ -43,12 +43,10 @@ public class CatalogService {
         return search.search(category(query.categorySlug()), query);
     }
 
-    /** Поиск по названию и бренду из строки поиска в шапке сайта. */
     public Page<Product> searchText(String text, int page) {
         return searchText(text, page, CatalogQueries.PAGE_SIZE);
     }
 
-    /** То же для бота: у него на странице меньше товаров. */
     public Page<Product> searchText(String text, int page, int size) {
         return search.searchText(text, page, size);
     }
@@ -65,24 +63,20 @@ public class CatalogService {
         return products.findAllByIdInAndActiveTrue(ids);
     }
 
-    /** Товары в том же порядке, что и id (для «недавно смотрели» и сравнения). Снятые с продажи пропускаются. */
     public List<Product> productsInOrder(List<Long> ids) {
         Map<Long, Product> byId = products.findAllByIdInAndActiveTrue(ids).stream()
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
         return ids.stream().distinct().map(byId::get).filter(Objects::nonNull).toList();
     }
 
-    /** Похожие товары для карточки: та же категория, ближе всего по цене. */
     public List<Product> similar(Product product, int limit) {
         return productsInOrder(products.similarIds(product.getCategory().getId(), product.getId(), product.getPrice(), limit));
     }
 
-    /** Подсказки в строке поиска: первые несколько товаров по тем же правилам, что и поиск. */
     public List<Product> suggest(String text, int limit) {
         return search.searchText(text, 0, limit).getContent();
     }
 
-    /** Все товары категории в продаже, от дешёвых к дорогим (для конфигуратора). */
     public List<Product> productsIn(String categorySlug) {
         return products.findAllByCategorySlugAndActiveTrueOrderByPriceAsc(categorySlug);
     }
@@ -91,7 +85,6 @@ public class CatalogService {
         return products.findAllBySlugInAndActiveTrue(slugs);
     }
 
-    /** Товары со скидкой, самые большие скидки первыми. */
     public List<Product> onSale() {
         return products.findAllByActiveTrueAndOldPriceNotNull().stream()
                 .sorted(Comparator.comparingInt(Product::discountPercent).reversed().thenComparing(Product::getPrice))

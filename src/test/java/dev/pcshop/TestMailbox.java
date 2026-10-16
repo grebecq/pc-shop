@@ -12,10 +12,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Почта в тестах: письма собираются как настоящие (MIME, UTF-8), но не уходят на SMTP, а складываются в список.
- * {@link #setDown} имитирует недоступный почтовый сервер.
- */
+// Письма в тестах
 public class TestMailbox extends JavaMailSenderImpl {
 
     public record Letter(String to, String from, String subject, String text) {
@@ -25,7 +22,7 @@ public class TestMailbox extends JavaMailSenderImpl {
     private volatile boolean down;
 
     public TestMailbox() {
-        // Как у отправителя, которого настраивает Spring Boot (spring.mail.default-encoding)
+
         setDefaultEncoding("UTF-8");
     }
 
@@ -45,12 +42,10 @@ public class TestMailbox extends JavaMailSenderImpl {
         }
     }
 
-    /** Письма на этот адрес, старые первыми. */
     public List<Letter> to(String email) {
         return letters.stream().filter(l -> l.to().equalsIgnoreCase(email)).toList();
     }
 
-    /** Письма на этот адрес с темой, в которой есть subjectPart, старые первыми. */
     public List<Letter> to(String email, String subjectPart) {
         return to(email).stream().filter(l -> l.subject().contains(subjectPart)).toList();
     }

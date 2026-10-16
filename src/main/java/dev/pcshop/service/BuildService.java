@@ -33,7 +33,6 @@ import static dev.pcshop.enums.Slot.PSU;
 import static dev.pcshop.enums.Slot.RAM;
 import static dev.pcshop.enums.Slot.SSD;
 
-/** Конфигуратор: сборка из ссылки, список подходящих деталей, готовые и сохранённые сборки. */
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -41,7 +40,6 @@ public class BuildService {
 
     public static final int MAX_SAVED = 20;
 
-    /** Готовые сборки задаём по slug товаров: id в разных базах могут отличаться. */
     private static final List<PresetDef> PRESETS = List.of(
             new PresetDef("Для офиса и учёбы", "Документы, браузер, видеозвонки. Графика встроена в процессор.", Map.of(
                     CPU, "amd-ryzen-5-7600-oem", MOTHERBOARD, "asus-prime-a620m-k", COOLER, "thermalright-peerless-assassin-120-se",
@@ -67,10 +65,6 @@ public class BuildService {
     private final SavedBuildRepository saved;
     private final BotBuildRepository botBuilds;
 
-    /**
-     * Сборка из параметров ссылки (cpu=1&mb=5). Незнакомые слоты, кривые id, снятые с продажи товары
-     * и товар не той категории молча пропускаются: ссылка могла устареть.
-     */
     public Build fromParams(Map<String, ?> params) {
         Map<Slot, Long> ids = new EnumMap<>(Slot.class);
         params.forEach((key, value) -> Slot.byKey(key).ifPresent(slot -> {
@@ -94,10 +88,6 @@ public class BuildService {
         return new Build(parts);
     }
 
-    /**
-     * Товары для слота: сначала подходящие и в наличии, потом остальные; внутри — по цене.
-     * Ссылка «Выбрать» сразу ведёт к следующему шагу сборки.
-     */
     public List<CandidateResponse> candidates(Build build, Slot slot) {
         return catalog.productsIn(slot.category()).stream()
                 .map(p -> new CandidateResponse(p, compatibility.problems(build, slot, p), build.with(slot, p).nextLink(slot)))
@@ -113,7 +103,7 @@ public class BuildService {
                 .collect(Collectors.toMap(Product::getSlug, Function.identity()));
         return PRESETS.stream().map(d -> {
             Map<Slot, Product> parts = new EnumMap<>(Slot.class);
-            // Товар из готовой сборки могли снять с продажи — тогда слот просто пустой
+
             d.parts().forEach((slot, slug) -> {
                 if (bySlug.containsKey(slug)) {
                     parts.put(slot, bySlug.get(slug));
@@ -122,8 +112,6 @@ public class BuildService {
             return new PresetResponse(d.name(), d.purpose(), new Build(parts));
         }).toList();
     }
-
-    // ---------- Сохранённые сборки в кабинете ----------
 
     @Transactional
     public SavedBuild save(long accountId, String name, Build build) {
@@ -158,8 +146,6 @@ public class BuildService {
         saved.delete(saved.findByIdAndAccountId(id, accountId)
                 .orElseThrow(() -> new ResourceNotFoundException("Сборка не найдена")));
     }
-
-    // ---------- Текущая сборка в Telegram-боте ----------
 
     public Build botBuild(long chatId) {
         return fromParams(botBuilds.find(chatId));

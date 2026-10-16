@@ -15,7 +15,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 
-/** Контакты и реквизиты продавца для подвала сайта, контактов и оферты. Строка в базе всегда одна. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -61,12 +60,10 @@ public class StoreInfo {
         this.legalAddress = Strings.blankToNull(form.legalAddress());
     }
 
-    /** Продавец указан: можно показывать реквизиты и убирать пометки «демо-магазин». */
     public boolean hasSeller() {
         return legalName != null && inn != null;
     }
 
-    /** Реквизиты одной строкой для подвала: «ООО «Сборка», ИНН 7700000000, ОГРН 1027700000000, Москва, …». */
     public String sellerLine() {
         var sb = new StringBuilder(legalName).append(", ИНН ").append(inn);
         if (ogrn != null) {
@@ -78,12 +75,10 @@ public class StoreInfo {
         return sb.toString();
     }
 
-    /** У ИП 15 цифр (ОГРНИП), у организации 13. */
     public String ogrnLabel() {
         return ogrn != null && ogrn.length() == 15 ? "ОГРНИП" : "ОГРН";
     }
 
-    /** Ссылка для кнопки звонка: «8 800 000-00-00» → tel:+78000000000. */
     public String phoneLink() {
         String digits = phone.replaceAll("\\D", "");
         if (digits.length() == 11 && digits.startsWith("8")) {

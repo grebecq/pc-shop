@@ -2,7 +2,6 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<!-- Шаги конструктора: выбранные отмечены галочкой, по любому шагу можно перейти -->
 <nav th:fragment="steps(build, active, slots)" class="steps" aria-label="Шаги сборки">
     <a th:each="s : ${slots}" class="step" th:href="${build.pickLink(s)}"
        th:classappend="${s == active} ? 'is-active' : (${build.has(s)} ? 'is-done')"

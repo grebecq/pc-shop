@@ -9,6 +9,5 @@ import java.util.List;
 @Repository
 public interface StockMovementRepository extends JpaRepository<StockMovement, Long> {
 
-    /** Последние операции по товару, новые сверху. */
     List<StockMovement> findTop50ByProductIdOrderByIdDesc(long productId);
 }

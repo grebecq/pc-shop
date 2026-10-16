@@ -17,7 +17,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.io.Serializable;
 import java.time.Instant;
 
-/** «Сообщить о поступлении»: покупатель ждёт товар, которого нет в наличии. */
+// Подписка на поступление
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -43,7 +43,6 @@ public class StockAlert {
         this.productId = productId;
     }
 
-    /** Составной ключ: на один товар покупатель подписан один раз. */
     @NoArgsConstructor
     @AllArgsConstructor
     @EqualsAndHashCode

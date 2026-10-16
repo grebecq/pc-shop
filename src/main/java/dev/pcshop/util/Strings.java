@@ -2,7 +2,6 @@ package dev.pcshop.util;
 
 public final class Strings {
 
-    // Транслитерация для адресов страниц: «Мониторы» → monitory
     private static final String[] CYRILLIC = {
             "a", "b", "v", "g", "d", "e", "zh", "z", "i", "y", "k", "l", "m", "n", "o", "p", "r", "s", "t", "u", "f", "h",
             "ts", "ch", "sh", "sch", "", "y", "", "e", "yu", "ya"};
@@ -10,20 +9,14 @@ public final class Strings {
     private Strings() {
     }
 
-    /** Пробелы по краям убираем, null оставляем null — для полей форм и запросов. */
     public static String strip(String s) {
         return s == null ? null : s.strip();
     }
 
-    /** Пустую строку из формы храним как null, остальное — без пробелов по краям. */
     public static String blankToNull(String s) {
         return s == null || s.isBlank() ? null : s.strip();
     }
 
-    /**
-     * Часть адреса страницы из названия: «AMD Ryzen 5 7600» → amd-ryzen-5-7600, «Мониторы» → monitory.
-     * Только латиница, цифры и разделитель; пустая строка, если букв и цифр нет совсем.
-     */
     public static String slug(String text, char separator) {
         var out = new StringBuilder();
         for (char c : text.toLowerCase().replace('ё', 'е').replace('×', 'x').toCharArray()) {

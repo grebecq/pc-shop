@@ -27,7 +27,6 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Выбор товара: отзывы покупателей, избранное, сравнение, подсказки в поиске, похожие и недавние товары. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfig.class)
 class ProductChoiceTest {
@@ -37,7 +36,6 @@ class ProductChoiceTest {
     @Autowired OrderService orders;
     @Autowired AccountRepository accounts;
 
-    /** Отдельный «браузер» со своими cookie. */
     class Browser {
         final HttpClient http = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
 
@@ -79,7 +77,6 @@ class ProductChoiceTest {
         maria.post(page + "/reviews", page, "rating", "5", "text", "Хорошая плата, всё работает");
         assertThat(maria.get(page).body()).contains("Отзыв можно оставить после покупки товара");
 
-        // Купила и оплатила — теперь можно
         var order = orders.create(Channel.SITE, new CustomerRequest("Мария", "+7 900 000-00-00", "Москва, ул. Ленина, 1", null),
                 DeliveryMethod.PICKUP, null, List.of(new OrderLineRequest(product.getId(), 1)), null, accountId);
         orders.markPaid(order.getPublicId());
@@ -130,7 +127,6 @@ class ProductChoiceTest {
 
         var page = new Browser().get("/compare?ids=" + gpu1 + "," + cpu + "," + gpu2).body();
         assertThat(page).contains("Видеокарты", "Процессоры", "Видеопамять, ГБ", "Только различия");
-        // Цена у видеокарт разная, а объём памяти одинаковый: 12 ГБ
         assertThat(page).containsPattern("class=\"is-diff\">\\s*<th>Цена</th>")
                 .containsPattern("class=\"is-same\">\\s*<th>Видеопамять, ГБ</th>");
 
@@ -158,7 +154,6 @@ class ProductChoiceTest {
         assertThat(cards.body().indexOf("Intel Core i5-12400F")).as("порядок как в запросе")
                 .isLessThan(cards.body().indexOf(product.getName()));
 
-        // Сортировка по рейтингу: у Ryzen 5 7600 в демо-отзывах 4,7, у i5-12400F — 4,5, у остальных отзывов нет
         var titles = Pattern.compile("class=\"card__title\"[^>]*>([^<]+)<").matcher(b.get("/c/cpu?sort=rating").body())
                 .results().map(m -> m.group(1)).limit(2).toList();
         assertThat(titles).containsExactly(product.getName(), catalog.product("intel-core-i5-12400f-oem").getName());

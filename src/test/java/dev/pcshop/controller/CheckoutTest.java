@@ -37,7 +37,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-/** Оформление на сайте: самовывоз и курьер, согласие гостя, письма о заказе, отмена и повтор, страницы для покупателя. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfig.class)
 class CheckoutTest {
@@ -68,7 +67,6 @@ class CheckoutTest {
         var created = postJson("/api/orders", order.formatted(email, ssd.getId(), store.getId(), ", \"consent\": true"));
         assertThat(created.statusCode()).isEqualTo(201);
         var saved = orders.byPublicId(UUID.fromString(find(created.body(), "\"publicId\":\"([^\"]+)\"")));
-        // Магазин взят из базы по id, а не из текста запроса; самовывоз бесплатный
         assertThat(saved.getDeliveryMethod()).isEqualTo(DeliveryMethod.PICKUP);
         assertThat(saved.getAddress()).isEqualTo(store.oneLine());
         assertThat(saved.getDeliveryPrice()).isZero();
@@ -83,7 +81,6 @@ class CheckoutTest {
         orders.markPaid(saved.getPublicId());
         assertThat(awaitLetter(email, 2).subject()).isEqualTo("Заказ " + saved.number() + " оплачен");
 
-        // При самовывозе «передан в доставку» для покупателя звучит как «ждёт в магазине»
         orders.changeStatus(saved.getId(), OrderStatus.SHIPPED);
         var ready = awaitLetter(email, 3);
         assertThat(ready.subject()).isEqualTo("Заказ " + saved.number() + ": ждёт в магазине");
@@ -124,13 +121,11 @@ class CheckoutTest {
                 {"customer": {"name": "Ольга", "phone": "+7 900 222-33-44", "address": "Москва, ул. Ленина, 1"},
                  "items": [{"productId": %d, "quantity": 1}], "consent": true}""".formatted(ssd.getId()));
         var order = orders.byPublicId(UUID.fromString(find(created.body(), "\"publicId\":\"([^\"]+)\"")));
-        // Курьер для дешёвого заказа платный
         assertThat(order.getDeliveryPrice()).isEqualTo(490);
         assertThat(order.getTotal()).isEqualTo(ssd.getPrice() + 490);
 
         orders.markPaid(order.getPublicId());
         orders.changeStatus(order.getId(), OrderStatus.SHIPPED);
-        // Кнопки нет, но запрос можно отправить и руками — сервер всё равно откажет
         String page = "/order/" + order.getPublicId();
         assertThat(get(page).body()).doesNotContain("Отменить заказ");
         var attempt = postForm(page + "/cancel", page);
@@ -146,7 +141,6 @@ class CheckoutTest {
         var order = orders.create(Channel.SITE, new CustomerRequest("Анна", "+7 900 000-00-00", "Москва, ул. Ленина, 1", null),
                 DeliveryMethod.COURIER, null, List.of(new OrderLineRequest(ssd, 1)), null, owner);
 
-        // По одной ссылке чужой заказ из кабинета не отменить: ни гостю, ни другому аккаунту
         assertThatThrownBy(() -> orders.cancelByCustomer(order.getPublicId(), null)).isInstanceOf(ResourceNotFoundException.class);
         assertThatThrownBy(() -> orders.cancelByCustomer(order.getPublicId(), owner + 1000)).isInstanceOf(ResourceNotFoundException.class);
         assertThat(orders.cancelByCustomer(order.getPublicId(), owner).getStatus()).isEqualTo(OrderStatus.CANCELLED);
@@ -177,7 +171,6 @@ class CheckoutTest {
     }
 
     private TestMailbox.Letter awaitLetter(String email, int count) {
-        // Письма уходят асинхронно после коммита
         await().atMost(Duration.ofSeconds(5)).until(() -> mailbox.to(email).size() >= count);
         return mailbox.to(email).get(count - 1);
     }

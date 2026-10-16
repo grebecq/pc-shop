@@ -29,7 +29,6 @@ dependencies {
     implementation("org.telegram:telegrambots-longpolling:$telegrambotsVersion")
     implementation("org.telegram:telegrambots-client:$telegrambotsVersion")
     runtimeOnly("org.postgresql:postgresql")
-    // При запуске из IDEA или bootRun сам поднимает базу из docker-compose.yml. В jar и тесты не попадает
     developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 
     implementation("org.mapstruct:mapstruct:$mapstructVersion")
@@ -38,7 +37,6 @@ dependencies {
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
     annotationProcessor("org.mapstruct:mapstruct-processor:$mapstructVersion")
-    // Чтобы MapStruct видел геттеры и сеттеры, которые генерирует Lombok
     annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")

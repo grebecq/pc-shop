@@ -24,7 +24,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/** Личный кабинет: заказы, профиль, подтверждение почты, смена пароля через письмо и адреса доставки. Только после входа. */
 @PreAuthorize("hasRole('CUSTOMER')")
 @Controller
 @RequestMapping("/account")
@@ -77,7 +76,6 @@ public class AccountController {
         return "redirect:/account/profile";
     }
 
-    /** «Отправить ещё раз» в напоминании о неподтверждённой почте. Возвращаемся туда, где нажали кнопку. */
     @PostMapping("/email")
     public String sendEmailConfirmation(@AuthenticationPrincipal ShopUser user, @RequestParam(defaultValue = "") String from,
                                         RedirectAttributes flash) {

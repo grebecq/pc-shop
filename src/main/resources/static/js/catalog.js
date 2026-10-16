@@ -1,5 +1,3 @@
-// Каталог: избранное, сравнение, «Вы недавно смотрели» и подсказки в строке поиска.
-// Сравнение и недавние товары хранятся в localStorage, как корзина; избранное — в аккаунте на сервере.
 (function () {
   "use strict";
 
@@ -15,7 +13,7 @@
     } catch (e) { return []; }
   }
   function writeList(key, list) {
-    try { localStorage.setItem(key, JSON.stringify(list)); } catch (e) { /* приватный режим */ }
+    try { localStorage.setItem(key, JSON.stringify(list)); } catch (e) {  }
   }
   function csrfHeaders() {
     var token = document.querySelector("meta[name=csrf-token]");
@@ -31,13 +29,11 @@
   var header = document.querySelector(".header");
   var loggedIn = header && header.dataset.loggedIn === "true";
 
-  // ---------- Избранное ----------
   document.querySelectorAll("[data-fav].is-on [data-fav-label]").forEach(function (l) { l.textContent = "В избранном"; });
 
   document.addEventListener("click", function (e) {
     var btn = e.target.closest("[data-fav]");
     if (!btn) return;
-    // Избранное хранится в аккаунте: гостя отправляем войти и вернуться на эту же страницу
     if (!loggedIn) {
       location.href = "/login?next=" + encodeURIComponent(location.pathname);
       return;
@@ -65,7 +61,6 @@
     }
   }
 
-  // ---------- Сравнение ----------
   function compareUrl(ids) {
     return "/compare" + (ids.length ? "?ids=" + ids.join(",") : "");
   }
@@ -96,7 +91,6 @@
       ids.splice(i, 1);
     } else {
       ids.push(id);
-      // Самый старый товар уступает место новому
       if (ids.length > MAX_COMPARE) ids.shift();
     }
     writeList(COMPARE, ids);
@@ -107,7 +101,6 @@
   if (comparePage) {
     var params = new URLSearchParams(location.search);
     var saved = readList(COMPARE);
-    // По ссылке /compare без списка показываем то, что покупатель отметил в этом браузере
     if (!params.has("ids") && saved.length) {
       location.replace(compareUrl(saved));
       return;
@@ -126,7 +119,6 @@
     }
   }
 
-  // ---------- Вы недавно смотрели ----------
   var viewed = document.querySelector("[data-viewed]");
   var current = viewed ? viewed.getAttribute("data-viewed") : null;
   var recent = readList(RECENT);
@@ -134,7 +126,6 @@
   if (recentBox) {
     var show = recent.filter(function (id) { return id !== current; }).slice(0, 4);
     if (show.length) {
-      // Карточки рисует сервер тем же шаблоном, что и в каталоге
       fetch("/cards?ids=" + show.join(","))
         .then(function (r) { return r.ok ? r.text() : ""; })
         .then(function (html) {
@@ -143,7 +134,7 @@
           recentBox.hidden = false;
           syncCompare();
         })
-        .catch(function () { /* блок просто не покажется */ });
+        .catch(function () {  });
     }
   }
   if (current) {
@@ -151,7 +142,6 @@
     writeList(RECENT, recent);
   }
 
-  // ---------- Подсказки в поиске ----------
   var input = document.querySelector(".search input[name=q]");
   if (input) {
     var box = document.createElement("div");
@@ -171,7 +161,6 @@
         box.hidden = true;
         return;
       }
-      // Ждём паузу в наборе, чтобы не слать запрос на каждую букву
       timer = setTimeout(function () { loadSuggestions(q); }, 200);
     });
 
@@ -203,10 +192,9 @@
     fetch("/api/products/suggest?q=" + encodeURIComponent(q))
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (list) {
-        // Пока шёл запрос, покупатель мог допечатать: старый ответ не показываем
         if (q === lastQuery) renderSuggestions(list, q);
       })
-      .catch(function () { /* без подсказок поиск всё равно работает */ });
+      .catch(function () {  });
   }
 
   function placeholder() {

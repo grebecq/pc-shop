@@ -12,7 +12,6 @@ import java.util.Set;
 @Repository
 public interface FavoriteRepository extends JpaRepository<Favorite, Favorite.Key> {
 
-    /** id товаров в избранном — чтобы закрасить сердечки в карточках. */
     @Query("select f.productId from Favorite f where f.accountId = :accountId")
     Set<Long> productIds(@Param("accountId") long accountId);
 

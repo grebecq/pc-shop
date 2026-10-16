@@ -20,7 +20,6 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Реквизиты продавца из админки, оферта, файлы для поисковиков и превью ссылок. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfig.class)
 class StorePagesTest {
@@ -118,7 +117,6 @@ class StorePagesTest {
         return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
     }
 
-    /** POST формы админки с CSRF-токеном со страницы pageWithForm. */
     private HttpResponse<String> post(String path, String pageWithForm, String... pairs) throws Exception {
         var body = new StringBuilder("_csrf=").append(enc(find(get(pageWithForm, ADMIN).body(), "name=\"_csrf\" value=\"([^\"]+)\"")));
         for (int i = 0; i < pairs.length; i += 2) {
