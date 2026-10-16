@@ -1,14 +1,16 @@
 package dev.pcshop.config;
 
 import dev.pcshop.bot.ShopBot;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
-/** Бот включается, только если задан BOT_TOKEN. Без него сайт и API работают как обычно. */
+@Slf4j
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnExpression("!'${shop.telegram.bot-token:}'.isBlank()")
 public class TelegramConfig {
@@ -19,9 +21,13 @@ public class TelegramConfig {
     }
 
     @Bean(destroyMethod = "close")
-    public TelegramBotsLongPollingApplication telegramBots(ShopProperties props, ShopBot bot) throws Exception {
+    public TelegramBotsLongPollingApplication telegramBots(ShopProperties props, ShopBot bot) {
         var app = new TelegramBotsLongPollingApplication();
-        app.registerBot(props.telegram().botToken(), bot);
+        try {
+            app.registerBot(props.telegram().botToken(), bot);
+        } catch (TelegramApiException e) {
+            log.warn("Бот не запущен: нет связи с api.telegram.org ({}). Сайт работает без бота", e.getMessage());
+        }
         return app;
     }
 }

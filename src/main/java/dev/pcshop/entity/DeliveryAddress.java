@@ -18,7 +18,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 
-/** Сохранённый адрес доставки покупателя. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -67,14 +66,12 @@ public class DeliveryAddress {
         this.postalCode = Strings.blankToNull(request.postalCode());
     }
 
-    /** Адрес одной строкой, как он попадает в заказ: «Москва, Тверская 1, кв. 5, индекс 125009». */
     public String oneLine() {
         var sb = new StringBuilder();
         sb.append(city).append(", ").append(street);
         if (apartment != null) {
             sb.append(", кв. ").append(apartment);
         }
-        // Индекс в конце и с подписью: в начале строки его путают с частью адреса
         if (postalCode != null) {
             sb.append(", индекс ").append(postalCode);
         }

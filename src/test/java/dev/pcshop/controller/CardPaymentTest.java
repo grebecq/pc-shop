@@ -29,7 +29,6 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Тестовая оплата картой на сайте: успешная оплата, ошибки в форме и отказ банка. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfig.class)
 class CardPaymentTest {
@@ -54,12 +53,10 @@ class CardPaymentTest {
         Order paid = orders.byPublicId(order.getPublicId());
         assertThat(paid.getStatus()).isEqualTo(OrderStatus.PAID);
         assertThat(paid.getPaymentCard()).isEqualTo("Visa •• 4242");
-        // В строке заказа в базе только последние 4 цифры, номера целиком нет
         String row = jdbc.sql("SELECT o::text FROM customer_order o WHERE o.id = ?").param(order.getId()).query(String.class).single();
         assertThat(row).contains("Visa •• 4242").doesNotContain("4242424242424242");
 
         assertThat(get("/order/" + order.getPublicId() + "?paid").body()).contains("Оплата прошла", "Оплачено: Visa •• 4242");
-        // Оплаченный заказ на страницу оплаты больше не пускает
         assertThat(get("/pay/" + order.getPublicId()).statusCode()).isEqualTo(302);
     }
 
@@ -78,7 +75,6 @@ class CardPaymentTest {
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body()).contains("Неверный номер карты");
         assertUnpaid(order);
-        // Введённое остаётся в форме, кроме CVC
         assertThat(response.body()).contains("value=\"4242424242424241\"", "value=\"" + FUTURE + "\"", "value=\"IVAN PETROV\"");
         assertThat(cvcInput(response.body())).doesNotContain("value=");
     }
@@ -125,7 +121,6 @@ class CardPaymentTest {
     }
 
     private Order newOrder() {
-        // Товар с большим остатком, который не трогают другие тесты: заказы здесь резервируют склад
         var cpu = catalog.product("intel-core-i5-12400f-oem");
         return orders.create(Channel.SITE, new CustomerRequest("Покупатель", "+7 900 000-00-00", "Москва", null),
                 List.of(new OrderLineRequest(cpu.getId(), 1)), null);

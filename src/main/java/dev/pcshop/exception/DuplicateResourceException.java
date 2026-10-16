@@ -3,7 +3,6 @@ package dev.pcshop.exception;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
-/** Такая запись уже есть: например, аккаунт с этим email. */
 @ResponseStatus(HttpStatus.CONFLICT)
 public class DuplicateResourceException extends RuntimeException {
 

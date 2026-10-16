@@ -4,11 +4,7 @@ import dev.pcshop.enums.Slot;
 
 import java.util.Set;
 
-/**
- * Замечание к сборке.
- * ERROR — так собрать нельзя, WARNING — соберётся, но есть нюанс, MISSING — не хватает детали.
- * slots — какие детали затронуты: по ним понимаем, почему конкретный товар не подходит.
- */
+// Проблема совместимости
 public record Issue(Level level, Set<Slot> slots, String text) {
 
     public enum Level { ERROR, WARNING, MISSING }

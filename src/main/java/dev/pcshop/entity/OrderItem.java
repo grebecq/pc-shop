@@ -31,7 +31,6 @@ public class OrderItem {
     @Column(name = "product_id", nullable = false)
     private long productId;
 
-    /** Название и цена копируются на момент заказа: потом товар могут переименовать или переоценить. */
     @Column(nullable = false)
     private String name;
 

@@ -102,6 +102,7 @@
             <label class="check consent" th:if="${user == null}"><input type="checkbox" name="consent">
                 <span>Согласен на <a th:href="@{/privacy}" target="_blank">обработку персональных данных</a></span></label>
             <button class="btn btn--wide" type="submit">Перейти к оплате</button>
+            <p class="muted small-line">Оформляя заказ, вы принимаете условия <a th:href="@{/offer}" target="_blank">оферты</a>.</p>
             <p class="form-error" data-order-error role="alert"></p>
         </form>
     </div>

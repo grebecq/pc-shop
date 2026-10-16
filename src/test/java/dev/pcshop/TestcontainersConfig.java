@@ -5,6 +5,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.context.annotation.Bean;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+// База для тестов
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfig {
 
@@ -14,7 +15,6 @@ public class TestcontainersConfig {
         return new PostgreSQLContainer("postgres:16-alpine");
     }
 
-    /** Вместо SMTP: письма складываются в список, тесты достают из них ссылки. */
     @Bean
     TestMailbox mailSender() {
         return new TestMailbox();

@@ -16,18 +16,15 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/** Избранное покупателя на сайте. */
 @Service
 @RequiredArgsConstructor
 public class FavoriteService {
 
-    /** Чтобы список не рос бесконечно. */
     private static final int MAX_FAVORITES = 200;
 
     private final FavoriteRepository favorites;
     private final ProductRepository products;
 
-    /** Добавляет товар в избранное или убирает его оттуда. Возвращает true, если товар теперь в избранном. */
     @Transactional
     public boolean toggle(long accountId, long productId) {
         var key = new Favorite.Key(accountId, productId);
@@ -50,7 +47,6 @@ public class FavoriteService {
         return favorites.productIds(accountId);
     }
 
-    /** Товары из избранного, недавно добавленные первыми. Снятые с продажи не показываем. */
     @Transactional(readOnly = true)
     public List<Product> products(long accountId) {
         List<Long> ids = favorites.findAllByAccountIdOrderByCreatedAtDesc(accountId).stream().map(Favorite::getProductId).toList();

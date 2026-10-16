@@ -49,22 +49,18 @@ public class Product {
     @Column(nullable = false)
     private String brand;
 
-    /** Цена в рублях. */
     @Column(nullable = false)
     private int price;
 
-    /** Цена до скидки или null, если скидки нет. Всегда больше price (проверяет и база). */
     @Column(name = "old_price")
     private Integer oldPrice;
 
-    /** Пишут его только запросы ProductRepository из StockService вместе с журналом склада, сам JPA — никогда. */
     @Column(nullable = false, insertable = false, updatable = false)
     private int stock;
 
     @Column(nullable = false)
     private String description;
 
-    /** Характеристики: у разных категорий разные, поэтому JSONB. */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false)
     private Map<String, Object> attributes = new LinkedHashMap<>();
@@ -77,7 +73,6 @@ public class Product {
     @Column(name = "image_url")
     private String imageUrl;
 
-    /** Средняя оценка из отзывов или null. Пересчитывает ReviewRepository.refreshRating, JPA её не пишет. */
     @Column(insertable = false, updatable = false)
     private BigDecimal rating;
 
@@ -92,13 +87,11 @@ public class Product {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    /** Новый товар из админки. Остаток у него 0, пока на склад не оформлен приход. */
     public Product(Category category, String slug) {
         this.category = category;
         this.slug = slug;
     }
 
-    /** Всё, что владелец правит в карточке товара, кроме цены, остатка и фото. slug не меняется: на него ведут ссылки. */
     public void edit(Category category, String name, String brand, String description, Map<String, Object> attributes) {
         this.category = category;
         this.name = name;
@@ -107,12 +100,10 @@ public class Product {
         this.attributes = new LinkedHashMap<>(attributes);
     }
 
-    /** Числовая характеристика или 0, если её нет. */
     public int num(String key) {
         return attributes.get(key) instanceof Number n ? n.intValue() : 0;
     }
 
-    /** Строковая характеристика или пустая строка. */
     public String str(String key) {
         Object v = attributes.get(key);
         return v == null ? "" : v.toString();
@@ -130,12 +121,10 @@ public class Product {
         return oldPrice != null;
     }
 
-    /** Скидка в процентах для значка «−12%», округлённая до целого. */
     public int discountPercent() {
         return oldPrice == null ? 0 : Math.round(100f * (oldPrice - price) / oldPrice);
     }
 
-    /** Новая цена и цена до скидки меняются вместе: иначе по дороге старая цена могла бы оказаться меньше новой. */
     public void reprice(int price, Integer oldPrice) {
         if (price <= 0) {
             throw new IllegalArgumentException("Цена должна быть больше нуля");

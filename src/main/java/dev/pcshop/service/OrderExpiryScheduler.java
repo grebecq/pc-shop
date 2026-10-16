@@ -11,10 +11,7 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.time.Instant;
 
-/**
- * Отменяет заказы, которые не оплатили вовремя, и возвращает товар на склад.
- * Без этого любой посетитель мог бы «выкупить» весь остаток неоплаченными заказами.
- */
+// Отмена неоплаченных заказов
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -34,7 +31,7 @@ public class OrderExpiryScheduler {
                     service.cancelUnpaid(id);
                 }
             } catch (ObjectOptimisticLockingFailureException e) {
-                // Заказ в этот момент оплатили или изменили в админке — значит, отменять не нужно
+
                 log.info("Заказ {} изменился во время автоотмены, пропускаем", id);
             }
         }

@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
-/** Каталог глазами владельца: заводит и правит товары и категории. Остаток меняет StockService. */
 @Slf4j
 @Service
 @Transactional
@@ -43,8 +42,6 @@ public class CatalogAdminService {
     private final ProductSearchRepository search;
     private final StockService stock;
 
-    // ---------- Товары ----------
-
     @Transactional(readOnly = true)
     public Page<Product> products(String text, Long categoryId, ProductListFilter show, int page) {
         return search.adminSearch(Strings.blankToNull(text), categoryId, show, Math.max(page, 0), PAGE_SIZE);
@@ -56,7 +53,6 @@ public class CatalogAdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Товар не найден"));
     }
 
-    /** Новый товар. Если указан начальный остаток, он оформляется приходом и попадает в журнал склада. */
     public Product create(ProductRequest request) {
         Category category = category(request.categoryId());
         Product product = new Product(category, uniqueSlug(request.name()));
@@ -82,10 +78,6 @@ public class CatalogAdminService {
         product.setActive(request.isActive());
     }
 
-    /**
-     * Значения характеристик из формы → JSON товара: числа — числами, галочки — true/false.
-     * Сохраняются только характеристики категории. Все ошибки собираются в одно сообщение.
-     */
     Map<String, Object> attributes(Category category, Map<String, String> form) {
         Map<String, Object> result = new LinkedHashMap<>();
         List<String> missing = new ArrayList<>();
@@ -104,7 +96,7 @@ public class CatalogAdminService {
             }
             if (spec.type() == SpecType.NUMBER) {
                 try {
-                    // Пробелы внутри числа («1 000») не мешают
+
                     result.put(spec.key(), Integer.parseInt(raw.replaceAll("\\s", "")));
                 } catch (NumberFormatException e) {
                     errors.add("«" + spec.label() + "» — нужно целое число");
@@ -134,16 +126,10 @@ public class CatalogAdminService {
         return slug;
     }
 
-    /**
-     * Подсказки для текстовых характеристик: значения, которые уже есть у товаров категории.
-     * Так владелец пишет «AM5», а не «am5» или «Socket AM5», и фильтр на сайте не дробится.
-     */
     @Transactional(readOnly = true)
     public Map<String, List<String>> suggestions(Category category) {
         return search.specValues(category);
     }
-
-    // ---------- Категории ----------
 
     @Transactional(readOnly = true)
     public List<Category> categories() {
@@ -182,7 +168,6 @@ public class CatalogAdminService {
         return category;
     }
 
-    /** Удалить можно только пустую категорию: на товары ссылаются заказы и сборки. */
     public void deleteCategory(long id) {
         Category category = category(id);
         if (products.countByCategoryId(id) > 0) {
@@ -194,10 +179,6 @@ public class CatalogAdminService {
         categories.delete(category);
     }
 
-    /**
-     * Строки формы → характеристики категории. Ключ существующей характеристики не меняется, у новой придумывается
-     * из названия. Характеристики, на которых держится конфигуратор, нельзя удалить или сменить им тип.
-     */
     private List<Spec> specs(String categorySlug, List<Spec> current, List<CategoryRequest.SpecRow> rows) {
         Map<String, Spec> byKey = new LinkedHashMap<>();
         current.forEach(s -> byKey.put(s.key(), s));
@@ -228,7 +209,7 @@ public class CatalogAdminService {
             used.add(key);
             result.add(new Spec(key, label, type, row.isFilter()));
         }
-        // Строку существующей характеристики убрали из формы руками — считаем это удалением, но не для нужных конфигуратору
+
         byKey.values().stream().filter(s -> Slot.needs(categorySlug, s.key())).findFirst().ifPresent(s -> {
             throw new BadRequestException("«" + s.label() + "» нужна конфигуратору сборок, её нельзя удалить");
         });

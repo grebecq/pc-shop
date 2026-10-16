@@ -33,10 +33,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Заказы с сайта и из бота. Данные покупателя проверяются здесь же (@Validated), поэтому
- * одни правила действуют для любого канала, даже если он сам что-то не проверил.
- */
 @Slf4j
 @Service
 @Validated
@@ -53,7 +49,6 @@ public class OrderService {
     private final PromoService promos;
     private final StockService stock;
 
-    /** Заказ из бота: доставка курьером по адресу из чата. */
     @Transactional
     public Order create(@NotNull(message = "Не указан канал заказа") Channel channel,
                         @NotNull(message = "Укажите данные покупателя") @Valid CustomerRequest customer,
@@ -62,13 +57,6 @@ public class OrderService {
         return create(channel, customer, DeliveryMethod.COURIER, null, lines, telegramChatId, null);
     }
 
-    /**
-     * Создаёт заказ и резервирует товар. Если чего-то не хватает, откатывается весь заказ целиком.
-     * Скидка по промокоду и цена доставки считаются здесь же, от суммы товаров по их ценам, и входят в итог.
-     *
-     * @param promoCode промокод из корзины или null
-     * @param accountId аккаунт покупателя на сайте или null для гостя и бота
-     */
     @Transactional
     public Order create(@NotNull(message = "Не указан канал заказа") Channel channel,
                         @NotNull(message = "Укажите данные покупателя") @Valid CustomerRequest customer,
@@ -76,7 +64,7 @@ public class OrderService {
                         String promoCode,
                         @NotEmpty(message = "Корзина пуста") List<@NotNull @Valid OrderLineRequest> lines,
                         Long telegramChatId, Long accountId) {
-        // Одинаковые товары в запросе складываем в одну позицию
+
         Map<Long, Integer> quantities = new LinkedHashMap<>();
         lines.forEach(l -> quantities.merge(l.productId(), l.quantity(), Integer::sum));
         if (quantities.isEmpty()) {
@@ -86,7 +74,6 @@ public class OrderService {
             throw new OrderException("Слишком много позиций в заказе");
         }
 
-        // Промокод проверяем до резерва: неизвестный или истёкший код — сразу понятная ошибка
         PromoCode promo = promoCode == null ? null : promos.find(promoCode);
 
         Map<Long, Product> byId = products.findAllById(quantities.keySet()).stream()
@@ -106,7 +93,7 @@ public class OrderService {
         if (promo != null) {
             order.applyPromo(promo.getCode(), promos.discount(promo, order.itemsTotal()));
         }
-        // Бесплатная доставка — от суммы товаров без скидки: как и обещано в корзине
+
         order.chargeDelivery(delivery.price(deliveryMethod, order.itemsTotal()));
 
         orders.save(order);
@@ -126,10 +113,6 @@ public class OrderService {
         return order;
     }
 
-    /**
-     * Тестовая оплата картой на сайте. Отменённый или уже оплаченный заказ не трогаем и деньги за него не списываем.
-     * Если банк отказал, летит BadRequestException и заказ остаётся неоплаченным.
-     */
     @Transactional
     public Order payByCard(UUID publicId, @NotNull(message = "Укажите данные карты") @Valid CardPaymentRequest card) {
         Order order = byPublicId(publicId);
@@ -144,16 +127,11 @@ public class OrderService {
         return order;
     }
 
-    /** Покупатель ушёл платить на страницу ЮKassa этим платежом. */
     @Transactional
     public void attachPayment(long orderId, String paymentId) {
         byId(orderId).attachPayment(paymentId);
     }
 
-    /**
-     * Оплата через ЮKassa. Неоплаченный заказ становится оплаченным, остальные не меняются:
-     * PaymentService по возвращённому заказу решает, не вернуть ли деньги.
-     */
     @Transactional
     public Order markPaidOnline(long orderId, String paymentId, String method) {
         Order order = byId(orderId);
@@ -178,22 +156,18 @@ public class OrderService {
         order.changeStatus(status);
         log.info("Заказ {}: статус {}", order.number(), status);
         if (status == OrderStatus.CANCELLED) {
-            // Отменённый заказ возвращает товар на склад. Если товара не было, подписчики узнают, что он появился
+
             stock.returned(order);
         }
         events.publishEvent(new OrderEvents.StatusChanged(order.getId(), status));
         return order;
     }
 
-    /**
-     * Отмена покупателем со страницы заказа. Заказ из кабинета может отменить только его владелец,
-     * гостевой — тот, у кого есть ссылка на заказ (в ней случайный UUID).
-     */
     @Transactional
     public Order cancelByCustomer(UUID publicId, Long accountId) {
         Order order = byPublicId(publicId);
         if (order.getAccountId() != null && !order.getAccountId().equals(accountId)) {
-            // Как будто заказа нет: не подсказываем, что ссылка настоящая
+
             throw new ResourceNotFoundException("Заказ не найден");
         }
         if (order.getStatus() == OrderStatus.CANCELLED) {
@@ -205,7 +179,6 @@ public class OrderService {
         return changeStatus(order.getId(), OrderStatus.CANCELLED);
     }
 
-    /** Отмена неоплаченного заказа по таймауту. Если заказ уже оплачен, ничего не делает. */
     @Transactional
     public void cancelUnpaid(long orderId) {
         Order order = orders.findWithItemsById(orderId).orElseThrow(() -> new ResourceNotFoundException("Заказ не найден"));

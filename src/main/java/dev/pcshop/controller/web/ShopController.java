@@ -1,5 +1,6 @@
 package dev.pcshop.controller.web;
 
+import dev.pcshop.config.ShopProperties;
 import dev.pcshop.dto.request.ProductSearchRequest;
 import dev.pcshop.dto.request.ReviewRequest;
 import dev.pcshop.entity.Category;
@@ -18,6 +19,7 @@ import dev.pcshop.service.PaymentService;
 import dev.pcshop.service.StockAlertService;
 import dev.pcshop.util.Attributes;
 import dev.pcshop.util.CatalogQueries;
+import dev.pcshop.util.Formats;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -33,12 +35,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/** Страницы сайта-витрины. Корзина хранится в браузере, заказ создаётся через /api/orders. */
 @Controller
 @RequiredArgsConstructor
 public class ShopController {
 
-    /** Сколько товаров берём в сравнение и «недавно смотрели»: защита от огромных запросов. */
     private static final int MAX_LISTED = 12;
 
     private final CatalogService catalog;
@@ -48,6 +48,7 @@ public class ShopController {
     private final ReviewService reviews;
     private final StockAlertService stockAlerts;
     private final PaymentService payments;
+    private final ShopProperties props;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -76,6 +77,8 @@ public class ShopController {
         model.addAttribute("selected", query.filters());
         model.addAttribute("sort", params.getFirst("sort") == null ? "popular" : params.getFirst("sort"));
         model.addAttribute("pageLinks", pageLinks(slug, params, page.getTotalPages()));
+        model.addAttribute("pageDescription", category.getName() + " в магазине «Сборка»: цены, характеристики и наличие, "
+                + "подбор по фильтрам и проверка совместимости. Доставка и самовывоз.");
         return "shop/category";
     }
 
@@ -84,6 +87,11 @@ public class ShopController {
         Product product = catalog.product(slug);
         model.addAttribute("product", product);
         model.addAttribute("specs", Attributes.readable(product));
+        model.addAttribute("pageDescription", pageDescription(product));
+        if (product.getImageUrl() != null) {
+            String image = product.getImageUrl();
+            model.addAttribute("pageImage", image.startsWith("/") ? props.siteUrl() + image : image);
+        }
         model.addAttribute("similar", catalog.similar(product, 4));
         model.addAttribute("reviews", reviews.forProduct(product.getId()));
         model.addAttribute("reviewPermission", reviews.permission(user == null ? null : user.getAccountId(), product.getId()));
@@ -93,12 +101,17 @@ public class ShopController {
         if (!model.containsAttribute("review")) {
             model.addAttribute("review", new ReviewRequest(null, null, null, null));
         }
-        // «Собрать ПК с этим товаром»: товар уже в сборке, дальше — первый пустой шаг конфигуратора
         model.addAttribute("buildLink", Slot.byCategory(product.getCategory().getSlug()).map(slot -> {
             Build build = Build.empty().with(slot, product);
             return build.firstEmpty().map(build::pickLink).orElseGet(build::link);
         }).orElse(null));
         return "shop/product";
+    }
+
+    private static String pageDescription(Product product) {
+        String brief = Attributes.brief(product);
+        return product.getName() + (brief.isEmpty() ? "" : ": " + brief) + ". Цена " + Formats.price(product.getPrice())
+                + (product.inStock() ? ", в наличии." : ", сейчас нет в наличии.") + " Доставка и самовывоз.";
     }
 
     @GetMapping("/search")
@@ -114,14 +127,12 @@ public class ShopController {
         return "shop/search";
     }
 
-    /** Сравнение: id товаров приходят из браузера (список хранится в localStorage, как корзина). */
     @GetMapping("/compare")
     public String compare(@RequestParam(defaultValue = "") List<Long> ids, Model model) {
         model.addAttribute("tables", Comparison.of(catalog.productsInOrder(ids.stream().limit(MAX_LISTED).toList())));
         return "shop/compare";
     }
 
-    /** Карточки товаров без страницы вокруг — для блока «Вы недавно смотрели», его собирает JS. */
     @GetMapping("/cards")
     public String cards(@RequestParam(defaultValue = "") List<Long> ids, Model model) {
         model.addAttribute("products", catalog.productsInOrder(ids.stream().limit(MAX_LISTED).toList()));
@@ -130,7 +141,6 @@ public class ShopController {
 
     @GetMapping("/cart")
     public String cart(@AuthenticationPrincipal ShopUser user, Model model) {
-        // Вошедшему покупателю подставляем имя, телефон и сохранённые адреса
         if (user != null) {
             model.addAttribute("account", accounts.get(user.getAccountId()));
             model.addAttribute("addresses", accounts.addresses(user.getAccountId()));
@@ -143,10 +153,8 @@ public class ShopController {
 
     @GetMapping("/order/{publicId}")
     public String order(@PathVariable UUID publicId, @AuthenticationPrincipal ShopUser user, Model model) {
-        // Покупатель мог вернуться со страницы ЮKassa раньше, чем пришло уведомление об оплате
         var order = payments.refresh(orders.byPublicId(publicId));
         model.addAttribute("order", order);
-        // Кнопку отмены показываем тому, кто может отменить: см. OrderService.cancelByCustomer
         model.addAttribute("canCancel", order.cancellableByCustomer()
                 && (order.getAccountId() == null || user != null && order.getAccountId().equals(user.getAccountId())));
         return "shop/order";
@@ -163,7 +171,6 @@ public class ShopController {
         return "redirect:/order/" + publicId;
     }
 
-    /** Ссылки на страницы с сохранением фильтров. */
     private static List<String> pageLinks(String slug, MultiValueMap<String, String> params, int totalPages) {
         String base = params.entrySet().stream()
                 .filter(e -> !e.getKey().equals("page"))

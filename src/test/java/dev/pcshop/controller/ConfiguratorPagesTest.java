@@ -20,7 +20,6 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Страницы конфигуратора: сборка из ссылки, выбор детали, сохранение в кабинет. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfig.class)
 class ConfiguratorPagesTest {
@@ -38,7 +37,6 @@ class ConfiguratorPagesTest {
         var page = get(preset).body();
         assertThat(page).contains("Сборка совместима и готова к заказу", "AMD Ryzen 7 7800X3D", "data-add-build=");
 
-        // Меняем плату на Intel: сборка сразу показывает конфликт сокетов
         long intelBoard = Long.parseLong(find(get("/configurator/mb?" + preset.substring(preset.indexOf('?') + 1)).body(),
                 "mb=(\\d+)[^\"]*\"[^>]*>Всё равно"));
         var broken = get(preset.replaceAll("mb=\\d+", "mb=" + intelBoard)).body();
@@ -53,17 +51,14 @@ class ConfiguratorPagesTest {
 
     @Test
     void stepsLeadToNextEmptySlot() throws Exception {
-        // Выбор процессора ведёт сразу к платам, а неподходящие платы спрятаны в свёрнутый список
         assertThat(get("/configurator").body()).contains("Начать с процессора", "Сборка ПК");
         String cpuLink = find(get("/configurator/cpu").body(), "href=\"(/configurator/mb\\?cpu=\\d+)\"");
         var boards = get(cpuLink).body();
         assertThat(boards).contains("Шаг 2 из 8", "Не подходят к сборке:", "Пропустить шаг");
-        // Пропуск шага ведёт к следующему, на последнем шаге — к итогу сборки
         String cpu = cpuLink.substring(cpuLink.indexOf("cpu="));
         assertThat(boards).contains("href=\"/configurator/cooler?" + cpu + "\"");
         assertThat(get("/configurator/case?" + cpu).body()).contains("href=\"/configurator?" + cpu + "\"");
 
-        // Со страницы товара — сразу в конструктор с этим товаром
         assertThat(get("/p/amd-ryzen-5-7600-oem").body()).containsPattern("class=\"build-with\" href=\"/configurator/mb\\?cpu=\\d+\"")
                 .contains("Собрать ПК с этим товаром");
     }
@@ -78,7 +73,6 @@ class ConfiguratorPagesTest {
         assertThat(post("/configurator/save", preset, query + "&name=x").headers().firstValue("Location").orElseThrow())
                 .endsWith("/login");
 
-        // Регистрация со ссылкой «вернуться к сборке»
         var reg = post("/register", "/register", "name=Анна&email=" + enc("b-" + UUID.randomUUID() + "@example.com")
                 + "&password=secret-123&consent=true&next=" + enc(preset));
         assertThat(reg.headers().firstValue("Location").orElseThrow()).endsWith(preset);
@@ -97,7 +91,6 @@ class ConfiguratorPagesTest {
         return http.send(HttpRequest.newBuilder(uri(path)).build(), HttpResponse.BodyHandlers.ofString());
     }
 
-    /** POST формы с CSRF-токеном со страницы pageWithForm. */
     private HttpResponse<String> post(String path, String pageWithForm, String form) throws Exception {
         String csrf = find(get(pageWithForm).body(), "name=\"csrf-token\" content=\"([^\"]+)\"");
         String body = "_csrf=" + enc(csrf) + (form.isEmpty() ? "" : "&" + form);

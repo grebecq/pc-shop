@@ -16,7 +16,6 @@ public interface PasswordResetTokenRepository extends JpaRepository<PasswordRese
 
     Optional<PasswordResetToken> findByTokenHash(String tokenHash);
 
-    /** С блокировкой строки: два одновременных запроса с одной ссылкой не сменят пароль дважды. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<PasswordResetToken> findForUpdateByTokenHash(String tokenHash);
 

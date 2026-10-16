@@ -12,13 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Таблица сравнения товаров одной категории: столбцы — товары, строки — цена, оценка и характеристики.
- * Сравнивать видеокарту с процессором бессмысленно, поэтому товары разных категорий попадают в разные таблицы.
- */
 public record Comparison(Category category, List<Product> products, List<Row> rows) {
 
-    /** Строка таблицы. differs — значения у товаров разные: такие строки подсвечиваются. */
     public record Row(String label, List<String> values, boolean differs) {
 
         static Row of(String label, List<String> values) {
@@ -40,7 +35,7 @@ public record Comparison(Category category, List<Product> products, List<Row> ro
         rows.add(Row.of("Цена", group.stream().map(p -> Formats.price(p.getPrice())).toList()));
         rows.add(Row.of("Оценка", group.stream()
                 .map(p -> p.getRating() == null ? "нет отзывов" : Formats.ratingText(p.getRating()) + " из 5").toList()));
-        // Характеристики категории, которые есть хотя бы у одного товара: если у другого её нет, ставим прочерк
+
         for (Spec spec : group.getFirst().getCategory().getSpecs()) {
             if (group.stream().anyMatch(p -> p.getAttributes().containsKey(spec.key()))) {
                 rows.add(Row.of(spec.label(), group.stream()

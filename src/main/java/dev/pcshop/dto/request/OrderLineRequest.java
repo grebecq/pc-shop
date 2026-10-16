@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 
-/** Позиция заказа: товар и количество. */
+// Строка заказа
 public record OrderLineRequest(
 
         @Positive(message = "Неизвестный товар")

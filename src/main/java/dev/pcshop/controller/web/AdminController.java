@@ -16,8 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-
-/** Админка владельца: заказы (товары и категории — в AdminCatalogController). Доступ по логину и паролю из ADMIN_USER / ADMIN_PASSWORD. */
 @PreAuthorize("hasRole('ADMIN')")
 @Controller
 @RequestMapping("/admin")

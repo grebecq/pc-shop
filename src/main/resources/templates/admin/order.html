@@ -40,7 +40,6 @@
         <div th:if="${order.refundedAt}"><dt>Возврат</dt><dd th:text="'Деньги возвращены ' + ${@fmt.date(order.refundedAt)}">Деньги возвращены</dd></div>
     </dl>
 
-    <!--/* Возврат делается сам сразу после отмены. Кнопка — на случай, если ЮKassa тогда не ответила */-->
     <form class="panel inline-form" method="post" th:action="@{/admin/orders/{id}/refund(id=${order.id})}" th:if="${order.awaitingRefund()}">
         <p class="notice notice--error">Заказ отменён после оплаты, а деньги покупателю ещё не вернулись.
             Если надпись не пропала после обновления страницы, верните их кнопкой.</p>

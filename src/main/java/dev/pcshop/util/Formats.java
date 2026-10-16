@@ -12,7 +12,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
-/** Форматирование цен и дат. Доступно в шаблонах как ${@fmt.price(...)}. */
 @Component("fmt")
 public class Formats {
 
@@ -21,17 +20,12 @@ public class Formats {
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMMM yyyy", java.util.Locale.of("ru")).withZone(ZONE);
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm").withZone(ZONE);
 
-    /** 17490 → «17 490 ₽» */
-    /**
-     * Текст для HTML-разметки Telegram. Telegram понимает только &lt; &gt; &amp; &quot; и числовые ссылки,
-     * поэтому «×» и «—» должны остаться символами, а не стать &times; и &mdash;, как у обычного htmlEscape.
-     */
     public static String telegramHtml(String text) {
         return HtmlUtils.htmlEscape(text, "UTF-8");
     }
 
     public static String price(long rubles) {
-        // Locale.ROOT: иначе на сервере с русской локалью разделитель будет другим и замена не сработает
+
         return String.format(java.util.Locale.ROOT, "%,d", rubles).replace(',', ' ') + " ₽";
     }
 
@@ -47,7 +41,6 @@ public class Formats {
         return dateTime(instant);
     }
 
-    /** «9 октября 2026» — для отзывов. */
     public String day(Instant instant) {
         return instant == null ? "" : DAY.format(instant);
     }
@@ -60,7 +53,6 @@ public class Formats {
         return timeOfDay(instant);
     }
 
-    /** Оценка как принято в русских магазинах: 4.7 → «4,7». */
     public static String ratingText(BigDecimal rating) {
         return rating == null ? "" : rating.setScale(1, RoundingMode.HALF_UP).toPlainString().replace('.', ',');
     }
@@ -69,12 +61,10 @@ public class Formats {
         return ratingText(rating);
     }
 
-    /** 1 отзыв, 3 отзыва, 11 отзывов. */
     public String reviews(int count) {
         return count + " " + plural(count, "отзыв", "отзыва", "отзывов");
     }
 
-    /** Только слово: «товар», «товара», «товаров» — число в шаблоне уже есть. */
     public String goods(long count) {
         return plural(count, "товар", "товара", "товаров");
     }
@@ -88,12 +78,10 @@ public class Formats {
                 : many;
     }
 
-    /** Короткая строка характеристик для карточки: «AM5 · 6 · 12». */
     public String specs(Product product) {
         return Attributes.brief(product);
     }
 
-    /** Отмечен ли чекбокс фильтра. */
     public boolean selected(Map<String, List<String>> selected, String key, String value) {
         return selected.getOrDefault(key, List.of()).contains(value);
     }

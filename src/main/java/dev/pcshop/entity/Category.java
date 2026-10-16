@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/** Категория каталога. Владелец заводит и правит их в админке; slug после создания не меняется — на нём ссылки. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -36,7 +35,6 @@ public class Category {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
-    /** Характеристики товаров категории в порядке вывода. */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false)
     private List<Spec> specs = new ArrayList<>();
@@ -52,7 +50,6 @@ public class Category {
         this.specs = new ArrayList<>(specs);
     }
 
-    /** Характеристики, по которым можно фильтровать категорию. */
     public List<FilterDef> getFilters() {
         return specs.stream().filter(Spec::filter).map(s -> new FilterDef(s.key(), s.label())).toList();
     }

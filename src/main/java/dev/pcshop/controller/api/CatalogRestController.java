@@ -27,7 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.Map;
 
-/** REST API каталога: его используют корзина на сайте и может использовать любой внешний клиент. */
 @Tag(name = "Каталог", description = "Категории, фильтры и товары")
 @Validated
 @RestController
@@ -71,7 +70,6 @@ public class CatalogRestController {
     @Operation(summary = "Товары для корзины", description = "Актуальные цены и остатки по id. Снятые с продажи не возвращаются.")
     @GetMapping("/products/by-ids")
     public List<ProductResponse> getProductsByIds(
-            // Корзина больше 50 позиций не бывает; ограничение защищает от огромных IN-запросов
             @RequestParam
             @NotEmpty(message = "Передайте хотя бы один id")
             @Size(max = 50, message = "Не больше 50 товаров за запрос")

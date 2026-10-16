@@ -24,11 +24,6 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Поиск по каталогу с фильтрами по JSONB-характеристикам.
- * SQL собирается динамически, но ключи характеристик берутся только из белого списка категории,
- * а значения всегда идут параметрами, поэтому инъекция невозможна.
- */
 @Repository
 @RequiredArgsConstructor
 public class ProductSearchRepository {
@@ -67,9 +62,9 @@ public class ProductSearchRepository {
             case PRICE_ASC -> "p.price ASC";
             case PRICE_DESC -> "p.price DESC";
             case NAME -> "p.name ASC";
-            // Товары без отзывов — в конце
+
             case RATING -> "p.rating DESC NULLS LAST, p.reviews_count DESC";
-            // «Популярные»: сначала то, что есть в наличии, затем по остатку
+
             case POPULAR -> "(p.stock > 0) DESC, p.stock DESC, p.name ASC";
         };
 
@@ -79,17 +74,12 @@ public class ProductSearchRepository {
                 "SELECT p.id FROM product p WHERE " + where + " ORDER BY " + order + ", p.id LIMIT :limit OFFSET :offset",
                 params, Long.class);
 
-        // Загружаем сущности одним запросом и восстанавливаем порядок сортировки
         Map<Long, Product> byId = products.findAllByIdInAndActiveTrue(ids).stream()
                 .collect(Collectors.toMap(Product::getId, Function.identity()));
         List<Product> page = ids.stream().map(byId::get).toList();
         return new PageImpl<>(page, PageRequest.of(query.page(), query.size()), total);
     }
 
-    /**
-     * Каждое слово запроса должно встретиться в названии или бренде: «rtx 5070 asus».
-     * Спецсимволы LIKE экранируем, чтобы «%» в запросе не превращался в шаблон.
-     */
     public Page<Product> searchText(String text, int page, int size) {
         String[] words = text.toLowerCase().split("\\s+");
         var params = new MapSqlParameterSource();
@@ -113,7 +103,6 @@ public class ProductSearchRepository {
         return new PageImpl<>(ids.stream().map(byId::get).toList(), PageRequest.of(page, size), total);
     }
 
-    /** Значения каждой характеристики категории с количеством товаров — для фильтра. */
     public Map<String, List<FacetValueResponse>> facets(Category category) {
         Map<String, List<FacetValueResponse>> result = new LinkedHashMap<>();
         for (FilterDef filter : category.getFilters()) {
@@ -130,7 +119,6 @@ public class ProductSearchRepository {
         return result;
     }
 
-    /** Список товаров в админке: все, включая снятые с продажи. Слова ищутся в названии, бренде и адресе страницы. */
     public Page<Product> adminSearch(String text, Long categoryId, ProductListFilter show, int page, int size) {
         var params = new MapSqlParameterSource();
         var where = new StringBuilder("TRUE");
@@ -166,7 +154,6 @@ public class ProductSearchRepository {
         return new PageImpl<>(ids.stream().map(byId::get).toList(), PageRequest.of(page, size), total);
     }
 
-    /** Значения текстовых характеристик у товаров категории, самые частые первыми: подсказки в форме товара. */
     public Map<String, List<String>> specValues(Category category) {
         Map<String, List<String>> result = new LinkedHashMap<>();
         for (Spec spec : category.getSpecs()) {
@@ -182,7 +169,6 @@ public class ProductSearchRepository {
         return result;
     }
 
-    /** Сколько товаров в каждой категории, включая снятые с продажи. */
     public Map<Long, Long> countByCategory() {
         Map<Long, Long> result = new LinkedHashMap<>();
         jdbc.query("SELECT category_id, count(*) FROM product GROUP BY 1", new MapSqlParameterSource(),

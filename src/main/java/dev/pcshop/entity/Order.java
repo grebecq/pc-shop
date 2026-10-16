@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/** Заказ с сайта или из бота. Статус меняется только через методы ниже, чтобы не нарушить правила перехода. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -43,7 +42,6 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Для ссылок покупателю: по нему нельзя перебрать чужие заказы. */
     @Column(name = "public_id", nullable = false, unique = true, updatable = false)
     private UUID publicId = UUID.randomUUID();
 
@@ -64,7 +62,6 @@ public class Order {
     @Column(nullable = false)
     private String phone;
 
-    /** Адрес доставки или магазин самовывоза, одной строкой. */
     @Column(nullable = false)
     private String address;
 
@@ -72,19 +69,15 @@ public class Order {
     @Column(name = "delivery_method", nullable = false)
     private DeliveryMethod deliveryMethod = DeliveryMethod.COURIER;
 
-    /** Цена доставки на момент заказа. Уже входит в total. */
     @Column(name = "delivery_price", nullable = false)
     private int deliveryPrice;
 
-    /** Промокод, по которому дали скидку, или null. */
     @Column(name = "promo_code")
     private String promoCode;
 
-    /** Скидка по промокоду в рублях. Уже вычтена из total. */
     @Column(nullable = false)
     private int discount;
 
-    /** Куда слать письма о заказе. У заказов из бота пусто. */
     private String email;
 
     private String comment;
@@ -109,15 +102,12 @@ public class Order {
     @Column(name = "paid_at")
     private Instant paidAt;
 
-    /** Чем оплачен на сайте: «Visa •• 4242», «СБП», «SberPay». Номер карты целиком не храним. */
     @Column(name = "payment_card")
     private String paymentCard;
 
-    /** Последний платёж в ЮKassa: им заказ оплачен или по нему покупатель сейчас платит. */
     @Column(name = "payment_id")
     private String paymentId;
 
-    /** Когда вернули деньги за отменённый заказ, оплаченный через ЮKassa. */
     @Column(name = "refunded_at")
     private Instant refundedAt;
 
@@ -142,7 +132,6 @@ public class Order {
         total += price * quantity;
     }
 
-    /** Скидка по промокоду считается от суммы товаров, поэтому вызывается после addItem. */
     public void applyPromo(String code, int discount) {
         if (discount < 0 || discount > itemsTotal()) {
             throw new IllegalArgumentException("Скидка не может быть больше суммы товаров");
@@ -152,28 +141,23 @@ public class Order {
         this.promoCode = code;
     }
 
-    /** Цена доставки считается от суммы товаров, поэтому вызывается после addItem. */
     public void chargeDelivery(int price) {
         total += price - deliveryPrice;
         deliveryPrice = price;
     }
 
-    /** Сумма товаров по их ценам, без скидки по промокоду и без доставки. */
     public int itemsTotal() {
         return total - deliveryPrice + discount;
     }
 
-    /** Покупатель может сам отменить заказ, пока его не передали в доставку. */
     public boolean cancellableByCustomer() {
         return status == OrderStatus.AWAITING_PAYMENT || status == OrderStatus.PAID || status == OrderStatus.ASSEMBLING;
     }
 
-    /** Статус для покупателя: при самовывозе «передан в доставку» значит, что заказ ждёт в магазине. */
     public String statusLabel() {
         return status == OrderStatus.SHIPPED && deliveryMethod == DeliveryMethod.PICKUP ? "Ждёт в магазине" : status.label();
     }
 
-    /** Возвращает true, если статус действительно поменялся (повторная оплата не считается). */
     public boolean markPaid() {
         if (status != OrderStatus.AWAITING_PAYMENT) {
             return false;
@@ -183,18 +167,15 @@ public class Order {
         return true;
     }
 
-    /** Тестовая оплата картой на сайте: то же, что markPaid, плюс запоминаем карту для страницы заказа. */
     public boolean markPaidByCard(String cardBrand, String cardLast4) {
-        // «Visa •• 4242», а у неизвестной платёжной системы просто «•• 4242»
+
         return markPaidWith((cardBrand == null ? "" : cardBrand + " ") + "•• " + cardLast4);
     }
 
-    /** Покупатель перешёл к оплате в ЮKassa. Прошлый платёж, если был, он так и не оплатил. */
     public void attachPayment(String paymentId) {
         this.paymentId = paymentId;
     }
 
-    /** Оплата через ЮKassa этим платежом. */
     public boolean markPaidOnline(String paymentId, String method) {
         if (!markPaidWith(method)) {
             return false;
@@ -211,15 +192,10 @@ public class Order {
         return true;
     }
 
-    /**
-     * Деньги пришли через ЮKassa. Способ оплаты записывает только markPaidOnline, поэтому заказ,
-     * отмеченный оплаченным в админке, сюда не попадает, даже если покупатель начинал платить онлайн.
-     */
     public boolean paidOnline() {
         return paidAt != null && paymentId != null && paymentCard != null;
     }
 
-    /** Заказ отменили после онлайн-оплаты, а деньги ещё не вернули. */
     public boolean awaitingRefund() {
         return status == OrderStatus.CANCELLED && paidOnline() && refundedAt == null;
     }
@@ -235,7 +211,7 @@ public class Order {
             throw new OrderException("Заказ уже " + status.label().toLowerCase() + ", статус менять нельзя");
         }
         if (next == OrderStatus.AWAITING_PAYMENT) {
-            // Иначе заказ снова попадёт под автоотмену и вернёт на склад уже отданный товар
+
             throw new OrderException("Вернуть заказ в «ждёт оплаты» нельзя");
         }
         if (next == OrderStatus.PAID && paidAt == null) {
@@ -244,17 +220,14 @@ public class Order {
         status = next;
     }
 
-    /** До какого момента нужно оплатить, иначе заказ отменится автоматически. */
     public Instant payBefore(Duration timeout) {
         return createdAt.plus(timeout);
     }
 
-    /** Короткий номер для людей: «№1042». */
     public String number() {
         return number(id);
     }
 
-    /** Номер заказа для людей по его id: в письмах, в боте, в журнале склада. */
     public static String number(long id) {
         return "№" + (1000 + id);
     }

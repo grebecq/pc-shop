@@ -15,7 +15,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 
-/** Одноразовая ссылка для смены пароля. Хранится только SHA-256 токена, сам токен есть лишь в письме. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -49,7 +48,6 @@ public class PasswordResetToken {
         this.expiresAt = expiresAt;
     }
 
-    /** Ссылкой ещё не пользовались, и она не просрочена. */
     public boolean isActive(Instant now) {
         return usedAt == null && now.isBefore(expiresAt);
     }

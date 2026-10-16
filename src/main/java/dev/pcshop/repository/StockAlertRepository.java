@@ -12,7 +12,6 @@ import java.util.List;
 @Repository
 public interface StockAlertRepository extends JpaRepository<StockAlert, StockAlert.Key> {
 
-    /** Кто ждёт товар: им уйдёт письмо, когда он появится. */
     @Query("select a from Account a where a.id in (select s.accountId from StockAlert s where s.productId = :productId)")
     List<Account> subscribers(@Param("productId") long productId);
 

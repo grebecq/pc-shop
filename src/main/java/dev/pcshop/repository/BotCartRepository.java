@@ -6,7 +6,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-/** Позиции корзины Telegram-бота: чат, товар, количество. */
 @Repository
 @RequiredArgsConstructor
 public class BotCartRepository {

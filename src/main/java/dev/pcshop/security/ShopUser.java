@@ -6,7 +6,7 @@ import lombok.Getter;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.userdetails.User;
 
-/** Вошедший покупатель: к стандартному пользователю Spring Security добавлены id и имя. */
+// Вошедший пользователь
 @Getter
 @EqualsAndHashCode(callSuper = true)
 public class ShopUser extends User {

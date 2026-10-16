@@ -21,7 +21,6 @@
             <select id="categoryId" name="categoryId" data-change-category>
                 <option th:each="c : ${categories}" th:value="${c.id}" th:text="${c.name}" th:selected="${c.id == category.id}">Категория</option>
             </select>
-            <!-- Без JavaScript категорию меняют этой кнопкой, с ним — сразу при выборе -->
             <button class="btn btn--small btn--ghost js-hide" type="submit" name="changeCategory" value="1" formnovalidate>Показать характеристики</button>
         </div>
         <div class="field">

@@ -12,13 +12,6 @@ import jakarta.validation.constraints.Size;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Карточка товара из админки. Характеристики проверяет CatalogAdminService: какие они, зависит от категории.
- *
- * @param oldPrice цена до скидки; пустое поле = скидки нет
- * @param specs    значения характеристик как в форме: ключ → текст, у галочки «true»
- * @param stock    сколько есть на складе — только у нового товара, дальше остаток меняют приход и списание
- */
 public record ProductRequest(
         @NotNull(message = "Выберите категорию") Long categoryId,
         @NotBlank(message = "Укажите название") @Size(max = 256, message = "Название длиннее 256 символов") String name,
@@ -37,7 +30,6 @@ public record ProductRequest(
         specs = specs == null ? Map.of() : specs;
     }
 
-    /** Форма для правки существующего товара. */
     public static ProductRequest of(Product p) {
         Map<String, String> specs = new LinkedHashMap<>();
         p.getAttributes().forEach((k, v) -> specs.put(k, String.valueOf(v)));
@@ -45,17 +37,14 @@ public record ProductRequest(
                 p.getDescription(), p.isActive(), specs, null);
     }
 
-    /** Пустая форма нового товара в выбранной категории. */
     public static ProductRequest empty(Long categoryId) {
         return new ProductRequest(categoryId, null, null, null, null, null, true, Map.of(), null);
     }
 
-    /** Та же форма в другой категории: совпадающие характеристики сохранятся. */
     public ProductRequest withCategory(Long categoryId) {
         return new ProductRequest(categoryId, name, brand, price, oldPrice, description, active, specs, stock);
     }
 
-    /** Снятая галочка в запрос не приходит, поэтому null = «не продаётся». */
     public boolean isActive() {
         return Boolean.TRUE.equals(active);
     }

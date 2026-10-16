@@ -24,17 +24,18 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Аккаунт покупателя: регистрация, адреса, заказ с сохранённым адресом, вход, смена пароля по письму и чужие данные. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfig.class)
 class AccountFlowTest {
+
+    private static final String PASSWORD_LETTER = "Смена пароля";
+    private static final String CONFIRM_LETTER = "Подтвердите почту";
 
     @LocalServerPort int port;
     @Autowired CatalogService catalog;
     @Autowired TestMailbox mailbox;
     @Autowired JdbcClient jdbc;
 
-    /** Отдельный «браузер» со своими cookie. */
     class Browser {
         final HttpClient http = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
 
@@ -83,7 +84,6 @@ class AccountFlowTest {
         assertThat(addresses).contains("Казань, ул. Баумана, 10, кв. 5, индекс 420111", "Подставляется в заказ");
         long addressId = Long.parseLong(find(addresses, "/account/addresses/(\\d+)\""));
 
-        // Корзина подставляет адрес, заказ через API с сохранённым адресом
         assertThat(anna.get("/cart").body()).contains("ул. Баумана, 10");
         long ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme").getId();
         String order = """
@@ -94,12 +94,10 @@ class AccountFlowTest {
         assertThat(created.statusCode()).isEqualTo(201);
         String publicId = find(created.body(), "\"publicId\":\"([^\"]+)\"");
 
-        // Адрес взят из базы, а не из текста запроса; заказ виден в кабинете
         assertThat(anna.get("/order/" + publicId).body()).contains("Казань, ул. Баумана").doesNotContain("подменённый");
         assertThat(anna.get("/account").body()).contains("Ждёт оплаты");
         assertThat(anna.get("/account/profile").body()).as("телефон из заказа сохранён").contains("+7 900 111-22-33");
 
-        // Другой покупатель не видит и не может использовать чужой адрес
         var boris = new Browser();
         boris.register("boris-" + UUID.randomUUID() + "@example.com");
         assertThat(boris.get("/account/addresses/" + addressId).statusCode()).isEqualTo(404);
@@ -170,7 +168,7 @@ class AccountFlowTest {
                 .contains("Если такой адрес зарегистрирован, мы отправили на него письмо со ссылкой");
 
         assertThat(mailbox.to(stranger)).isEmpty();
-        var letters = mailbox.to(email);
+        var letters = mailbox.to(email, PASSWORD_LETTER);
         assertThat(letters).hasSize(1);
         var letter = letters.getFirst();
         assertThat(letter.from()).isEqualTo("Сборка <noreply@pc-shop.local>");
@@ -178,10 +176,9 @@ class AccountFlowTest {
         assertThat(letter.text()).contains("Здравствуйте, Анна!", "http://localhost:8080/password/reset?token=",
                 "действует 30 минут", "Если вы не запрашивали смену пароля, просто проигнорируйте письмо");
 
-        // Повторная просьба в течение минуты: ответ тот же, но второго письма нет
         var again = anna.postForm("/password/forgot", "/password/forgot", "email", email);
         assertThat(again.headers().firstValue("Location")).isEqualTo(known.headers().firstValue("Location"));
-        assertThat(mailbox.to(email)).hasSize(1);
+        assertThat(mailbox.to(email, PASSWORD_LETTER)).hasSize(1);
 
         var invalid = anna.postForm("/password/forgot", "/password/forgot", "email", "not-an-email");
         assertThat(invalid.statusCode()).as("форма с ошибкой").isEqualTo(200);
@@ -208,7 +205,6 @@ class AccountFlowTest {
         assertThat(changed.headers().firstValue("Location").orElseThrow()).endsWith("/login?reset");
         assertThat(b.get("/login?reset").body()).contains("Пароль изменён, войдите с новым паролем");
 
-        // Второй раз та же ссылка не работает
         assertThat(b.get(link).body()).contains("Ссылка устарела, запросите новую", "/password/forgot");
         var reused = b.postForm("/password/reset", "/login", "token", token, "password", "evil-secret-1", "confirm", "evil-secret-1");
         assertThat(reused.body()).contains("Ссылка устарела, запросите новую");
@@ -217,6 +213,7 @@ class AccountFlowTest {
         assertThat(oldPassword.headers().firstValue("Location").orElseThrow()).endsWith("/login?error");
         var newPassword = b.postForm("/login", "/login", "email", email, "password", "new-secret-1");
         assertThat(newPassword.headers().firstValue("Location").orElseThrow()).endsWith("/account");
+        assertThat(b.get("/account").body()).as("ссылка из письма подтвердила и почту").doesNotContain("Подтвердите почту");
     }
 
     @Test
@@ -254,9 +251,8 @@ class AccountFlowTest {
         var sent = b.postForm("/account/password", "/account/profile");
         assertThat(sent.headers().firstValue("Location").orElseThrow()).endsWith("/account/profile");
         assertThat(b.get("/account/profile").body()).contains("Письмо отправлено на " + email);
-        assertThat(mailbox.to(email)).hasSize(1);
+        assertThat(mailbox.to(email, PASSWORD_LETTER)).hasSize(1);
 
-        // Ссылку открыли в том же браузере, где покупатель вошёл: после смены пароля входим заново
         String link = resetLink(email);
         var changed = b.postForm("/password/reset", link, "token", link.substring(link.indexOf('=') + 1),
                 "password", "new-secret-1", "confirm", "new-secret-1");
@@ -279,9 +275,71 @@ class AccountFlowTest {
         } finally {
             mailbox.setDown(false);
         }
-        // Неудачная попытка не считается за отправленное письмо: можно сразу попробовать снова
         b.postForm("/account/password", "/account/profile");
-        assertThat(mailbox.to(email)).hasSize(1);
+        assertThat(mailbox.to(email, PASSWORD_LETTER)).hasSize(1);
+    }
+
+    @Test
+    void registrationAsksToConfirmEmail() throws Exception {
+        var b = new Browser();
+        String email = "confirm-" + UUID.randomUUID() + "@example.com";
+        b.register(email);
+        var letters = mailbox.to(email, CONFIRM_LETTER);
+        assertThat(letters).hasSize(1);
+        assertThat(letters.getFirst().text()).contains("Здравствуйте, Анна!", "http://localhost:8080/email/confirm?token=",
+                "действует 3 дня", "Если вы не регистрировались");
+        assertThat(b.get("/account").body()).contains("Подтвердите почту <b>" + email + "</b>", "Отправить ещё раз");
+        assertThat(b.get("/account/profile").body()).contains("Подтвердите почту");
+
+        b.postForm("/account/email", "/account", "from", "profile");
+        assertThat(b.get("/account/profile").body()).contains("Письмо уже отправлено. Новое можно запросить через минуту");
+        assertThat(mailbox.to(email, CONFIRM_LETTER)).hasSize(1);
+
+        String link = confirmLink(email);
+        var other = new Browser().get(link);
+        assertThat(other.body()).contains("Почта подтверждена", "Войти");
+        assertThat(other.headers().firstValue("Referrer-Policy")).hasValue("no-referrer");
+        assertThat(b.get("/account").body()).doesNotContain("Подтвердите почту");
+        assertThat(b.get(link).body()).as("ссылка одноразовая").contains("Ссылка не работает");
+        assertThat(b.get("/email/confirm?token=" + "A".repeat(43)).body()).contains("Ссылка не работает");
+        assertThat(b.get("/email/confirm").body()).contains("Ссылка не работает");
+
+        b.postForm("/account/email", "/account");
+        assertThat(b.get("/account").body()).contains("Почта уже подтверждена");
+        assertThat(mailbox.to(email, CONFIRM_LETTER)).hasSize(1);
+    }
+
+    @Test
+    void oldConfirmLinkExpiresAndNewOneWorks() throws Exception {
+        var b = new Browser();
+        String email = "late-" + UUID.randomUUID() + "@example.com";
+        b.register(email);
+        String oldLink = confirmLink(email);
+        jdbc.sql("update account set email_token_sent_at = now() - interval '3 days 1 minute' where email = ?").param(email).update();
+        assertThat(b.get(oldLink).body()).contains("Ссылка не работает");
+
+        var resent = b.postForm("/account/email", "/account");
+        assertThat(resent.headers().firstValue("Location").orElseThrow()).endsWith("/account");
+        assertThat(b.get("/account").body()).contains("Письмо отправлено на " + email);
+        String newLink = confirmLink(email);
+        assertThat(newLink).isNotEqualTo(oldLink);
+        assertThat(b.get(oldLink).body()).as("старая ссылка заменена новой").contains("Ссылка не работает");
+        assertThat(b.get(newLink).body()).contains("Почта подтверждена", "В личный кабинет");
+    }
+
+    @Test
+    void registrationWorksWhenMailIsDown() throws Exception {
+        var b = new Browser();
+        String email = "nomail-" + UUID.randomUUID() + "@example.com";
+        mailbox.setDown(true);
+        try {
+            assertThat(b.register(email)).endsWith("/account?welcome");
+        } finally {
+            mailbox.setDown(false);
+        }
+        assertThat(mailbox.to(email)).isEmpty();
+        b.postForm("/account/email", "/account");
+        assertThat(mailbox.to(email, CONFIRM_LETTER)).hasSize(1);
     }
 
     @Test
@@ -382,7 +440,6 @@ class AccountFlowTest {
         assertThat(photo.headers().firstValue("Content-Type").orElseThrow()).isEqualTo("image/png");
         assertThat(new Browser().get("/p/deepcool-cc560-v2-black").body()).contains("/media/products/" + id + "?v=");
 
-        // Не картинка (HTML под видом PNG) не принимается
         var fake = multipart(boundary, formCsrf(page), "x.png", "<script>alert(1)</script>".getBytes());
         http.send(HttpRequest.newBuilder(uri("/admin/products/" + id + "/photo"))
                 .header("Authorization", auth).header("Content-Type", "multipart/form-data; boundary=" + boundary)
@@ -390,7 +447,6 @@ class AccountFlowTest {
         assertThat(http.send(HttpRequest.newBuilder(uri("/media/products/" + id)).build(), HttpResponse.BodyHandlers.ofByteArray())
                 .headers().firstValue("Content-Type").orElseThrow()).isEqualTo("image/png");
 
-        // Фото к несуществующему товару — 404, а не ошибка сервера
         var missing = http.send(HttpRequest.newBuilder(uri("/admin/products/999999/photo"))
                 .header("Authorization", auth).header("Content-Type", "multipart/form-data; boundary=" + boundary)
                 .POST(HttpRequest.BodyPublishers.ofByteArray(multipart(boundary, formCsrf(page), "photo.png", png))).build(),
@@ -408,11 +464,16 @@ class AccountFlowTest {
         return out.toByteArray();
     }
 
-    /** Ссылка из последнего письма на этот адрес: путь с токеном, без адреса сайта. */
     private String resetLink(String email) {
-        var letters = mailbox.to(email);
+        var letters = mailbox.to(email, PASSWORD_LETTER);
         assertThat(letters).as("письмо на " + email).isNotEmpty();
         return find(letters.getLast().text(), "http://localhost:8080(/password/reset\\?token=[A-Za-z0-9_-]{43})\\s");
+    }
+
+    private String confirmLink(String email) {
+        var letters = mailbox.to(email, CONFIRM_LETTER);
+        assertThat(letters).as("письмо на " + email).isNotEmpty();
+        return find(letters.getLast().text(), "http://localhost:8080(/email/confirm\\?token=[A-Za-z0-9_-]{43})\\s");
     }
 
     private URI uri(String path) {

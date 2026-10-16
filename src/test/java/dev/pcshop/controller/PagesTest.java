@@ -27,7 +27,6 @@ import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Смоук-тест страниц: каждая рендерится без ошибок шаблонов и показывает ключевой текст. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfig.class)
 class PagesTest {

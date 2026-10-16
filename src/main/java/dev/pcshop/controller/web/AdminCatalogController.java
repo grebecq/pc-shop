@@ -34,10 +34,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Каталог в админке: товары, их склад и фото, категории с характеристиками.
- * Формы работают и без JavaScript: при ошибке страница показывается снова с тем, что владелец успел ввести.
- */
 @PreAuthorize("hasRole('ADMIN')")
 @Controller
 @RequestMapping("/admin")
@@ -49,8 +45,6 @@ public class AdminCatalogController {
     private final CatalogAdminService catalog;
     private final StockService stock;
     private final ProductPhotoService photos;
-
-    // ---------- Товары ----------
 
     @GetMapping("/products")
     public String products(@RequestParam(required = false) String q, @RequestParam(required = false) Long category,
@@ -65,7 +59,6 @@ public class AdminCatalogController {
         return "admin/products";
     }
 
-    /** Пустая форма или копия другого товара («Создать похожий»): без фото и остатка. */
     @GetMapping("/products/new")
     public String newProduct(@RequestParam(required = false) Long category, @RequestParam(required = false) Long copy,
                              Model model, RedirectAttributes flash) {
@@ -79,9 +72,6 @@ public class AdminCatalogController {
         return productForm(model, null, form, null);
     }
 
-    /**
-     * @param changeCategory нажата скрытая кнопка «Показать характеристики»: категорию сменили, сохранять рано
-     */
     @PostMapping("/products")
     public String create(@Valid @ModelAttribute("form") ProductRequest form, BindingResult binding,
                          @RequestParam(required = false) MultipartFile photo, @RequestParam(required = false) String changeCategory,
@@ -149,7 +139,6 @@ public class AdminCatalogController {
         return "admin/product";
     }
 
-    /** Приход, списание или пересчёт. Ответ показывается в блоке склада, к нему же прокручивается страница. */
     @PostMapping("/products/{id}/stock")
     public String changeStock(@PathVariable long id, @Valid @ModelAttribute StockRequest request, BindingResult binding,
                               RedirectAttributes flash) {
@@ -188,7 +177,6 @@ public class AdminCatalogController {
         return "redirect:/admin/products/" + id;
     }
 
-    /** Фото из формы товара, если его выбрали. Ошибка фото не отменяет сохранение остальных полей. */
     private boolean savePhoto(long productId, MultipartFile file, RedirectAttributes flash) {
         if (file == null || file.isEmpty()) {
             return false;
@@ -201,8 +189,6 @@ public class AdminCatalogController {
             return false;
         }
     }
-
-    // ---------- Категории ----------
 
     @GetMapping("/categories")
     public String categories(Model model) {

@@ -16,7 +16,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import java.time.LocalDateTime;
 
-/** Ошибки REST API в одном формате. Страницы сайта обрабатывает {@link WebExceptionHandler}. */
 @Slf4j
 @RestControllerAdvice(basePackages = "dev.pcshop.controller.api")
 public class GlobalExceptionHandler {

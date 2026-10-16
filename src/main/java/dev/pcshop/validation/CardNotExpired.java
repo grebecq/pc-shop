@@ -14,10 +14,6 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.regex.Pattern;
 
-/**
- * Срок действия карты «ММ/ГГ» не в прошлом. Карта действует до конца указанного месяца,
- * поэтому текущий месяц ещё подходит. Формат проверяет {@code @Pattern} рядом, здесь — только дата.
- */
 @Documented
 @Constraint(validatedBy = CardNotExpired.Validator.class)
 @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.RECORD_COMPONENT})

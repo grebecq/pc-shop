@@ -24,6 +24,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+// Сквозной сценарий покупки
 @SpringBootTest
 @Import(TestcontainersConfig.class)
 class ShopFlowTest {
@@ -100,7 +101,6 @@ class ShopFlowTest {
     @Test
     void orderServiceChecksCustomerForEveryChannel() {
         long ssd = catalog.product("kingston-nv3-1-tb-m-2-nvme").getId();
-        // Бот проверяет ввод сам, но сервис не доверяет никакому каналу
         var bad = new CustomerRequest(" ", "не телефон", "Мск", null);
         assertThatThrownBy(() -> orders.create(Channel.TELEGRAM, bad, List.of(new OrderLineRequest(ssd, 1)), 1L))
                 .isInstanceOf(ConstraintViolationException.class)
@@ -131,7 +131,6 @@ class ShopFlowTest {
                 .isInstanceOf(OrderException.class)
                 .hasMessageContaining("Недостаточно на складе");
 
-        // Резерв по первой позиции тоже откатился вместе с транзакцией
         assertThat(products.findById(case_.getId()).orElseThrow().getStock()).isEqualTo(caseStock);
     }
 }

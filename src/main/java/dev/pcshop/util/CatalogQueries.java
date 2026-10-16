@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Разбор параметров запроса каталога — общий для API и страниц сайта. */
+// Запросы каталога
 public final class CatalogQueries {
 
     public static final int PAGE_SIZE = 12;

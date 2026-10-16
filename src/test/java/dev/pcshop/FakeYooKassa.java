@@ -15,16 +15,12 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * API ЮKassa для тестов: настоящий HTTP-сервер на свободном порту, платежи живут в памяти.
- * Платёж создаётся в статусе pending, «оплатить» его можно методом {@link #succeed}.
- */
+// Заглушка ЮKassa
 public class FakeYooKassa {
 
     public static final String SHOP_ID = "123456";
     public static final String SECRET_KEY = "test_secret";
 
-    /** Запрос магазина к API: что проверить в тесте. */
     public record Call(String method, String path, String authorization, String idempotenceKey, Map<String, Object> body) {
     }
 
@@ -50,7 +46,6 @@ public class FakeYooKassa {
         return "http://127.0.0.1:" + server.getAddress().getPort() + "/v3";
     }
 
-    /** Покупатель заплатил картой на странице ЮKassa. */
     public void succeed(String paymentId) {
         var payment = payments.get(paymentId);
         payment.put("status", "succeeded");
@@ -65,7 +60,6 @@ public class FakeYooKassa {
         return calls.stream().filter(c -> c.method().equals(method) && c.path().equals(path)).toList();
     }
 
-    /** ЮKassa не отвечает: на любой запрос 500. */
     public void setDown(boolean down) {
         this.down = down;
     }
@@ -89,7 +83,7 @@ public class FakeYooKassa {
             return;
         }
         if (ex.getRequestMethod().equals("POST") && path.equals("/payments")) {
-            // Тот же ключ — тот же платёж, как у настоящей ЮKassa
+
             String id = byIdempotenceKey.computeIfAbsent(key, k -> {
                 String newId = UUID.randomUUID().toString();
                 var confirmation = (Map<String, Object>) body.get("confirmation");

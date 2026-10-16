@@ -16,7 +16,6 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     boolean existsByProductIdAndAccountId(long productId, long accountId);
 
-    /** Пересчитывает среднюю оценку и число отзывов товара после нового отзыва. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             UPDATE product SET

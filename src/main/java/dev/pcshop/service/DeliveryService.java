@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-/** Способы получения: магазины для самовывоза и цена доставки курьером. */
 @Service
 @RequiredArgsConstructor
 public class DeliveryService {
@@ -32,7 +31,6 @@ public class DeliveryService {
         return pickupPoints.findByIdAndActiveTrue(id).orElseThrow(() -> new BadRequestException("Этого магазина нет в списке"));
     }
 
-    /** Самовывоз бесплатный, курьер — бесплатный от суммы free-from. */
     public int price(DeliveryMethod method, int itemsTotal) {
         if (method == DeliveryMethod.PICKUP || itemsTotal >= props.delivery().freeFrom()) {
             return 0;

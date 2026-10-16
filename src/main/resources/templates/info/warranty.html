@@ -27,7 +27,9 @@
         <li>Что модель совпадает с той, что в заказе.</li>
     </ul>
 
-    <p class="info-note">Это демо-магазин: условия приведены для примера.</p>
+    <p class="after-list">Полные условия продажи — в <a th:href="@{/offer}">публичной оферте</a>.</p>
+
+    <p class="info-note" th:unless="${store.hasSeller()}">Это демо-магазин: условия приведены для примера.</p>
 </main>
 
 <footer th:replace="~{fragments :: footer}"></footer>

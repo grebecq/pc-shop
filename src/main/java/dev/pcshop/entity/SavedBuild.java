@@ -19,7 +19,6 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Сборка, сохранённая в личном кабинете. Хранит только id товаров: цены и совместимость всегда актуальные. */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -37,7 +36,6 @@ public class SavedBuild {
     @Column(nullable = false, length = 80)
     private String name;
 
-    /** Слот конфигуратора → id товара: {"cpu": 1, "mb": 12}. */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false)
     private Map<String, Object> items = new LinkedHashMap<>();

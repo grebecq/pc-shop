@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/** Контакты покупателя в заказе. Одни правила для сайта и для бота. */
 public record CustomerRequest(
 
         @NotBlank(message = "Укажите имя")
@@ -24,7 +23,6 @@ public record CustomerRequest(
         @Size(max = 1000, message = "Комментарий — не длиннее 1000 символов")
         String comment,
 
-        // Необязательный: туда придут письма о заказе. В боте его не спрашиваем
         @Email(message = "Проверьте email")
         @Size(max = 254, message = "Email — не длиннее 254 символов")
         String email) {
@@ -37,7 +35,6 @@ public record CustomerRequest(
         email = Strings.blankToNull(email);
     }
 
-    /** Без email — так заказывают в боте. */
     public CustomerRequest(String name, String phone, String address, String comment) {
         this(name, phone, address, comment, null);
     }
