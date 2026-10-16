@@ -1,6 +1,7 @@
 package dev.pcshop.controller;
 
 import dev.pcshop.TestcontainersConfig;
+import dev.pcshop.service.StoreInfoService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,15 +20,20 @@ import java.util.Base64;
 import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(TestcontainersConfig.class)
 class StorePagesTest {
 
+    private static final byte[] PNG = Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+
     private static final String ADMIN = "Basic " + Base64.getEncoder().encodeToString("admin:admin-test-pass".getBytes());
 
     @LocalServerPort int port;
     @Autowired JdbcClient jdbc;
+    @Autowired StoreInfoService store;
 
     private final HttpClient http = HttpClient.newBuilder().cookieHandler(new CookieManager()).build();
 
@@ -45,7 +51,7 @@ class StorePagesTest {
         try {
             var saved = saveStore("ООО «Сборка»", "7701234567", "1027700000001");
             assertThat(saved.statusCode()).isEqualTo(302);
-            assertThat(get("/admin/settings", ADMIN).body()).contains("Контакты и реквизиты сохранены");
+            assertThat(get("/admin/settings", ADMIN).body()).contains("Настройки магазина сохранены");
 
             String seller = "ООО «Сборка», ИНН 7701234567, ОГРН 1027700000001, 101000, Москва, ул. Мясницкая, 1";
             assertThat(get("/", null).body()).contains(seller, "8 495 000-00-00", "href=\"tel:+74950000000\"", "href=\"/offer\"");
@@ -60,6 +66,42 @@ class StorePagesTest {
                     UPDATE store_info SET phone = '8 800 000-00-00', email = 'hello@pc-shop.local',
                         hours = 'ежедневно 9:00–21:00, звонок бесплатный', legal_name = NULL, inn = NULL, ogrn = NULL, legal_address = NULL""")
                     .update();
+        }
+    }
+
+    @Test
+    void brandFromAdminAppearsOnSite() throws Exception {
+        assertThat(saveStore("Мегабайт", "ноутбуки и техника", "red", "", "", "").body()).contains("Цвет — в виде #2b50d9");
+        assertThat(saveStore("", "ноутбуки и техника", "#ff6600", "", "", "").body()).contains("Укажите название магазина");
+
+        try {
+            assertThat(saveStore("Мегабайт", "ноутбуки и техника", "#FF6600", "", "", "").statusCode()).isEqualTo(302);
+            String home = get("/", null).body();
+            assertThat(home).contains("<title>Комплектующие для ПК · Мегабайт</title>",
+                    "<meta property=\"og:site_name\" content=\"Мегабайт\">",
+                    ":root { --accent: #ff6600; --accent-ink: #ffffff; }",
+                    "<span>Мегабайт</span>", "«Мегабайт» — ноутбуки и техника", "class=\"logo__mark\"")
+                    .doesNotContain("logo__img", "«Сборка»");
+            assertThat(get("/c/cpu", null).body()).contains("content=\"Процессоры в магазине «Мегабайт»");
+            assertThat(get("/admin/settings", ADMIN).body()).contains("Мегабайт · админка", "value=\"#ff6600\"");
+
+            store.saveLogo(PNG);
+            home = get("/", null).body();
+            assertThat(home).containsPattern("<img class=\"logo__img\" src=\"/media/logo\\?v=\\d+\"")
+                    .containsPattern("<link rel=\"icon\" href=\"/media/logo\\?v=\\d+\">")
+                    .doesNotContain("class=\"logo__mark\"");
+            var logo = http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/media/logo")).build(),
+                    HttpResponse.BodyHandlers.ofByteArray());
+            assertThat(logo.headers().firstValue("Content-Type")).hasValue("image/png");
+            assertThat(logo.body()).isEqualTo(PNG);
+
+            assertThatThrownBy(() -> store.saveLogo("<svg/>".getBytes())).hasMessageContaining("PNG, JPEG или WebP");
+            store.deleteLogo();
+            assertThat(get("/", null).body()).contains("class=\"logo__mark\"").doesNotContain("logo__img");
+            assertThat(get("/media/logo", null).statusCode()).isEqualTo(404);
+        } finally {
+            store.deleteLogo();
+            jdbc.sql("UPDATE store_info SET name = 'Сборка', tagline = 'комплектующие и сборка ПК', accent = '#2b50d9'").update();
         }
     }
 
@@ -104,8 +146,13 @@ class StorePagesTest {
     }
 
     private HttpResponse<String> saveStore(String legalName, String inn, String ogrn) throws Exception {
+        return saveStore("Сборка", "комплектующие и сборка ПК", "#2b50d9", legalName, inn, ogrn);
+    }
+
+    private HttpResponse<String> saveStore(String name, String tagline, String accent,
+                                           String legalName, String inn, String ogrn) throws Exception {
         return post("/admin/settings/store", "/admin/settings",
-                "phone", "8 495 000-00-00", "email", "shop@example.ru", "hours", "с 10 до 20, кроме воскресенья",
+                "name", name, "tagline", tagline, "accent", accent, "phone", "8 495 000-00-00", "email", "shop@example.ru", "hours", "с 10 до 20, кроме воскресенья",
                 "legalName", legalName, "inn", inn, "ogrn", ogrn, "legalAddress", "101000, Москва, ул. Мясницкая, 1");
     }
 

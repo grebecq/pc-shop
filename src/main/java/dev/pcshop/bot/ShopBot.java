@@ -27,6 +27,7 @@ import dev.pcshop.service.CompatibilityService;
 import dev.pcshop.service.DeliveryService;
 import dev.pcshop.service.OrderService;
 import dev.pcshop.service.PromoService;
+import dev.pcshop.service.StoreInfoService;
 import dev.pcshop.util.Attributes;
 import dev.pcshop.util.Formats;
 import jakarta.validation.ConstraintViolation;
@@ -39,6 +40,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.HtmlUtils;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.AnswerPreCheckoutQuery;
@@ -101,6 +103,7 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
     private final DeliveryService delivery;
     private final PromoService promos;
     private final ShopProperties props;
+    private final StoreInfoService store;
     @Value("${shop.orders.payment-timeout:30m}")
     private final Duration paymentTimeout;
 
@@ -156,12 +159,12 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
         if (text.equals("/start") || text.equals(BTN_CANCEL)) {
             checkouts.remove(chatId);
             send(chatId, """
-                    Привет! Это <b>Сборка</b>, магазин комплектующих для ПК.
+                    Привет! Это <b>%s</b>, магазин комплектующих для ПК.
 
                     Выберите товар в каталоге или соберите целый компьютер в «🛠 Собрать ПК»: бот сам проверит, \
                     что детали подходят друг к другу. Заказ можно оформить и оплатить прямо здесь.
 
-                    Или просто напишите, что ищете, например «RTX 5070».""", mainMenu());
+                    Или просто напишите, что ищете, например «RTX 5070».""".formatted(HtmlUtils.htmlEscape(store.get().getName())), mainMenu());
             return;
         }
 

@@ -2,6 +2,7 @@ package dev.pcshop.service;
 
 import dev.pcshop.config.ShopProperties;
 import dev.pcshop.entity.Account;
+import dev.pcshop.entity.StoreInfo;
 import dev.pcshop.exception.BadRequestException;
 import dev.pcshop.exception.ResourceNotFoundException;
 import dev.pcshop.repository.AccountRepository;
@@ -21,11 +22,11 @@ public class EmailConfirmService {
     private static final Duration LINK_TTL = Duration.ofDays(3);
 
     private static final Duration RESEND_PAUSE = Duration.ofMinutes(1);
-    private static final String SUBJECT = "Подтвердите почту в магазине «Сборка»";
 
     private final AccountRepository accounts;
     private final MailService mail;
     private final ShopProperties props;
+    private final StoreInfoService store;
 
     @Transactional
     public void send(long accountId) {
@@ -41,7 +42,8 @@ public class EmailConfirmService {
         String token = Tokens.newToken();
         account.newEmailToken(Tokens.sha256(token), now);
 
-        mail.send(account.getEmail(), SUBJECT, letter(account.getName(), link(token)));
+        StoreInfo shop = store.get();
+        mail.send(account.getEmail(), "Подтвердите почту в магазине «" + shop.getName() + "»", letter(shop, account.getName(), link(token)));
     }
 
     @Transactional
@@ -63,18 +65,18 @@ public class EmailConfirmService {
                 .toUriString();
     }
 
-    private static String letter(String name, String link) {
+    private static String letter(StoreInfo shop, String name, String link) {
         return """
                 Здравствуйте, %s!
 
-                Вы зарегистрировались в магазине «Сборка». Чтобы подтвердить почту, откройте ссылку:
+                Вы зарегистрировались в магазине «%s». Чтобы подтвердить почту, откройте ссылку:
                 %s
 
                 Ссылка действует %d дня. Так мы будем уверены, что письма о заказах и ссылка для смены пароля дойдут до вас.
 
                 Если вы не регистрировались, просто проигнорируйте письмо.
 
-                «Сборка» — комплектующие и сборка ПК
-                """.formatted(name, link, LINK_TTL.toDays());
+                «%s» — %s
+                """.formatted(name, shop.getName(), link, LINK_TTL.toDays(), shop.getName(), shop.getTagline());
     }
 }
