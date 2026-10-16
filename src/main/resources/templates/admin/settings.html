@@ -53,8 +53,10 @@
             <input id="legalAddress" th:field="*{legalAddress}" maxlength="512">
             <p class="form-error" th:errors="*{legalAddress}"></p>
         </div>
-        <p class="muted">Текст <a th:href="@{/offer}" target="_blank">оферты</a> и <a th:href="@{/privacy}" target="_blank">политики
-            обработки данных</a> — типовой. Перед запуском покажите его юристу.</p>
+        <p class="muted">Текст <a th:href="@{/offer}" target="_blank">оферты</a>, <a th:href="@{/privacy}" target="_blank">политики
+            обработки данных</a> и <a th:href="@{/consent}" target="_blank">согласия</a> — типовой. Перед запуском покажите его юристу.</p>
+        <p class="muted">Ещё до запуска по 152-ФЗ нужно: подать уведомление об обработке персональных данных в Роскомнадзор
+            (pd.rkn.gov.ru) и разместить сайт с базой на сервере в России.</p>
         <div><button class="btn" type="submit">Сохранить</button></div>
     </form>
 

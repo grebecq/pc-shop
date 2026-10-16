@@ -257,7 +257,7 @@ public class ShopBot implements LongPollingSingleThreadUpdateConsumer {
                     Order last = lastOrder(chatId);
 
                     send(chatId, "Оформляем заказ. Продолжая, вы принимаете условия <a href=\"" + props.siteUrl() + "/offer\">оферты</a> "
-                            + "и соглашаетесь на <a href=\"" + props.siteUrl() + "/privacy\">обработку персональных данных</a>.\n\n"
+                            + "и даёте <a href=\"" + props.siteUrl() + "/consent\">согласие на обработку персональных данных</a>.\n\n"
                             + "Как вас зовут?", suggestKeyboard(last == null ? null : last.getCustomerName()));
                 }
             }
