@@ -1,6 +1,9 @@
 spring:
   application:
     name: pc-shop
+  # Переменные из .env подхватываются и при запуске из IDEA. Настоящие переменные окружения (docker, Render) важнее
+  config:
+    import: optional:file:.env[.properties][encoding=utf-8]
   datasource:
     # Либо целиком DB_URL, либо по частям (так их отдают хостинги вроде Render).
     # По умолчанию — база из docker-compose (порт 5433), чтобы приложение можно было запускать из IDEA
