@@ -1,5 +1,11 @@
 # «Сборка» — интернет-магазин комплектующих для ПК
 
+![Java 21](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-4-6DB33F?logo=springboot&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 ## Что это
 
 Полноценный интернет-магазин: сайт, Telegram-бот и админка работают на одном бэкенде.
@@ -47,3 +53,7 @@
 
 - **Render, бесплатно:** Dashboard → New → Blueprint → этот репозиторий, всё описано в `render.yaml`.
 - **Свой сервер:** Docker, `git clone`, файл `.env`, `docker compose up -d --build`, Caddy для https.
+
+## Лицензия
+
+[MIT](LICENSE)
